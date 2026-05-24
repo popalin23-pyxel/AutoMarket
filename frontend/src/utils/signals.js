@@ -236,6 +236,61 @@ export function calcCompositeSignal(candles, indicators, fundingData = null, boo
 }
 
 /**
+ * Calcola la strategia range per mercati laterali
+ * @param {Array} candles
+ * @param {Object} indicators
+ * @returns {Object|null}
+ */
+export function calcRangeStrategy(candles, indicators) {
+  if (!candles || candles.length < 20 || !indicators?.bollinger) return null;
+
+  const lookback = 20;
+  const recent = candles.slice(-lookback);
+  const lastIdx = candles.length - 1;
+  const price = candles[lastIdx].close;
+
+  const recentHigh = Math.max(...recent.map((c) => c.high));
+  const recentLow = Math.min(...recent.map((c) => c.low));
+  const bolUpper = indicators.bollinger.upper[lastIdx];
+  const bolLower = indicators.bollinger.lower[lastIdx];
+
+  if (isNaN(bolUpper) || isNaN(bolLower)) return null;
+
+  const resistance = (recentHigh + bolUpper) / 2;
+  const support = (recentLow + bolLower) / 2;
+  const middle = (resistance + support) / 2;
+  const rangeWidth = resistance - support;
+
+  if (rangeWidth <= 0) return null;
+
+  const positionInRange = (price - support) / rangeWidth;
+
+  let signal = 'NO_TRADE';
+  let stopLoss = null;
+  let takeProfit = null;
+  let reason = 'Prezzo a metà range — attendi i bordi';
+
+  if (positionInRange < 0.25) {
+    signal = 'LONG';
+    stopLoss = support - rangeWidth * 0.05;
+    takeProfit = middle;
+    reason = 'Prezzo vicino al supporto del range';
+  } else if (positionInRange > 0.75) {
+    signal = 'SHORT';
+    stopLoss = resistance + rangeWidth * 0.05;
+    takeProfit = middle;
+    reason = 'Prezzo vicino alla resistenza del range';
+  }
+
+  const risk = stopLoss ? Math.abs(price - stopLoss) : 0;
+  const reward = takeProfit ? Math.abs(takeProfit - price) : 0;
+  const rr = risk > 0 ? reward / risk : 0;
+  const targetPct = takeProfit ? (Math.abs(takeProfit - price) / price) * 100 : 0;
+
+  return { signal, entry: price, stopLoss, takeProfit, support, resistance, middle, positionInRange, reason, rr, targetPct };
+}
+
+/**
  * Calcola le zone di liquidazione approssimative
  * @param {number} price - Prezzo corrente
  * @param {number|null} openInterest - Open interest (per stima)

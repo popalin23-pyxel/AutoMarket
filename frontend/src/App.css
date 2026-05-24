@@ -1707,6 +1707,145 @@ input[type=date]::-webkit-calendar-picker-indicator {
   cursor: pointer;
 }
 
+/* ============================================================
+   VERDICT CARD
+   ============================================================ */
+.verdict-card {
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-bottom: 16px;
+  border: 2px solid;
+  position: relative;
+}
+.verdict-no-trade {
+  background: #1a0a0a;
+  border-color: #ff446688;
+}
+.verdict-long {
+  background: #0a1a0f;
+  border-color: #00ff8888;
+  box-shadow: var(--glow-green);
+}
+.verdict-short {
+  background: #1a0a0a;
+  border-color: #ff446688;
+  box-shadow: var(--glow-red);
+}
+.verdict-strategy-badge {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 20px;
+  background: var(--bg-main);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-bright);
+}
+.verdict-status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.verdict-emoji {
+  font-size: 28px;
+  line-height: 1;
+}
+.verdict-label {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+.verdict-no-trade .verdict-label { color: var(--accent-red); }
+.verdict-long .verdict-label    { color: var(--accent-green); }
+.verdict-short .verdict-label   { color: var(--accent-red); }
+
+.verdict-reason {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 14px;
+  padding-left: 2px;
+}
+.verdict-params {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px 16px;
+  margin-bottom: 12px;
+  background: #ffffff08;
+  border-radius: var(--radius-sm);
+  padding: 12px;
+}
+@media (min-width: 480px) {
+  .verdict-params { grid-template-columns: repeat(3, 1fr); }
+}
+.verdict-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.vp-label {
+  font-size: 10px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.vp-value {
+  font-size: 14px;
+  font-weight: 600;
+}
+.verdict-meta {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+  font-family: var(--font-mono);
+}
+.verdict-disclaimer {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* ---- Strategy comparison in journal ---- */
+.strategy-comparison {
+  display: flex;
+  gap: 12px;
+  margin: 10px 0;
+  flex-wrap: wrap;
+}
+.strategy-stat-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-main);
+  border-radius: var(--radius-sm);
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+}
+.strategy-stat-name {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary);
+}
+.strategy-stat-wr { font-size: 13px; font-weight: 700; }
+.strategy-stat-n  { font-size: 11px; color: var(--text-muted); }
+
+/* ---- Strategy badge in journal table ---- */
+.strategy-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+.strat-trend { background: #4488ff22; color: var(--accent-blue); border: 1px solid #4488ff44; }
+.strat-range { background: #aa44ff22; color: var(--accent-purple); border: 1px solid #aa44ff44; }
+
 select option {
   background: var(--bg-card);
   color: var(--text-primary);

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import './App.css';
 
 import { calcEMA, calcSMA, calcRSI, calcMACD, calcBollinger, calcATR, calcADX } from './utils/indicators.js';
-import { detectRegime, calcCompositeSignal, calcLiquidationZones } from './utils/signals.js';
+import { detectRegime, calcCompositeSignal, calcLiquidationZones, calcRangeStrategy } from './utils/signals.js';
 import { runBacktest, calcHistoricalFrequencies } from './utils/backtest.js';
 import {
   fetchCandles,
@@ -27,6 +27,7 @@ import FrequenciesPanel from './components/FrequenciesPanel.jsx';
 import RiskPanel from './components/RiskPanel.jsx';
 import DemoPanel from './components/DemoPanel.jsx';
 import JournalPanel from './components/JournalPanel.jsx';
+import VerdictCard from './components/VerdictCard.jsx';
 
 const REFRESH_INTERVAL = 30000; // 30 secondi
 
@@ -57,6 +58,7 @@ export default function App() {
   const [liquidationZones, setLiquidationZones] = useState([]);
   const [backtestResult, setBacktestResult] = useState(null);
   const [frequencies, setFrequencies] = useState(null);
+  const [rangeStrategy, setRangeStrategy] = useState(null);
 
   // ---- Stato UI ----
   const [loading, setLoading] = useState(true);
@@ -135,6 +137,10 @@ export default function App() {
           );
           setCompositeSignal(newSignal);
 
+          // Strategia range
+          const newRangeStrategy = calcRangeStrategy(newCandles, newIndicators);
+          setRangeStrategy(newRangeStrategy);
+
           // Zone di liquidazione
           const lastPrice = newCandles[newCandles.length - 1].close;
           const oiValue = newOi?.openInterest ? parseFloat(newOi.openInterest) : null;
@@ -183,6 +189,7 @@ export default function App() {
     setRegime(null);
     setBacktestResult(null);
     setFrequencies(null);
+    setRangeStrategy(null);
 
     fetchAllData();
 
@@ -251,6 +258,21 @@ export default function App() {
                 Ultimo aggiornamento: {formatLastUpdate(lastUpdate)} — auto-refresh 30s
               </p>
             )}
+
+            {/* Carta verdetto — in cima, sopra tutto */}
+            <div className="dashboard-full">
+              <VerdictCard
+                regime={regime}
+                compositeSignal={compositeSignal}
+                backtestResult={backtestResult}
+                rangeStrategy={rangeStrategy}
+                indicators={indicators}
+                candles={candles}
+                capital={capital}
+                leverage={leverage}
+                frequencies={frequencies}
+              />
+            </div>
 
             <div className="dashboard-grid">
               {/* Colonna sinistra: segnale principale */}
@@ -340,6 +362,7 @@ export default function App() {
                   compositeSignal={compositeSignal}
                   regime={regime}
                   selectedPair={selectedPair}
+                  verdictStrategy={(regime?.regime === 'lateral' && rangeStrategy) ? 'Range' : 'Trend'}
                 />
               </div>
             </div>
