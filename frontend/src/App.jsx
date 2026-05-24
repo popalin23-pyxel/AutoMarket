@@ -3,15 +3,11 @@ import './App.css';
 
 import { calcEMA, calcSMA, calcRSI, calcMACD, calcBollinger, calcATR, calcADX } from './utils/indicators.js';
 import { detectRegime, calcCompositeSignal, calcLiquidationZones, calcRangeStrategy } from './utils/signals.js';
-import { runBacktest, calcHistoricalFrequencies } from './utils/backtest.js';
+import { runBacktest, calcHistoricalFrequencies, runWalkForwardBacktest } from './utils/backtest.js';
+import { logVerdict, verifyPendingVerdicts } from './utils/verdictLog.js';
 import {
-  fetchCandles,
-  fetchTicker,
-  fetchBook,
-  fetchFunding,
-  fetchOpenInterest,
-  fetchOIHistory,
-  fetchGlobal,
+  fetchCandles, fetchTicker, fetchBook, fetchFunding,
+  fetchOpenInterest, fetchOIHistory, fetchGlobal,
 } from './services/api.js';
 
 import Header from './components/Header.jsx';
@@ -27,20 +23,23 @@ import FrequenciesPanel from './components/FrequenciesPanel.jsx';
 import RiskPanel from './components/RiskPanel.jsx';
 import DemoPanel from './components/DemoPanel.jsx';
 import JournalPanel from './components/JournalPanel.jsx';
-import VerdictCard from './components/VerdictCard.jsx';
+import VerdictCard, { calcVerdict } from './components/VerdictCard.jsx';
+import MonteCarloPanel from './components/MonteCarloPanel.jsx';
+import MultiTimeframePanel from './components/MultiTimeframePanel.jsx';
+import ReportPanel from './components/ReportPanel.jsx';
 
-const REFRESH_INTERVAL = 30000; // 30 secondi
+const REFRESH_INTERVAL = 30000;
+const INTERVAL_HORIZON_MS = { '5m': 900000, '15m': 2700000, '1h': 3600000, '4h': 14400000, '1d': 86400000 };
 
 export default function App() {
-  // ---- Parametri utente ----
   const [selectedPair, setSelectedPair] = useState('BTCUSDT');
   const [selectedInterval, setSelectedInterval] = useState('1h');
   const [capital, setCapital] = useState(15);
   const [leverage, setLeverage] = useState(5);
   const [entryPrice, setEntryPrice] = useState(null);
   const [demoMode, setDemoMode] = useState(true);
+  const [activeTab, setActiveTab] = useState('verdetto');
 
-  // ---- Dati di mercato ----
   const [candles, setCandles] = useState(null);
   const [ticker, setTicker] = useState(null);
   const [bookData, setBookData] = useState(null);
@@ -48,48 +47,34 @@ export default function App() {
   const [oiData, setOiData] = useState(null);
   const [oiHistory, setOiHistory] = useState(null);
   const [globalData, setGlobalData] = useState(null);
-
-  // ---- Indicatori calcolati ----
   const [indicators, setIndicators] = useState(null);
-
-  // ---- Segnali e analisi ----
   const [compositeSignal, setCompositeSignal] = useState(null);
   const [regime, setRegime] = useState(null);
   const [liquidationZones, setLiquidationZones] = useState([]);
   const [backtestResult, setBacktestResult] = useState(null);
+  const [walkForwardResult, setWalkForwardResult] = useState(null);
   const [frequencies, setFrequencies] = useState(null);
   const [rangeStrategy, setRangeStrategy] = useState(null);
-
-  // ---- Stato UI ----
   const [loading, setLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState(null);
   const [error, setError] = useState(null);
 
   const intervalRef = useRef(null);
-  const backtestWorkerRef = useRef(null);
+  const lastLoggedVerdictRef = useRef(null);
 
-  // ---- Calcola indicatori ----
   const computeIndicators = useCallback((candleData) => {
     if (!candleData || candleData.length < 30) return null;
     const closes = candleData.map((c) => c.close);
-
-    const ema12 = calcEMA(closes, 12);
-    const ema26 = calcEMA(closes, 26);
-    const sma50 = calcSMA(closes, 50);
-    const rsi = calcRSI(closes, 14);
-    const macd = calcMACD(closes, 12, 26, 9);
-    const bollinger = calcBollinger(closes, 20, 2);
-    const atr = calcATR(candleData, 14);
-    const adx = calcADX(candleData, 14);
-
-    return { ema12, ema26, sma50, rsi, macd, bollinger, atr, adx };
+    return {
+      ema12: calcEMA(closes, 12), ema26: calcEMA(closes, 26), sma50: calcSMA(closes, 50),
+      rsi: calcRSI(closes, 14), macd: calcMACD(closes, 12, 26, 9),
+      bollinger: calcBollinger(closes, 20, 2), atr: calcATR(candleData, 14), adx: calcADX(candleData, 14),
+    };
   }, []);
 
-  // ---- Fetch tutti i dati ----
   const fetchAllData = useCallback(async () => {
     setError(null);
     try {
-      // Fetch in parallelo
       const [candlesRes, tickerRes, bookRes, fundingRes, oiRes, oiHistRes, globalRes] =
         await Promise.allSettled([
           fetchCandles(selectedPair, selectedInterval, 500),
@@ -118,54 +103,67 @@ export default function App() {
 
       if (newCandles && newCandles.length > 0) {
         setCandles(newCandles);
+        verifyPendingVerdicts(newCandles, selectedPair, selectedInterval);
 
-        // Calcola indicatori
         const newIndicators = computeIndicators(newCandles);
         setIndicators(newIndicators);
 
         if (newIndicators) {
-          // Regime di mercato
           const newRegime = detectRegime(newCandles, newIndicators);
           setRegime(newRegime);
 
-          // Segnale composito
-          const newSignal = calcCompositeSignal(
-            newCandles,
-            newIndicators,
-            newFunding,
-            newBook
-          );
+          const newSignal = calcCompositeSignal(newCandles, newIndicators, newFunding, newBook);
           setCompositeSignal(newSignal);
 
-          // Strategia range
           const newRangeStrategy = calcRangeStrategy(newCandles, newIndicators);
           setRangeStrategy(newRangeStrategy);
 
-          // Zone di liquidazione
           const lastPrice = newCandles[newCandles.length - 1].close;
           const oiValue = newOi?.openInterest ? parseFloat(newOi.openInterest) : null;
-          const zones = calcLiquidationZones(lastPrice, oiValue, [5, 10, 25]);
-          setLiquidationZones(zones);
+          setLiquidationZones(calcLiquidationZones(lastPrice, oiValue, [5, 10, 25]));
 
-          // Backtest (può essere lento, lo eseguiamo in modo asincrono non bloccante)
           setTimeout(() => {
             try {
               const bt = runBacktest(newCandles, newIndicators);
               setBacktestResult(bt);
-            } catch (e) {
-              console.warn('Backtest error:', e.message);
-            }
+              // Log verdetto se non NO_TRADE
+              const v = calcVerdict({ regime: newRegime, compositeSignal: newSignal, backtestResult: bt, rangeStrategy: newRangeStrategy, indicators: newIndicators, candles: newCandles, capital, leverage });
+              if (v.verdict !== 'NO_TRADE' && v.entry) {
+                const key = `${selectedPair}_${selectedInterval}_${v.verdict}_${Math.round(v.entry)}`;
+                if (lastLoggedVerdictRef.current !== key) {
+                  lastLoggedVerdictRef.current = key;
+                  logVerdict({
+                    id: Date.now(),
+                    date: new Date().toISOString(),
+                    pair: selectedPair,
+                    timeframe: selectedInterval,
+                    strategy: v.strategy,
+                    direction: v.verdict,
+                    entryPrice: v.entry,
+                    target: v.takeProfit,
+                    stop: v.stopLoss,
+                    horizonMs: INTERVAL_HORIZON_MS[selectedInterval] || 3600000,
+                    verifiedAt: null,
+                    outcome: null,
+                  });
+                }
+              }
+            } catch (e) { console.warn('Backtest error:', e.message); }
           }, 100);
 
-          // Frequenze storiche
           setTimeout(() => {
             try {
               const freq = calcHistoricalFrequencies(newCandles, newIndicators, 24, [5, 10, 20]);
               setFrequencies(freq);
-            } catch (e) {
-              console.warn('Frequencies error:', e.message);
-            }
+            } catch (e) { console.warn('Frequencies error:', e.message); }
           }, 200);
+
+          setTimeout(() => {
+            try {
+              const wf = runWalkForwardBacktest(newCandles, newIndicators);
+              setWalkForwardResult(wf);
+            } catch (e) { console.warn('Walk-forward error:', e.message); }
+          }, 400);
         }
       } else if (!newCandles) {
         setError('Impossibile caricare le candele. Verificare la connessione.');
@@ -174,66 +172,56 @@ export default function App() {
       setLastUpdate(new Date());
     } catch (err) {
       console.error('fetchAllData error:', err);
-      setError('Errore di connessione al backend.');
+      setError('Errore di connessione.');
     } finally {
       setLoading(false);
     }
-  }, [selectedPair, selectedInterval, computeIndicators]);
+  }, [selectedPair, selectedInterval, computeIndicators, capital, leverage]);
 
-  // ---- Effetto principale: fetch al montaggio e ogni 30s ----
   useEffect(() => {
     setLoading(true);
-    setCandles(null);
-    setIndicators(null);
-    setCompositeSignal(null);
-    setRegime(null);
-    setBacktestResult(null);
-    setFrequencies(null);
-    setRangeStrategy(null);
-
+    setCandles(null); setIndicators(null); setCompositeSignal(null);
+    setRegime(null); setBacktestResult(null); setFrequencies(null);
+    setRangeStrategy(null); setWalkForwardResult(null);
     fetchAllData();
-
     intervalRef.current = setInterval(fetchAllData, REFRESH_INTERVAL);
-
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
+    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [selectedPair, selectedInterval]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ---- Handlers ----
-  const handlePairChange = (pair) => {
-    setSelectedPair(pair);
-    setEntryPrice(null);
-  };
+  const handlePairChange = (pair) => { setSelectedPair(pair); setEntryPrice(null); };
+  const handleIntervalChange = (interval) => { setSelectedInterval(interval); };
+  const fmtTime = (d) => d ? d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '';
 
-  const handleIntervalChange = (interval) => {
-    setSelectedInterval(interval);
-  };
+  const verdictStrategy = (regime?.regime === 'lateral' && rangeStrategy) ? 'Range' : 'Trend';
 
-  const formatLastUpdate = (date) => {
-    if (!date) return '';
-    return date.toLocaleTimeString('it-IT', {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-    });
-  };
+  const TABS = [
+    { id: 'verdetto', label: 'Verdetto' },
+    { id: 'grafico', label: 'Grafico' },
+    { id: 'report', label: 'Report' },
+    { id: 'dettagli', label: 'Dettagli' },
+  ];
 
   return (
     <div className="app-wrapper">
       <Header globalData={globalData} />
 
       <div className="app-content">
-        {/* Pair selector sempre visibile */}
+        {/* PairSelector sempre visibile */}
         <div className="dashboard-full">
           <PairSelector
-            selectedPair={selectedPair}
-            selectedInterval={selectedInterval}
-            onPairChange={handlePairChange}
-            onIntervalChange={handleIntervalChange}
-            ticker={ticker}
+            selectedPair={selectedPair} selectedInterval={selectedInterval}
+            onPairChange={handlePairChange} onIntervalChange={handleIntervalChange} ticker={ticker}
           />
         </div>
+
+        {/* Tab bar */}
+        <nav className="tab-bar">
+          {TABS.map((t) => (
+            <button key={t.id} className={`tab-btn ${activeTab === t.id ? 'active' : ''}`} onClick={() => setActiveTab(t.id)}>
+              {t.label}
+            </button>
+          ))}
+        </nav>
 
         {loading && (
           <div className="app-loading">
@@ -251,122 +239,89 @@ export default function App() {
           </div>
         )}
 
-        {!loading && (
-          <>
-            {lastUpdate && (
-              <p className="last-update">
-                Ultimo aggiornamento: {formatLastUpdate(lastUpdate)} — auto-refresh 30s
-              </p>
-            )}
+        {!loading && lastUpdate && (
+          <p className="last-update">Ultimo aggiornamento: {fmtTime(lastUpdate)} — auto-refresh 30s</p>
+        )}
 
-            {/* Carta verdetto — in cima, sopra tutto */}
+        {/* TAB: VERDETTO */}
+        {!loading && activeTab === 'verdetto' && (
+          <div className="dashboard-grid">
             <div className="dashboard-full">
               <VerdictCard
-                regime={regime}
-                compositeSignal={compositeSignal}
-                backtestResult={backtestResult}
-                rangeStrategy={rangeStrategy}
-                indicators={indicators}
-                candles={candles}
-                capital={capital}
-                leverage={leverage}
-                frequencies={frequencies}
+                regime={regime} compositeSignal={compositeSignal} backtestResult={backtestResult}
+                rangeStrategy={rangeStrategy} indicators={indicators} candles={candles}
+                capital={capital} leverage={leverage} frequencies={frequencies}
               />
             </div>
-
-            <div className="dashboard-grid">
-              {/* Colonna sinistra: segnale principale */}
-              <div>
-                <SignalCard
-                  selectedPair={selectedPair}
-                  ticker={ticker}
-                  compositeSignal={compositeSignal}
-                  regime={regime}
-                  frequencies={frequencies}
-                  fundingData={fundingData}
-                  oiData={oiData}
-                  bookData={bookData}
-                  backtestResult={backtestResult}
-                  capital={capital}
-                  leverage={leverage}
-                  entryPrice={entryPrice}
-                  indicators={indicators}
-                  candles={candles}
-                />
-
-                <RiskPanel
-                  capital={capital}
-                  leverage={leverage}
-                  entryPrice={entryPrice}
-                  onCapitalChange={setCapital}
-                  onLeverageChange={setLeverage}
-                  onEntryPriceChange={setEntryPrice}
-                  ticker={ticker}
-                  indicators={indicators}
-                  candles={candles}
-                />
-              </div>
-
-              {/* Colonna centrale: grafico */}
-              <div className="dashboard-2col">
-                <CandleChart
-                  candles={candles}
-                  indicators={indicators}
-                  liquidationZones={liquidationZones}
-                />
-
-                <IndicatorsPanel
-                  indicators={indicators}
-                  candles={candles}
-                />
-              </div>
-
-              {/* Seconda riga: analisi approfondita */}
-              <div>
-                <FundingPanel
-                  fundingData={fundingData}
-                  oiData={oiData}
-                  oiHistory={oiHistory}
-                />
-
-                <FrequenciesPanel
-                  frequencies={frequencies}
-                  compositeSignal={compositeSignal}
-                />
-              </div>
-
-              <div>
-                <OrderFlowPanel
-                  bookData={bookData}
-                  ticker={ticker}
-                />
-
-                <BacktestPanel
-                  backtestResult={backtestResult}
-                />
-              </div>
-
-              <div>
-                <DemoPanel
-                  demoMode={demoMode}
-                  onDemoModeChange={setDemoMode}
-                  compositeSignal={compositeSignal}
-                  ticker={ticker}
-                  selectedPair={selectedPair}
-                />
-              </div>
-
-              {/* Journal a tutta larghezza */}
-              <div className="dashboard-full">
-                <JournalPanel
-                  compositeSignal={compositeSignal}
-                  regime={regime}
-                  selectedPair={selectedPair}
-                  verdictStrategy={(regime?.regime === 'lateral' && rangeStrategy) ? 'Range' : 'Trend'}
-                />
-              </div>
+            <div className="dashboard-full">
+              <MultiTimeframePanel selectedPair={selectedPair} currentSignal={compositeSignal} currentInterval={selectedInterval} />
             </div>
-          </>
+            <div>
+              <SignalCard
+                selectedPair={selectedPair} ticker={ticker} compositeSignal={compositeSignal}
+                regime={regime} frequencies={frequencies} fundingData={fundingData}
+                oiData={oiData} bookData={bookData} backtestResult={backtestResult}
+                capital={capital} leverage={leverage} entryPrice={entryPrice}
+                indicators={indicators} candles={candles}
+              />
+            </div>
+            <div>
+              <RiskPanel
+                capital={capital} leverage={leverage} entryPrice={entryPrice}
+                onCapitalChange={setCapital} onLeverageChange={setLeverage}
+                onEntryPriceChange={setEntryPrice} ticker={ticker}
+                indicators={indicators} candles={candles}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* TAB: GRAFICO */}
+        {!loading && activeTab === 'grafico' && (
+          <div className="dashboard-grid">
+            <div className="dashboard-full">
+              <CandleChart candles={candles} indicators={indicators} liquidationZones={liquidationZones} />
+            </div>
+            <div className="dashboard-full">
+              <IndicatorsPanel indicators={indicators} candles={candles} />
+            </div>
+          </div>
+        )}
+
+        {/* TAB: REPORT */}
+        {!loading && activeTab === 'report' && (
+          <div className="dashboard-grid">
+            <div className="dashboard-full">
+              <ReportPanel />
+            </div>
+          </div>
+        )}
+
+        {/* TAB: DETTAGLI */}
+        {!loading && activeTab === 'dettagli' && (
+          <div className="dashboard-grid">
+            <div>
+              <FundingPanel fundingData={fundingData} oiData={oiData} oiHistory={oiHistory} />
+              <FrequenciesPanel frequencies={frequencies} compositeSignal={compositeSignal} />
+            </div>
+            <div>
+              <OrderFlowPanel bookData={bookData} ticker={ticker} />
+              <BacktestPanel backtestResult={backtestResult} walkForwardResult={walkForwardResult} />
+              <MonteCarloPanel backtestResult={backtestResult} capital={capital} />
+            </div>
+            <div>
+              <DemoPanel
+                demoMode={demoMode} onDemoModeChange={setDemoMode}
+                compositeSignal={compositeSignal} ticker={ticker} selectedPair={selectedPair}
+              />
+            </div>
+            <div className="dashboard-full">
+              <JournalPanel
+                compositeSignal={compositeSignal} regime={regime}
+                selectedPair={selectedPair} verdictStrategy={verdictStrategy}
+              />
+            </div>
+          </div>
         )}
       </div>
 

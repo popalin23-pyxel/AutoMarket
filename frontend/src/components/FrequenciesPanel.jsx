@@ -1,4 +1,5 @@
 import React from 'react';
+import { fmtPct, sampleWarning as checkSampleWarning } from '../utils/stats.js';
 
 export default function FrequenciesPanel({ frequencies, compositeSignal }) {
   if (!frequencies) {
@@ -56,8 +57,8 @@ export default function FrequenciesPanel({ frequencies, compositeSignal }) {
               return (
                 <div key={row.target} className="freq-table-row">
                   <span className="freq-target font-mono">±{row.target}%</span>
-                  <span className="freq-up font-mono accent-green">{row.upFreq}%</span>
-                  <span className="freq-down font-mono accent-red">{row.downFreq}%</span>
+                  <span className="freq-up font-mono accent-green" title={fmtPct(Math.round(row.upFreq * n / 100), n)}>{row.upFreq}% <span style={{fontSize:10,opacity:0.7}}>±{n>0?(1.96*Math.sqrt(row.upFreq/100*(1-row.upFreq/100)/n)*100).toFixed(1):0}%</span></span>
+                  <span className="freq-down font-mono accent-red" title={fmtPct(Math.round(row.downFreq * n / 100), n)}>{row.downFreq}% <span style={{fontSize:10,opacity:0.7}}>±{n>0?(1.96*Math.sqrt(row.downFreq/100*(1-row.downFreq/100)/n)*100).toFixed(1):0}%</span></span>
                   <span className="freq-diff font-mono" style={{ color: diffColor }}>
                     {diff > 0 ? '+' : ''}{diff.toFixed(1)}%
                   </span>

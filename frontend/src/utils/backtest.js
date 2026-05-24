@@ -173,6 +173,69 @@ function buildSubIndicators(indicators, upToIdx) {
 }
 
 /**
+ * Esegue un backtest walk-forward a 3 fold (train + test scorrevole)
+ * @param {Array} candles
+ * @param {Object} indicators
+ * @param {number} commission
+ * @param {number} slippage
+ * @returns {{ inSample, outOfSample, overfit, noEdgeOOS }}
+ */
+export function runWalkForwardBacktest(candles, indicators, commission = 0.0004, slippage = 0.0002) {
+  if (!candles || candles.length < 120) {
+    return { inSample: null, outOfSample: null, overfit: false, noEdgeOOS: true };
+  }
+
+  const blockSize = Math.floor(candles.length / 4);
+  const oosResults = [];
+  const isResults = [];
+
+  for (let i = 0; i < 3; i++) {
+    const trainEnd = (i + 3) * blockSize;
+    const testStart = trainEnd;
+    const testEnd = Math.min(testStart + blockSize, candles.length);
+
+    const trainCandles = candles.slice(i * blockSize, trainEnd);
+    const testCandles = candles.slice(testStart, testEnd);
+
+    if (trainCandles.length < 60 || testCandles.length < 20) continue;
+
+    // Ricalcola sub-indicatori per le slice
+    const trainIndicators = buildSubIndicators(indicators, trainEnd - 1);
+    const testIndicators = buildSubIndicators(indicators, testEnd - 1);
+
+    // In-sample
+    const isResult = runBacktest(trainCandles, trainIndicators, commission, slippage);
+    isResults.push(isResult);
+
+    // Out-of-sample
+    const oosResult = runBacktest(testCandles, testIndicators, commission, slippage);
+    oosResults.push(oosResult);
+  }
+
+  if (oosResults.length === 0) {
+    return { inSample: null, outOfSample: null, overfit: false, noEdgeOOS: true };
+  }
+
+  const avgIS = {
+    expectancy: isResults.reduce((s, r) => s + r.expectancy, 0) / isResults.length,
+    winRate: isResults.reduce((s, r) => s + r.winRate, 0) / isResults.length,
+    profitFactor: isResults.reduce((s, r) => s + r.profitFactor, 0) / isResults.length,
+  };
+  const avgOOS = {
+    expectancy: oosResults.reduce((s, r) => s + r.expectancy, 0) / oosResults.length,
+    winRate: oosResults.reduce((s, r) => s + r.winRate, 0) / oosResults.length,
+    profitFactor: oosResults.reduce((s, r) => s + r.profitFactor, 0) / oosResults.length,
+  };
+
+  return {
+    inSample: avgIS,
+    outOfSample: avgOOS,
+    overfit: avgOOS.expectancy < avgIS.expectancy * 0.5 && avgIS.expectancy > 0,
+    noEdgeOOS: avgOOS.expectancy <= 0,
+  };
+}
+
+/**
  * Calcola le frequenze storiche basate su segnali simili
  * @param {Array} candles - Candele storiche
  * @param {Object} indicators - Indicatori calcolati
