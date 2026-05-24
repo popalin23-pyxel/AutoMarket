@@ -1,100 +1,75 @@
-/**
- * Servizio API per comunicare con il backend proxy
- */
+const BINANCE_SPOT = 'https://api.binance.com';
+const BINANCE_FUTURES = 'https://fapi.binance.com';
+const COINGECKO = 'https://api.coingecko.com';
 
-const BASE_URL = '/api';
-
-/**
- * Funzione generica per fetch con gestione errori
- */
-async function apiFetch(endpoint, params = {}) {
+async function externalFetch(url, params = {}) {
   try {
     const query = new URLSearchParams(params).toString();
-    const url = query ? `${BASE_URL}${endpoint}?${query}` : `${BASE_URL}${endpoint}`;
-    const response = await fetch(url, {
-      signal: AbortSignal.timeout(15000),
-    });
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({}));
-      console.warn(`API error ${endpoint}:`, err);
-      return null;
-    }
+    const fullUrl = query ? `${url}?${query}` : url;
+    const response = await fetch(fullUrl, { signal: AbortSignal.timeout(15000) });
+    if (!response.ok) return null;
     const data = await response.json();
-    if (data && data.error) {
-      console.warn(`Backend error ${endpoint}:`, data.error);
+    if (data && data.code && data.code < 0) {
+      console.warn('Binance error:', data.msg);
       return null;
     }
     return data;
   } catch (err) {
     if (err.name === 'AbortError' || err.name === 'TimeoutError') {
-      console.warn(`Timeout per ${endpoint}`);
+      console.warn(`Timeout per ${url}`);
     } else {
-      console.warn(`Errore fetch ${endpoint}:`, err.message);
+      console.warn(`Errore fetch ${url}:`, err.message);
     }
     return null;
   }
 }
 
-/**
- * Scarica le candele OHLCV
- * @param {string} symbol - Es. BTCUSDT
- * @param {string} interval - Es. 1h
- * @param {number} limit - Numero candele (max 1000)
- * @returns {Array|null}
- */
 export async function fetchCandles(symbol = 'BTCUSDT', interval = '1h', limit = 500) {
-  return apiFetch('/candles', { symbol, interval, limit });
+  const data = await externalFetch(`${BINANCE_SPOT}/api/v3/klines`, {
+    symbol,
+    interval,
+    limit: Math.min(Number(limit), 1000),
+  });
+  if (!data) return null;
+  return data.map((k) => ({
+    time: Math.floor(k[0] / 1000),
+    open: parseFloat(k[1]),
+    high: parseFloat(k[2]),
+    low: parseFloat(k[3]),
+    close: parseFloat(k[4]),
+    volume: parseFloat(k[5]),
+    closeTime: Math.floor(k[6] / 1000),
+    quoteVolume: parseFloat(k[7]),
+    trades: parseInt(k[8]),
+    takerBuyBaseVolume: parseFloat(k[9]),
+    takerBuyQuoteVolume: parseFloat(k[10]),
+  }));
 }
 
-/**
- * Scarica i dati ticker 24h
- * @param {string} symbol
- * @returns {Object|null}
- */
 export async function fetchTicker(symbol = 'BTCUSDT') {
-  return apiFetch('/ticker', { symbol });
+  return externalFetch(`${BINANCE_SPOT}/api/v3/ticker/24hr`, { symbol });
 }
 
-/**
- * Scarica il book degli ordini
- * @param {string} symbol
- * @returns {Object|null}
- */
 export async function fetchBook(symbol = 'BTCUSDT') {
-  return apiFetch('/book', { symbol });
+  return externalFetch(`${BINANCE_SPOT}/api/v3/depth`, { symbol, limit: 20 });
 }
 
-/**
- * Scarica il tasso di funding
- * @param {string} symbol
- * @returns {Object|null}
- */
 export async function fetchFunding(symbol = 'BTCUSDT') {
-  return apiFetch('/funding', { symbol });
+  return externalFetch(`${BINANCE_FUTURES}/fapi/v1/premiumIndex`, { symbol });
 }
 
-/**
- * Scarica l'open interest corrente
- * @param {string} symbol
- * @returns {Object|null}
- */
 export async function fetchOpenInterest(symbol = 'BTCUSDT') {
-  return apiFetch('/openinterest', { symbol });
+  return externalFetch(`${BINANCE_FUTURES}/fapi/v1/openInterest`, { symbol });
 }
 
-/**
- * Scarica la storia dell'open interest
- * @param {string} symbol
- * @returns {Array|null}
- */
 export async function fetchOIHistory(symbol = 'BTCUSDT') {
-  return apiFetch('/oi-history', { symbol, period: '1h', limit: 10 });
+  return externalFetch(`${BINANCE_FUTURES}/futures/data/openInterestHist`, {
+    symbol,
+    period: '1h',
+    limit: 10,
+  });
 }
 
-/**
- * Scarica i dati globali del mercato crypto (CoinGecko)
- * @returns {Object|null}
- */
 export async function fetchGlobal() {
-  return apiFetch('/global');
+  return externalFetch(`${COINGECKO}/api/v3/global`);
 }

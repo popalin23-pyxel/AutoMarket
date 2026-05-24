@@ -239,7 +239,7 @@ export default function App() {
           <div className="card" style={{ borderColor: 'var(--accent-red)', marginBottom: 16 }}>
             <p style={{ color: 'var(--accent-red)', fontWeight: 600 }}>⚠️ {error}</p>
             <p style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 4 }}>
-              Il backend deve essere avviato su http://localhost:3001
+              Controlla la connessione internet e ricarica la pagina.
             </p>
           </div>
         )}
