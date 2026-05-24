@@ -2,7 +2,7 @@
  * Servizio API per comunicare con il backend proxy
  */
 
-const BASE_URL = 'http://localhost:3001/api';
+const BASE_URL = '/api';
 
 /**
  * Funzione generica per fetch con gestione errori
