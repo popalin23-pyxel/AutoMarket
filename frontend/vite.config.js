@@ -18,9 +18,9 @@ export default defineConfig({
     sourcemap: false,
     rollupOptions: {
       output: {
-        manualChunks: {
-          react: ['react', 'react-dom'],
-          charts: ['lightweight-charts'],
+        manualChunks: (id) => {
+          if (id.includes('react') || id.includes('react-dom')) return 'react';
+          if (id.includes('lightweight-charts')) return 'charts';
         },
       },
     },

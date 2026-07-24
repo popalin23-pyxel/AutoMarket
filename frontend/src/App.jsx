@@ -4,7 +4,8 @@ import './App.css';
 import { calcEMA, calcSMA, calcRSI, calcMACD, calcBollinger, calcATR, calcADX } from './utils/indicators.js';
 import { detectRegime, calcCompositeSignal, calcLiquidationZones, calcRangeStrategy } from './utils/signals.js';
 import { runBacktest, calcHistoricalFrequencies, runWalkForwardBacktest } from './utils/backtest.js';
-import { logVerdict, verifyPendingVerdicts } from './utils/verdictLog.js';
+import { logVerdict, verifyPendingVerdicts, runRetroactiveAnalysis } from './utils/verdictLog.js';
+import { calcPrisma } from './utils/prisma.js';
 import {
   fetchCandles, fetchTicker, fetchBook, fetchFunding,
   fetchOpenInterest, fetchOIHistory, fetchGlobal,
@@ -27,6 +28,8 @@ import VerdictCard, { calcVerdict } from './components/VerdictCard.jsx';
 import MonteCarloPanel from './components/MonteCarloPanel.jsx';
 import MultiTimeframePanel from './components/MultiTimeframePanel.jsx';
 import ReportPanel from './components/ReportPanel.jsx';
+import PrismaPanel from './components/PrismaPanel.jsx';
+import OraclePanel from './components/OraclePanel.jsx';
 
 const REFRESH_INTERVAL = 30000;
 const INTERVAL_HORIZON_MS = { '5m': 900000, '15m': 2700000, '1h': 3600000, '4h': 14400000, '1d': 86400000 };
@@ -55,6 +58,7 @@ export default function App() {
   const [walkForwardResult, setWalkForwardResult] = useState(null);
   const [frequencies, setFrequencies] = useState(null);
   const [rangeStrategy, setRangeStrategy] = useState(null);
+  const [prismaData, setPrismaData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState(null);
   const [error, setError] = useState(null);
@@ -164,6 +168,21 @@ export default function App() {
               setWalkForwardResult(wf);
             } catch (e) { console.warn('Walk-forward error:', e.message); }
           }, 400);
+
+          // PRISMA score (Hurst + ApEn + Volume Gravity)
+          setTimeout(() => {
+            try {
+              const closes = newCandles.map(c => c.close);
+              const newPrisma = calcPrisma(closes, newCandles);
+              setPrismaData(newPrisma);
+            } catch (e) { console.warn('PRISMA error:', e.message); }
+          }, 600);
+
+          // Analisi retroattiva ORACLE (cached in localStorage)
+          setTimeout(() => {
+            runRetroactiveAnalysis(newCandles, selectedPair, selectedInterval)
+              .catch(e => console.warn('ORACLE retro error:', e.message));
+          }, 800);
         }
       } else if (!newCandles) {
         setError('Impossibile caricare le candele. Verificare la connessione.');
@@ -182,7 +201,7 @@ export default function App() {
     setLoading(true);
     setCandles(null); setIndicators(null); setCompositeSignal(null);
     setRegime(null); setBacktestResult(null); setFrequencies(null);
-    setRangeStrategy(null); setWalkForwardResult(null);
+    setRangeStrategy(null); setWalkForwardResult(null); setPrismaData(null);
     fetchAllData();
     intervalRef.current = setInterval(fetchAllData, REFRESH_INTERVAL);
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
@@ -247,10 +266,14 @@ export default function App() {
         {!loading && activeTab === 'verdetto' && (
           <div className="dashboard-grid">
             <div className="dashboard-full">
+              <PrismaPanel prismaData={prismaData} />
+            </div>
+            <div className="dashboard-full">
               <VerdictCard
                 regime={regime} compositeSignal={compositeSignal} backtestResult={backtestResult}
                 rangeStrategy={rangeStrategy} indicators={indicators} candles={candles}
                 capital={capital} leverage={leverage} frequencies={frequencies}
+                prismaData={prismaData}
               />
             </div>
             <div className="dashboard-full">
@@ -291,6 +314,9 @@ export default function App() {
         {/* TAB: REPORT */}
         {!loading && activeTab === 'report' && (
           <div className="dashboard-grid">
+            <div className="dashboard-full">
+              <OraclePanel selectedPair={selectedPair} selectedInterval={selectedInterval} />
+            </div>
             <div className="dashboard-full">
               <ReportPanel />
             </div>
