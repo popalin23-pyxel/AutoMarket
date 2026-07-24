@@ -5,6 +5,45 @@ const fmtPrice = (n) =>
     ? n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 4 })
     : '—';
 
+// Calcola stop loss e take profit in base allo stato PRISMA
+// Range → usa Bollinger (stop fuori dalla banda, target alla mediana)
+// Trend → R:R 1:2  (1.5×ATR stop, 3×ATR target)
+// Impulso → R:R 1:2.5 (1.5×ATR stop, 3.75×ATR target)
+function calcLevels(signal, prismaState, price, atr, indicators) {
+  if (!price || !atr || signal === 'NEUTRAL') return {};
+
+  const bbL = indicators?.bollinger?.lower?.at(-1);
+  const bbU = indicators?.bollinger?.upper?.at(-1);
+  const bbM = indicators?.bollinger?.middle?.at(-1);
+
+  if (prismaState === 'range' && bbL && bbU && bbM) {
+    const stopPad = atr * 0.3; // piccolo margine oltre la banda
+    if (signal === 'LONG') {
+      return {
+        stopLoss:   bbL - stopPad,
+        takeProfit: bbM,
+        rrLabel: 'R:R variabile (range)',
+      };
+    } else {
+      return {
+        stopLoss:   bbU + stopPad,
+        takeProfit: bbM,
+        rrLabel: 'R:R variabile (range)',
+      };
+    }
+  }
+
+  const stopDist = 1.5 * atr;
+  const tpMult   = prismaState === 'impulse' ? 3.75 : 3;
+  const rr       = (tpMult / 1.5).toFixed(1);
+
+  return {
+    stopLoss:   signal === 'LONG' ? price - stopDist : price + stopDist,
+    takeProfit: signal === 'LONG' ? price + tpMult * atr : price - tpMult * atr,
+    rrLabel: `R:R 1 : ${rr}`,
+  };
+}
+
 export default function VerdictCard({ signal, indicators, prismaData, candles }) {
   if (!signal || !indicators || !prismaData) return (
     <div className="card">
@@ -14,16 +53,13 @@ export default function VerdictCard({ signal, indicators, prismaData, candles })
   );
 
   const price = candles?.[candles.length - 1]?.close;
-  const atr = indicators.atr?.[indicators.atr.length - 1];
+  const atr   = indicators.atr?.at(-1);
 
-  // Calcola livelli operativi
-  let stopLoss, takeProfit;
-  if (price && atr && signal.signal !== 'NEUTRAL') {
-    stopLoss   = signal.signal === 'LONG' ? price - 2 * atr : price + 2 * atr;
-    takeProfit = signal.signal === 'LONG' ? price + 3 * atr : price - 3 * atr;
-  }
+  const { stopLoss, takeProfit, rrLabel } = calcLevels(
+    signal.signal, prismaData.state, price, atr, indicators
+  );
 
-  // Verdetto finale con logica PRISMA
+  // Verdetto finale con filtro PRISMA
   let verdict, verdictColor, verdictIcon, desc;
   if (prismaData.state === 'noise') {
     verdict = 'NON FARE TRADING';
@@ -40,33 +76,33 @@ export default function VerdictCard({ signal, indicators, prismaData, candles })
     verdictColor = '#00ff88';
     verdictIcon = '🟢';
     desc = prismaData.state === 'range'
-      ? 'Compra ai supporti — mercato laterale, punta alla mediana'
+      ? 'Compra al supporto — target la banda mediana di Bollinger'
       : prismaData.state === 'impulse'
-      ? 'Impulso rialzista forte — condizioni ottimali per entrare'
-      : 'Trend rialzista confermato — segui il trend';
+      ? 'Impulso rialzista forte — condizioni ottimali (R:R 1:2.5)'
+      : 'Trend rialzista confermato — segui il trend (R:R 1:2)';
   } else {
     verdict = 'VAI SHORT';
     verdictColor = '#ff4466';
     verdictIcon = '🔴';
     desc = prismaData.state === 'range'
-      ? 'Vendi alle resistenze — mercato laterale, punta alla mediana'
+      ? 'Vendi alla resistenza — target la banda mediana di Bollinger'
       : prismaData.state === 'impulse'
-      ? 'Impulso ribassista forte — condizioni ottimali per entrare'
-      : 'Trend ribassista confermato — segui il trend';
+      ? 'Impulso ribassista forte — condizioni ottimali (R:R 1:2.5)'
+      : 'Trend ribassista confermato — segui il trend (R:R 1:2)';
   }
 
   return (
     <div className="card verdict-card">
       <h3 className="section-title">Verdetto ARIA</h3>
 
-      {/* Verdict principale — grande e chiaro */}
+      {/* Verdetto principale */}
       <div className="verdict-main" style={{ borderColor: verdictColor + '40', background: verdictColor + '0c' }}>
         <div className="verdict-icon">{verdictIcon}</div>
         <div className="verdict-text" style={{ color: verdictColor }}>{verdict}</div>
         <div className="verdict-desc">{desc}</div>
       </div>
 
-      {/* Livelli operativi */}
+      {/* Livelli operativi adattivi */}
       {stopLoss && takeProfit && (
         <div className="verdict-levels">
           <div className="vl-item">
@@ -82,13 +118,13 @@ export default function VerdictCard({ signal, indicators, prismaData, candles })
             <span className="vl-value font-mono green">${fmtPrice(takeProfit)}</span>
           </div>
           <div className="vl-item">
-            <span className="vl-label">R:R</span>
-            <span className="vl-value font-mono">1 : 1.5</span>
+            <span className="vl-label">Rischio/Rendimento</span>
+            <span className="vl-value font-mono">{rrLabel}</span>
           </div>
         </div>
       )}
 
-      {/* Forza segnale */}
+      {/* Barra forza segnale */}
       <div className="verdict-strength">
         <span className="vs-label">Forza segnale</span>
         <div className="vs-bar-track">
