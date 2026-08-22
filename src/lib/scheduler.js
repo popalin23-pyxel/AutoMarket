@@ -357,6 +357,110 @@ export function coverageHoursDeficits(data, shifts, rules) {
   return out;
 }
 
+function cloneSchedule(schedule) {
+  return Object.fromEntries(Object.entries(schedule).map(([id, s]) => [id, {
+    ...s, days: s.days.slice(), floors: s.floors ? s.floors.slice() : new Array(s.days.length).fill(''),
+  }]));
+}
+
+// Riempi i buchi di copertura assegnando persone libere ed eleggibili.
+export function fillGaps(data, ctx) {
+  const { shifts, roles, rules, staff } = ctx;
+  const isWork = (c) => !!shifts[c]?.working;
+  const isNight = (c) => !!shifts[c]?.is_night;
+  const staffById = new Map(staff.map((s) => [String(s.id), s]));
+  const canFloor = (s, fid) => !s?.floors?.length || !fid || s.floors.includes(fid);
+  const out = { ...data, schedule: cloneSchedule(data.schedule) };
+
+  const findFree = (idx, role, floor, code) => {
+    for (const [id, row] of Object.entries(out.schedule)) {
+      if (row.role !== role) continue;
+      if (isWork(row.days[idx])) continue;             // deve essere libero
+      if (!(roles[role] ?? []).includes(code)) continue;
+      if (!canFloor(staffById.get(id), floor)) continue;
+      if (isNight(code) && idx > 0 && row.days[idx - 1] === 'N') continue;
+      return id;
+    }
+    return null;
+  };
+  const assign = (id, idx, code, floor) => {
+    const row = out.schedule[id];
+    row.days[idx] = code;
+    row.floors[idx] = isWork(code) ? (floor || '') : '';
+  };
+  const usesHours = out.mode === 'hours';
+
+  for (let pass = 0; pass < 4; pass++) {
+    let filled = 0;
+    const defs = usesHours ? coverageHoursDeficits(out, shifts, rules) : coverageDeficits(out, shifts, rules);
+    if (!defs.length) break;
+    for (const d of defs) {
+      const idx = d.day - 1;
+      if (d.code) {
+        const id = findFree(idx, d.role, d.floor, d.code);
+        if (id) { assign(id, idx, d.code, d.floor); filled++; }
+      } else {
+        let missing = d.neededHours - d.gotHours;
+        const seq = (rules.sequences?.[d.role]?.length ? rules.sequences[d.role] : (roles[d.role] ?? [])).filter(isWork);
+        let i = 0, guard = 0;
+        while (missing > 0 && guard < 30 && seq.length) {
+          const code = seq[i % seq.length]; i++; guard++;
+          const id = findFree(idx, d.role, d.floor, code);
+          if (!id) continue;
+          assign(id, idx, code, d.floor);
+          missing -= Number(shifts[code]?.hours || 0);
+          filled++;
+        }
+      }
+    }
+    if (!filled) break;
+  }
+  return out;
+}
+
+// Ottimizzatore: riduce lo squilibrio di ORE spostando turni diurni da chi
+// ne ha di più a colleghi liberi ed eleggibili (la copertura resta invariata).
+export function balance(data, ctx) {
+  const { shifts, roles, staff } = ctx;
+  const isWork = (c) => !!shifts[c]?.working;
+  const isNight = (c) => !!shifts[c]?.is_night;
+  const hoursOf = (c) => Number(shifts[c]?.hours || 0);
+  const staffById = new Map(staff.map((s) => [String(s.id), s]));
+  const canFloor = (s, fid) => !s?.floors?.length || !fid || s.floors.includes(fid);
+  const out = { ...data, schedule: cloneSchedule(data.schedule) };
+  const ids = Object.keys(out.schedule);
+  const H = Object.fromEntries(ids.map((id) => [id, out.schedule[id].days.reduce((a, c) => a + hoursOf(c), 0)]));
+
+  for (let pass = 0; pass < 400; pass++) {
+    let moved = false;
+    for (let idx = 0; idx < out.days && !moved; idx++) {
+      for (const aId of ids) {
+        const A = out.schedule[aId];
+        const code = A.days[idx];
+        if (!isWork(code) || isNight(code)) continue;   // muovo solo turni diurni
+        const fl = A.floors?.[idx] || '';
+        const h = hoursOf(code);
+        for (const bId of ids) {
+          if (bId === aId) continue;
+          const B = out.schedule[bId];
+          if (B.role !== A.role) continue;
+          if (isWork(B.days[idx])) continue;             // B libero quel giorno
+          if (!(roles[B.role] ?? []).includes(code)) continue;
+          if (!canFloor(staffById.get(bId), fl)) continue;
+          if (H[aId] > H[bId] + h) {                     // migliora l'equità
+            A.days[idx] = 'R'; A.floors[idx] = '';
+            B.days[idx] = code; B.floors[idx] = fl;
+            H[aId] -= h; H[bId] += h; moved = true; break;
+          }
+        }
+        if (moved) break;
+      }
+    }
+    if (!moved) break;
+  }
+  return out;
+}
+
 // Statistiche di un piano individuale
 export function staffStats(dayCodes, shifts) {
   const hoursFor = (c) => Number(shifts[c]?.hours || 0);

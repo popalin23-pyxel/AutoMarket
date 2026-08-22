@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import {
   generateSchedule, monthDays, weekdayOf, staffStats,
   coverageDeficits, coverageHoursDeficits, holidaysOfYear, isHoliday,
+  fillGaps, balance,
 } from '../lib/scheduler.js';
 import { exportExcel } from '../lib/excel.js';
 import { saveSchedule, removeSchedule, setGenMode } from '../lib/store.js';
@@ -88,9 +89,17 @@ export default function GenerateTab({ state, setState }) {
   }, [state.staff]);
 
   const [editing, setEditing] = useState(null); // { id, idx }
+  const [undo, setUndo] = useState([]);
   const openEditor = (id, idx) => setEditing({ id, idx });
+  const snap = () => setUndo((u) => (data ? [data, ...u].slice(0, 30) : u));
+  const doUndo = () => setUndo((u) => { if (u.length) setData(u[0]); return u.slice(1); });
+
+  const ctx = () => ({ shifts: state.shifts, roles: state.roles, rules: state.rules, staff: state.staff, floors: state.floors });
+  const doFill = () => { if (!data) return; snap(); setData(fillGaps(data, ctx())); };
+  const doBalance = () => { if (!data) return; snap(); setData(balance(data, ctx())); };
 
   const setCell = (id, idx, code) => {
+    snap();
     setData((prev) => {
       if (!prev) return prev;
       const s = prev.schedule[id];
@@ -102,6 +111,7 @@ export default function GenerateTab({ state, setState }) {
   };
 
   const setCellFloor = (id, idx, floor) => {
+    snap();
     setData((prev) => {
       if (!prev) return prev;
       const s = prev.schedule[id];
@@ -187,6 +197,9 @@ export default function GenerateTab({ state, setState }) {
 
         {data && (
           <div className="form-row no-print" style={{ marginTop: 16, marginBottom: 0, alignItems: 'center' }}>
+            <button className="btn btn-primary" onClick={doFill}>{t('gen.fill')}</button>
+            <button className="btn" onClick={doBalance}>{t('gen.balance')}</button>
+            <button className="btn" onClick={doUndo} disabled={undo.length === 0}>{t('gen.undo')}</button>
             <button className="btn" onClick={doPrint}>{t('gen.print')}</button>
             <span style={{ color: 'var(--text-mut)', fontSize: 12 }}>{t('gen.calPerson')}</span>
             <div className="field" style={{ minWidth: 160 }}>
@@ -348,6 +361,7 @@ export default function GenerateTab({ state, setState }) {
         const working = state.shifts[code]?.working;
         const subs = working ? freeColleagues(editing.id, idx, flr || firstFloorFor(editing.id)) : [];
         const transfer = (toId) => {
+          snap();
           setData((prev) => {
             const from = prev.schedule[editing.id];
             const c = from.days[idx];
