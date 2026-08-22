@@ -9,13 +9,23 @@ export function exportExcel(data, shifts) {
   const { year, month, days, schedule } = data;
   const wb = XLSX.utils.book_new();
 
+  // Etichette piano (numero) per i turni lavorativi, quando ci sono più piani
+  const floors = data.floors ?? [];
+  const multiFloor = floors.length > 1;
+  const floorLabel = {};
+  floors.forEach((f, i) => { floorLabel[f.id] = (String(f.name).match(/\d+/) || [])[0] || String(i + 1); });
+  const cellText = (code, floorId) =>
+    (multiFloor && shifts[code]?.working && floorId && floorLabel[floorId])
+      ? `${code}${floorLabel[floorId]}` : code;
+
   // ── Foglio principale ──────────────────────────────────────────────
   const header = ['ID', 'Nome', 'Ruolo', ...range(1, days).map(String), 'Totale ore'];
   const rows = [header];
 
   for (const [id, s] of Object.entries(schedule)) {
     const stats = staffStats(s.days, shifts);
-    rows.push([id, s.name, s.role, ...s.days, stats.hours]);
+    const dayCells = s.days.map((code, i) => cellText(code, s.floors?.[i]));
+    rows.push([id, s.name, s.role, ...dayCells, stats.hours]);
   }
 
   const ws = XLSX.utils.aoa_to_sheet(rows);

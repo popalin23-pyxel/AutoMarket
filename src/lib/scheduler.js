@@ -118,7 +118,9 @@ export function generateSchedule(year, month, cfg) {
         ? rules.sequences[p.ref.role] : (roles[p.ref.role] ?? [restCode]);
       const seq = seqAll.length ? seqAll : [restCode];
       const li = roleIdx[p.ref.role] ?? 0; roleIdx[p.ref.role] = li + 1;
-      const offset = li % seq.length;
+      // offset: se la persona ha un turno di inizio scelto, parte da lì; altrimenti sfalsa in automatico
+      const startShift = p.ref.startShift;
+      const offset = (startShift && seq.includes(startShift)) ? seq.indexOf(startShift) : (li % seq.length);
       const eligFloors = p.ref.floors?.length ? p.ref.floors : floors.map((f) => f.id);
       const floorForP = eligFloors[0] === '_' ? '' : eligFloors[0];
       for (let d = 1; d <= days; d++) {

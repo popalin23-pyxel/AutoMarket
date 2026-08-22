@@ -153,6 +153,7 @@ export function addStaff(state, name, role, opts = {}) {
       contractHours: Number(opts.contractHours) || 0, // 0 = nessun target
       preferredShift: opts.preferredShift || '',       // '', 'M', 'P', 'N'
       floors: Array.isArray(opts.floors) ? opts.floors : [], // [] = tutti i piani
+      startShift: opts.startShift || '',               // inizio rotazione ('' = auto)
     }],
     seq: { ...state.seq, staff: id + 1 },
   };

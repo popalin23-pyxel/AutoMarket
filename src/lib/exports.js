@@ -29,6 +29,11 @@ function download(filename, text, mime = 'text/plain') {
 }
 
 // Genera un file .ics con i turni lavorativi di UNA persona.
+function floorNameOf(data, floorId) {
+  if (!floorId) return '';
+  return (data.floors ?? []).find((f) => f.id === floorId)?.name || '';
+}
+
 export function exportPersonICS(data, shifts, staffId) {
   const s = data.schedule[String(staffId)];
   if (!s) return;
@@ -44,9 +49,11 @@ export function exportPersonICS(data, shifts, staffId) {
     const meta = shifts[code];
     if (!meta?.working) return;
     const day = i + 1;
+    const fName = floorNameOf(data, s.floors?.[i]);
     const uid = `turnify-${staffId}-${year}${pad(month)}${pad(day)}-${code}@turnify`;
-    const summary = `${code} · ${meta.description || code} (${s.name})`;
+    const summary = `${code} · ${meta.description || code}${fName ? ` · ${fName}` : ''} (${s.name})`;
     lines.push('BEGIN:VEVENT', `UID:${uid}`, `DTSTAMP:${dtstamp}`);
+    if (fName) lines.push(`LOCATION:${fName}`);
     const times = SHIFT_TIMES[code];
     if (times) {
       lines.push(
@@ -80,7 +87,8 @@ export function personSummaryText(data, shifts, staffId) {
     const day = i + 1;
     const wd = WEEKDAYS_IT[weekdayOf(year, month, day)];
     const desc = shifts[code]?.description || code;
-    return `${pad(day)} ${wd}: ${code} (${desc})`;
+    const fName = floorNameOf(data, s.floors?.[i]);
+    return `${pad(day)} ${wd}: ${code} (${desc})${fName ? ` — ${fName}` : ''}`;
   });
   return `${header}\n${rows.join('\n')}`;
 }

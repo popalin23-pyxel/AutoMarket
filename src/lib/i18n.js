@@ -27,6 +27,7 @@ const DICT = {
     'staff.hoursMonth': 'Ore/mese', 'staff.hoursPh': '0 = auto',
     'staff.preferred': 'Turno preferito', 'staff.preferredShort': 'Preferito',
     'staff.floors': 'Piani', 'staff.floorsAll': 'Tutti i piani',
+    'staff.startShift': 'Inizio rotazione', 'staff.auto': 'Auto',
     'staff.empty': 'Nessun membro del personale. Aggiungine uno sopra.',
     'staff.pref.none': '—', 'staff.pref.M': 'Mattina', 'staff.pref.P': 'Pomeriggio', 'staff.pref.N': 'Notte',
 
@@ -113,6 +114,7 @@ const DICT = {
     'staff.hoursMonth': 'Hours/month', 'staff.hoursPh': '0 = auto',
     'staff.preferred': 'Preferred shift', 'staff.preferredShort': 'Preferred',
     'staff.floors': 'Floors', 'staff.floorsAll': 'All floors',
+    'staff.startShift': 'Rotation start', 'staff.auto': 'Auto',
     'staff.empty': 'No staff yet. Add one above.',
     'staff.pref.none': '—', 'staff.pref.M': 'Morning', 'staff.pref.P': 'Afternoon', 'staff.pref.N': 'Night',
 

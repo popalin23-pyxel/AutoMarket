@@ -10,7 +10,9 @@ export default function StaffTab({ state, setState }) {
   const [role, setRole] = useState(roleKeys[0] ?? '');
   const [hours, setHours] = useState('');
   const [pref, setPref] = useState('');
+  const [start, setStart] = useState('');
   const [floorSel, setFloorSel] = useState([]); // [] = tutti
+  const seqFor = (r) => (state.rules.sequences?.[r] ?? state.roles[r] ?? []);
 
   const PREF = [
     { v: '', l: t('staff.pref.none') },
@@ -22,8 +24,8 @@ export default function StaffTab({ state, setState }) {
   const add = () => {
     const n = name.trim();
     if (!n || !role) return;
-    setState((s) => addStaff(s, n, role, { contractHours: hours, preferredShift: pref, floors: floorSel }));
-    setName(''); setHours(''); setPref(''); setFloorSel([]);
+    setState((s) => addStaff(s, n, role, { contractHours: hours, preferredShift: pref, floors: floorSel, startShift: start }));
+    setName(''); setHours(''); setPref(''); setStart(''); setFloorSel([]);
   };
 
   const del = (id) => setState((s) => removeStaff(s, id));
@@ -78,6 +80,13 @@ export default function StaffTab({ state, setState }) {
             {PREF.map((o) => <option key={o.v} value={o.v}>{o.l}</option>)}
           </select>
         </div>
+        <div className="field">
+          <label className="field-label">{t('staff.startShift')}</label>
+          <select value={start} onChange={(e) => setStart(e.target.value)}>
+            <option value="">{t('staff.auto')}</option>
+            {seqFor(role).map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
+        </div>
         <button className="btn btn-primary" onClick={add}>{t('c.add')}</button>
       </div>
 
@@ -94,13 +103,14 @@ export default function StaffTab({ state, setState }) {
             <tr>
               <th style={{ width: 44 }}>ID</th><th>{t('c.name')}</th><th>{t('c.role')}</th>
               <th style={{ width: 100 }}>{t('staff.hoursMonth')}</th><th style={{ width: 130 }}>{t('staff.preferredShort')}</th>
+              <th style={{ width: 100 }}>{t('staff.startShift')}</th>
               {floors.length > 0 && <th style={{ minWidth: 150 }}>{t('staff.floors')}</th>}
               <th style={{ width: 90 }}></th>
             </tr>
           </thead>
           <tbody>
             {state.staff.length === 0 ? (
-              <tr className="empty-row"><td colSpan={floors.length > 0 ? 7 : 6}>{t('staff.empty')}</td></tr>
+              <tr className="empty-row"><td colSpan={floors.length > 0 ? 8 : 7}>{t('staff.empty')}</td></tr>
             ) : state.staff.map((s) => (
               <tr key={s.id}>
                 <td className="mono">{s.id}</td>
@@ -114,6 +124,12 @@ export default function StaffTab({ state, setState }) {
                 <td>
                   <select value={s.preferredShift || ''} onChange={(e) => patch(s.id, { preferredShift: e.target.value })}>
                     {PREF.map((o) => <option key={o.v} value={o.v}>{o.l}</option>)}
+                  </select>
+                </td>
+                <td>
+                  <select value={s.startShift || ''} onChange={(e) => patch(s.id, { startShift: e.target.value })}>
+                    <option value="">{t('staff.auto')}</option>
+                    {seqFor(s.role).map((c) => <option key={c} value={c}>{c}</option>)}
                   </select>
                 </td>
                 {floors.length > 0 && (
