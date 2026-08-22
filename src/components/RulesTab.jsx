@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useT } from '../lib/i18n.js';
-import { addFloor, renameFloor, removeFloor, setCoverage } from '../lib/store.js';
+import { addFloor, renameFloor, removeFloor, setCoverage, setCoverageHours, setSequence } from '../lib/store.js';
 
 export default function RulesTab({ state, setState }) {
   const t = useT();
@@ -15,6 +15,10 @@ export default function RulesTab({ state, setState }) {
 
   const covVal = (fid, role, code, kind) =>
     state.rules.coverage?.[fid]?.[role]?.[code]?.[kind] ?? 0;
+  const hoursVal = (fid, role, kind) =>
+    state.rules.coverageHours?.[fid]?.[role]?.[kind] ?? 0;
+  const seqStr = (role) => (state.rules.sequences?.[role] ?? []).join(' ');
+  const setSeq = (role, str) => setState((s) => setSequence(s, role, str.split(/[\s,]+/).filter(Boolean)));
 
   const toggleRoleShift = (role, code) => {
     setState((s) => {
@@ -133,6 +137,55 @@ export default function RulesTab({ state, setState }) {
                 </tbody>
               </table>
             </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Copertura in ore per ruolo */}
+      <div className="panel">
+        <h2 className="panel-title">{t('rules.coverageHours')}</h2>
+        <p className="panel-desc">{t('rules.coverageHoursDesc')}</p>
+        {floors.map((f) => (
+          <div key={f.id} style={{ marginBottom: 18 }}>
+            <div className="cov-floor-title">{f.name}</div>
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>{t('c.role')}</th>
+                    <th style={{ textAlign: 'center' }}>{t('rules.hWeekday')}</th>
+                    <th style={{ textAlign: 'center' }}>{t('rules.hWeekend')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {roleKeys.map((role) => (
+                    <tr key={role}>
+                      <td><span className="badge badge-role">{role}</span></td>
+                      {['weekday', 'weekend'].map((kind) => (
+                        <td key={kind} style={{ textAlign: 'center' }}>
+                          <input type="number" min={0} max={999} step={1} value={hoursVal(f.id, role, kind)}
+                            onChange={(e) => setState((s) => setCoverageHours(s, f.id, role, kind, e.target.value))}
+                            style={{ minWidth: 0, width: 70 }} /> h
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Sequenze turni per ruolo */}
+      <div className="panel">
+        <h2 className="panel-title">{t('rules.sequences')}</h2>
+        <p className="panel-desc">{t('rules.sequencesDesc')}</p>
+        {roleKeys.map((role) => (
+          <div className="form-row" key={role} style={{ alignItems: 'center', marginBottom: 10 }}>
+            <span className="badge badge-role" style={{ minWidth: 90 }}>{role}</span>
+            <input type="text" value={seqStr(role)} placeholder="P M N S R"
+              onChange={(e) => setSeq(role, e.target.value)} style={{ flex: 1, minWidth: 200 }} />
           </div>
         ))}
       </div>

@@ -2,7 +2,8 @@
 // Un solo oggetto stato serializzato, con API semplici e id incrementali.
 
 import {
-  DEFAULT_SHIFTS, DEFAULT_ROLES, DEFAULT_RULES, DEFAULT_FLOORS, buildCoverage, defaultFloorCoverage,
+  DEFAULT_SHIFTS, DEFAULT_ROLES, DEFAULT_RULES, DEFAULT_FLOORS,
+  buildCoverage, defaultFloorCoverage, buildCoverageHours, defaultFloorHours, defaultSequences,
 } from './defaults.js';
 
 const KEY = 'turnify_state_v1';
@@ -15,7 +16,12 @@ function freshState() {
     shifts: structuredClone(DEFAULT_SHIFTS),
     roles: structuredClone(DEFAULT_ROLES),
     floors,              // [{ id, name }]
-    rules: { ...structuredClone(DEFAULT_RULES), coverage: buildCoverage(floors, DEFAULT_ROLES, DEFAULT_SHIFTS) },
+    rules: {
+      ...structuredClone(DEFAULT_RULES),
+      coverage: buildCoverage(floors, DEFAULT_ROLES, DEFAULT_SHIFTS),
+      coverageHours: buildCoverageHours(floors, DEFAULT_ROLES),
+      sequences: defaultSequences(DEFAULT_ROLES),
+    },
     history: [],         // [{ id, name, year, month, savedAt, data }]
     lang: 'it',
     seq: { staff: 1, unav: 1 },
@@ -40,6 +46,19 @@ function sanitizeState(parsed) {
     && floors.some((f) => parsedCov[f.id] && typeof parsedCov[f.id] === 'object');
   const coverage = isNewCoverage ? parsedCov : buildCoverage(floors, roles, shifts);
 
+  const parsedHours = parsed.rules?.coverageHours;
+  const hasHours = parsedHours && typeof parsedHours === 'object'
+    && floors.some((f) => parsedHours[f.id] && typeof parsedHours[f.id] === 'object');
+  const coverageHours = hasHours ? parsedHours : buildCoverageHours(floors, roles);
+
+  const sequences = (parsed.rules?.sequences && typeof parsed.rules.sequences === 'object'
+    && Object.keys(parsed.rules.sequences).length)
+    ? parsed.rules.sequences
+    : defaultSequences(roles);
+
+  const genMode = ['count', 'hours', 'rotation'].includes(parsed.rules?.genMode)
+    ? parsed.rules.genMode : 'count';
+
   return {
     ...freshState(),
     ...parsed,
@@ -48,7 +67,7 @@ function sanitizeState(parsed) {
     shifts,
     roles,
     floors,
-    rules: { ...DEFAULT_RULES, ...(parsed.rules ?? {}), coverage },
+    rules: { ...DEFAULT_RULES, ...(parsed.rules ?? {}), coverage, coverageHours, sequences, genMode },
     history: Array.isArray(parsed.history) ? parsed.history : [],
     lang: parsed.lang === 'en' ? 'en' : 'it',
     seq: parsed.seq ?? { staff: 1, unav: 1 },
@@ -151,6 +170,7 @@ export function addFloor(state, name) {
     rules: {
       ...state.rules,
       coverage: { ...state.rules.coverage, [id]: defaultFloorCoverage(roles, shifts) },
+      coverageHours: { ...state.rules.coverageHours, [id]: defaultFloorHours(roles) },
     },
   };
 }
@@ -161,16 +181,45 @@ export function renameFloor(state, id, name) {
 
 export function removeFloor(state, id) {
   const coverage = { ...state.rules.coverage };
+  const coverageHours = { ...state.rules.coverageHours };
   delete coverage[id];
+  delete coverageHours[id];
   return {
     ...state,
     floors: state.floors.filter((f) => f.id !== id),
-    rules: { ...state.rules, coverage },
+    rules: { ...state.rules, coverage, coverageHours },
     // rimuove il piano dalle assegnazioni del personale
     staff: state.staff.map((s) => (
       Array.isArray(s.floors) ? { ...s, floors: s.floors.filter((x) => x !== id) } : s
     )),
   };
+}
+
+// Imposta la copertura in ORE/giorno per piano → ruolo → { feriale|weekend }
+export function setCoverageHours(state, floorId, role, kind, value) {
+  const cov = state.rules.coverageHours ?? {};
+  const floorCov = cov[floorId] ?? {};
+  const cell = floorCov[role] ?? { weekday: 0, weekend: 0 };
+  return {
+    ...state,
+    rules: {
+      ...state.rules,
+      coverageHours: {
+        ...cov,
+        [floorId]: { ...floorCov, [role]: { ...cell, [kind]: Math.max(0, Number(value) || 0) } },
+      },
+    },
+  };
+}
+
+// Imposta la sequenza ciclica di turni per un ruolo (array di codici)
+export function setSequence(state, role, codes) {
+  return { ...state, rules: { ...state.rules, sequences: { ...state.rules.sequences, [role]: codes } } };
+}
+
+export function setGenMode(state, mode) {
+  const m = ['count', 'hours', 'rotation'].includes(mode) ? mode : 'count';
+  return { ...state, rules: { ...state.rules, genMode: m } };
 }
 
 // Imposta la copertura per piano → ruolo → turno → { feriale|weekend }

@@ -21,9 +21,29 @@ export const DEFAULT_RULES = {
   max_nights: 6,       // max notti al mese per persona
   max_work_streak: 6,  // max giorni lavorativi consecutivi
   prefer_alt_mp: true, // (legacy) alterna Mattina/Pomeriggio
+  genMode: 'count',    // 'count' (persone) | 'hours' (ore) | 'rotation' (sequenza ciclica)
   // Copertura per piano → ruolo → turno → { feriale, weekend }. Vedi buildCoverage().
   coverage: {},
+  // Copertura in ORE/giorno per piano → ruolo → { feriale, weekend }. Vedi buildCoverageHours().
+  coverageHours: {},
+  // Sequenza ciclica di turni per ruolo, es. { OSS: ['P','M','N','S','R'] }
+  sequences: {},
 };
+
+// Ore di copertura di default per un piano: 0 per ogni ruolo (l'utente imposta).
+export function defaultFloorHours(roles) {
+  const cov = {};
+  for (const role of Object.keys(roles)) cov[role] = { weekday: 0, weekend: 0 };
+  return cov;
+}
+export function buildCoverageHours(floors, roles) {
+  return Object.fromEntries(floors.map((f) => [f.id, defaultFloorHours(roles)]));
+}
+
+// Sequenza di default per ruolo = elenco turni ammessi al ruolo (già ordinato).
+export function defaultSequences(roles) {
+  return Object.fromEntries(Object.entries(roles).map(([role, codes]) => [role, [...codes]]));
+}
 
 // Copertura di default per un singolo piano: 1 persona per ruolo su ogni turno
 // ammesso a quel ruolo (feriale e weekend), 0 dove il turno non è ammesso.

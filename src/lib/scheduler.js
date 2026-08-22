@@ -107,6 +107,63 @@ export function generateSchedule(year, month, cfg) {
     prefer: s.preferredShift || '',
   }));
 
+  const mode = cfg.mode ?? rules.genMode ?? 'count';
+
+  // ── Modalità ROTAZIONE: ogni persona segue la sequenza del proprio ruolo,
+  //    sfalsata, creando turni ciclici che si ripetono. ────────────────────
+  if (mode === 'rotation') {
+    const roleIdx = {};
+    for (const p of st) {
+      const seqAll = (rules.sequences?.[p.ref.role]?.length)
+        ? rules.sequences[p.ref.role] : (roles[p.ref.role] ?? [restCode]);
+      const seq = seqAll.length ? seqAll : [restCode];
+      const li = roleIdx[p.ref.role] ?? 0; roleIdx[p.ref.role] = li + 1;
+      const offset = li % seq.length;
+      const eligFloors = p.ref.floors?.length ? p.ref.floors : floors.map((f) => f.id);
+      const floorForP = eligFloors[0] === '_' ? '' : eligFloors[0];
+      for (let d = 1; d <= days; d++) {
+        const idx = d - 1;
+        if (unav[p.ref.id]?.has(d)) { p.plan[idx] = restCode; p.planFloor[idx] = ''; continue; }
+        let code = seq[(offset + idx) % seq.length];
+        if (!p.allowed.includes(code)) code = restCode;
+        p.plan[idx] = code;
+        p.planFloor[idx] = isWorking(code) ? floorForP : '';
+      }
+    }
+    const schedule = {};
+    for (const p of st) schedule[String(p.ref.id)] = { name: p.ref.name, role: p.ref.role, days: p.plan, floors: p.planFloor };
+    return { year, month, days, floors: cfg.floors ?? [], schedule, warnings: [], holidays: [...holidaySet], mode };
+  }
+
+  // ── Modalità ORE: converte il monte-ore/giorno per (piano,ruolo) in un
+  //    insieme di turni, seguendo la sequenza del ruolo come priorità. ──────
+  const hoursTally = { weekday: {}, weekend: {} };
+  if (mode === 'hours') {
+    for (const kind of ['weekday', 'weekend']) {
+      for (const f of floors) {
+        for (const role of Object.keys(roles)) {
+          const target = rules.coverageHours?.[f.id]?.[role]?.[kind] || 0;
+          if (target <= 0) continue;
+          const seqAll = (rules.sequences?.[role]?.length ? rules.sequences[role] : (roles[role] ?? []));
+          const seq = seqAll.filter(isWorking);
+          if (!seq.length) continue;
+          const tally = {};
+          let sum = 0, i = 0, guard = 0;
+          while (sum < target && guard < 500) {
+            const c = seq[i % seq.length];
+            tally[c] = (tally[c] || 0) + 1; sum += hoursOf(c); i++; guard++;
+          }
+          (hoursTally[kind][f.id] ??= {})[role] = tally;
+        }
+      }
+    }
+  }
+
+  const needCount = (floor, role, code, kind) =>
+    mode === 'hours'
+      ? (hoursTally[kind]?.[floor]?.[role]?.[code] || 0)
+      : requiredFor(rules, floor, role, code, kind);
+
   const warnings = [];
 
   for (let d = 1; d <= days; d++) {
@@ -138,7 +195,7 @@ export function generateSchedule(year, month, cfg) {
     for (const f of floors) {
       for (const role of Object.keys(roles)) {
         for (const c of nightCodes) {
-          const need = requiredFor(rules, f.id, role, c, kind);
+          const need = needCount(f.id, role, c, kind);
           for (let k = 0; k < need; k++) nightSlots.push({ floor: f.id, role, code: c });
         }
       }
@@ -148,7 +205,7 @@ export function generateSchedule(year, month, cfg) {
     for (const f of floors) {
       for (const role of Object.keys(roles)) {
         for (const c of dayCodes) {
-          const need = requiredFor(rules, f.id, role, c, kind);
+          const need = needCount(f.id, role, c, kind);
           if (need > 0) dayNeeds.push({ floor: f.id, role, code: c, n: need });
         }
       }
@@ -192,7 +249,7 @@ export function generateSchedule(year, month, cfg) {
 
     for (const [key, miss] of Object.entries(deficit)) {
       const [floor, role, code] = key.split('|');
-      const needed = requiredFor(rules, floor, role, code, kind);
+      const needed = needCount(floor, role, code, kind);
       warnings.push({ day: d, floor, role, code, needed, got: needed - miss });
     }
 
@@ -209,7 +266,7 @@ export function generateSchedule(year, month, cfg) {
       days: p.plan, floors: p.planFloor,
     };
   }
-  return { year, month, days, floors: cfg.floors ?? [], schedule, warnings, holidays: [...holidaySet] };
+  return { year, month, days, floors: cfg.floors ?? [], schedule, warnings, holidays: [...holidaySet], mode };
 
   function scoreForShift(p, code, isWknd) {
     let s = 0;
@@ -255,6 +312,43 @@ export function coverageDeficits(data, shifts, rules) {
           const got = counts[d]?.[f.id]?.[role]?.[c] || 0;
           if (got < needed) out.push({ day: d, floor: f.id, floorName: f.name, role, code: c, needed, got });
         }
+      }
+    }
+  }
+  return out;
+}
+
+// Ore lavorative assegnate per (giorno, piano, ruolo)
+export function assignedHours(data, shifts) {
+  const h = {}; // day -> floor -> role -> ore
+  for (const s of Object.values(data.schedule)) {
+    s.days.forEach((code, i) => {
+      const hrs = Number(shifts[code]?.hours || 0);
+      if (hrs <= 0) return;
+      const day = i + 1;
+      const floor = (s.floors && s.floors[i]) || '';
+      (((h[day] ??= {})[floor] ??= {})[s.role]) = (h[day]?.[floor]?.[s.role] || 0) + hrs;
+    });
+  }
+  return h;
+}
+
+// Deficit in ORE: confronta le ore assegnate col monte-ore/giorno per (piano,ruolo)
+export function coverageHoursDeficits(data, shifts, rules) {
+  const h = assignedHours(data, shifts);
+  const holidaySet = holidaysOfYear(data.year);
+  const out = [];
+  const floors = (data.floors && data.floors.length) ? data.floors : [{ id: '', name: '' }];
+  for (let d = 1; d <= data.days; d++) {
+    const kind = dayKind(data.year, data.month, d, holidaySet);
+    for (const f of floors) {
+      const roleKeys = Object.keys(rules.coverageHours?.[f.id] ?? {});
+      for (const role of roleKeys) {
+        const cell = rules.coverageHours?.[f.id]?.[role];
+        const needed = Math.max(0, Number(kind === 'weekend' ? cell?.weekend : cell?.weekday) || 0);
+        if (needed <= 0) continue;
+        const got = h[d]?.[f.id]?.[role] || 0;
+        if (got < needed) out.push({ day: d, floor: f.id, floorName: f.name, role, neededHours: needed, gotHours: got });
       }
     }
   }

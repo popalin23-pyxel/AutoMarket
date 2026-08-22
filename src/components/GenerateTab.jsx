@@ -1,10 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import {
   generateSchedule, monthDays, weekdayOf, staffStats,
-  coverageDeficits, holidaysOfYear, isHoliday,
+  coverageDeficits, coverageHoursDeficits, holidaysOfYear, isHoliday,
 } from '../lib/scheduler.js';
 import { exportExcel } from '../lib/excel.js';
-import { saveSchedule, removeSchedule } from '../lib/store.js';
+import { saveSchedule, removeSchedule, setGenMode } from '../lib/store.js';
 import {
   exportPersonICS, personSummaryText, shareWhatsApp, shareEmail,
 } from '../lib/exports.js';
@@ -27,8 +27,10 @@ export default function GenerateTab({ state, setState }) {
     setData(generateSchedule(Number(year), Number(month), {
       shifts: state.shifts, roles: state.roles, rules: state.rules,
       staff: state.staff, unavailability: state.unavailability, floors: state.floors,
+      mode: state.rules.genMode,
     }));
   };
+  const changeMode = (m) => setState((s) => setGenMode(s, m));
 
   const workingSet = new Set(Object.keys(state.shifts).filter((c) => state.shifts[c]?.working));
   const multiFloor = (state.floors?.length ?? 0) > 1;
@@ -67,9 +69,16 @@ export default function GenerateTab({ state, setState }) {
 
   const days = data ? data.days : monthDays(year, month);
   const holidaySet = useMemo(() => holidaysOfYear(Number(year)), [year]);
+  const hasHoursTargets = useMemo(() => {
+    const ch = state.rules.coverageHours ?? {};
+    return Object.values(ch).some((fl) => Object.values(fl || {}).some((c) => (c?.weekday || 0) > 0 || (c?.weekend || 0) > 0));
+  }, [state.rules.coverageHours]);
+  const hoursMode = data ? (data.mode === 'hours' || (data.mode === 'rotation' && hasHoursTargets)) : false;
   const deficits = useMemo(
-    () => (data ? coverageDeficits(data, state.shifts, state.rules) : []),
-    [data, state.shifts, state.rules],
+    () => (!data ? []
+      : (hoursMode ? coverageHoursDeficits(data, state.shifts, state.rules)
+                   : coverageDeficits(data, state.shifts, state.rules))),
+    [data, state.shifts, state.rules, hoursMode],
   );
   const totals = data ? computeTotals(data, state.shifts) : null;
   const targetById = useMemo(() => {
@@ -112,6 +121,14 @@ export default function GenerateTab({ state, setState }) {
             <input type="number" min={2000} max={2100} value={year}
               onChange={(e) => setYear(Number(e.target.value))} />
           </div>
+          <div className="field">
+            <label className="field-label">{t('gen.mode')}</label>
+            <select value={state.rules.genMode ?? 'count'} onChange={(e) => changeMode(e.target.value)}>
+              <option value="count">{t('gen.modeCount')}</option>
+              <option value="hours">{t('gen.modeHours')}</option>
+              <option value="rotation">{t('gen.modeRotation')}</option>
+            </select>
+          </div>
           <button className="btn btn-primary" onClick={generate} disabled={state.staff.length === 0}>{t('gen.generate')}</button>
           <button className="btn" onClick={doExport} disabled={!data}>{t('gen.excel')}</button>
           <button className="btn" onClick={save} disabled={!data}>{t('gen.saveHist')}</button>
@@ -121,13 +138,14 @@ export default function GenerateTab({ state, setState }) {
 
         {data && deficits.length > 0 && (
           <div className="hint hint-warn" style={{ cursor: 'pointer' }} onClick={() => setShowDeficits((v) => !v)}>
-            ⚠️ {deficits.length} {t('gen.deficitPre')} {new Set(deficits.map((d) => d.day)).size} {t('gen.deficitDays')}
+            ⚠️ {deficits.length} {hoursMode ? t('gen.deficitHoursPre') : t('gen.deficitPre')} {new Set(deficits.map((d) => d.day)).size} {t('gen.deficitDays')}
             {' '}<u>{showDeficits ? t('gen.hide') : t('gen.details')}</u>
             {showDeficits && (
               <div style={{ marginTop: 8, fontSize: 12, color: 'var(--text-dim)' }}>
                 {deficits.slice(0, 40).map((d, i) => (
                   <span key={i} style={{ marginRight: 12 }}>
-                    {d.day}: {multiFloor && d.floorName ? `${d.floorName} · ` : ''}{d.role} {d.code} {d.got}/{d.needed}
+                    {d.day}: {multiFloor && d.floorName ? `${d.floorName} · ` : ''}{d.role}{' '}
+                    {hoursMode ? `${d.gotHours}/${d.neededHours}${t('gen.hoursUnit')}` : `${d.code} ${d.got}/${d.needed}`}
                   </span>
                 ))}
               </div>
