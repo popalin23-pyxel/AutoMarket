@@ -87,20 +87,42 @@ export default function GenerateTab({ state, setState }) {
     return m;
   }, [state.staff]);
 
-  const cycleCell = (staffId, dayIdx) => {
+  const [editing, setEditing] = useState(null); // { id, idx }
+  const openEditor = (id, idx) => setEditing({ id, idx });
+
+  const setCell = (id, idx, code) => {
     setData((prev) => {
       if (!prev) return prev;
-      const s = prev.schedule[staffId];
-      const allowed = state.roles[s.role] ?? Object.keys(state.shifts);
-      if (allowed.length === 0) return prev;
-      const pos = allowed.indexOf(s.days[dayIdx]);
-      const next = allowed[(pos + 1) % allowed.length];
-      const newDays = s.days.slice(); newDays[dayIdx] = next;
+      const s = prev.schedule[id];
+      const newDays = s.days.slice(); newDays[idx] = code;
       const newFloors = (s.floors ? s.floors.slice() : new Array(newDays.length).fill(''));
-      // aggiorna il piano assegnato in base al nuovo turno
-      newFloors[dayIdx] = workingSet.has(next) ? (newFloors[dayIdx] || firstFloorFor(staffId)) : '';
-      return { ...prev, schedule: { ...prev.schedule, [staffId]: { ...s, days: newDays, floors: newFloors } } };
+      newFloors[idx] = state.shifts[code]?.working ? (newFloors[idx] || firstFloorFor(id)) : '';
+      return { ...prev, schedule: { ...prev.schedule, [id]: { ...s, days: newDays, floors: newFloors } } };
     });
+  };
+
+  const setCellFloor = (id, idx, floor) => {
+    setData((prev) => {
+      if (!prev) return prev;
+      const s = prev.schedule[id];
+      const newFloors = (s.floors ? s.floors.slice() : new Array(s.days.length).fill(''));
+      newFloors[idx] = floor;
+      return { ...prev, schedule: { ...prev.schedule, [id]: { ...s, floors: newFloors } } };
+    });
+  };
+
+  // Colleghi liberi (a Riposo) quel giorno, stesso ruolo, idonei al piano
+  const freeColleagues = (id, idx, floor) => {
+    if (!data) return [];
+    const me = data.schedule[id];
+    return Object.entries(data.schedule)
+      .filter(([oid, s]) => {
+        if (oid === id || s.role !== me.role) return false;
+        if (state.shifts[s.days[idx]]?.working) return false;
+        const person = state.staff.find((p) => String(p.id) === String(oid));
+        return !person?.floors?.length || !floor || person.floors.includes(floor);
+      })
+      .map(([oid, s]) => ({ id: oid, name: s.name }));
   };
 
   return (
@@ -229,7 +251,7 @@ export default function GenerateTab({ state, setState }) {
                         const holiday = isHoliday(data.year, data.month, d, holidaySet);
                         return (
                           <td key={d} className={(wd >= 5 || holiday) ? 'weekend' : ''}
-                            onClick={() => cycleCell(id, d - 1)} style={{ cursor: 'pointer' }} title={t('gen.changeShift')}>
+                            onClick={() => openEditor(id, d - 1)} style={{ cursor: 'pointer' }} title={t('gen.changeShift')}>
                             <span className={`cell cell-${code}`}>{code}</span>
                             {workingSet.has(code) && floorTag(s.floors?.[d - 1]) &&
                               <span className="floor-tag">{floorTag(s.floors?.[d - 1])}</span>}
@@ -279,6 +301,105 @@ export default function GenerateTab({ state, setState }) {
           </div>
         </div>
       )}
+
+      {/* Analisi & Equità (futuristico) */}
+      {data && (
+        <div className="panel no-print">
+          <h2 className="panel-title">{t('gen.analysis')}</h2>
+          <div className="coverage-strip-label">{t('gen.coverStrip')}</div>
+          <div className="coverage-strip">
+            {range(1, data.days).map((d) => {
+              const bad = deficits.some((x) => x.day === d);
+              return <div key={d} className={`cov-cell ${bad ? 'bad' : 'ok'}`} title={`${d}${bad ? ' ⚠' : ' ✓'}`}>{d}</div>;
+            })}
+          </div>
+
+          <div className="coverage-strip-label" style={{ marginTop: 16 }}>{t('gen.perPerson')}</div>
+          <div className="load-bars">
+            {(() => {
+              const rows = Object.entries(data.schedule).map(([id, s]) => ({ id, s, st: staffStats(s.days, state.shifts) }));
+              const maxH = Math.max(1, ...rows.map((r) => r.st.hours));
+              return rows.map(({ id, s, st }) => {
+                const wkend = range(1, data.days).filter((d) => {
+                  const wd = weekdayOf(data.year, data.month, d);
+                  const hol = isHoliday(data.year, data.month, d, holidaySet);
+                  return (wd >= 5 || hol) && state.shifts[s.days[d - 1]]?.working;
+                }).length;
+                return (
+                  <div key={id} className="load-row">
+                    <span className="load-name">{s.name}</span>
+                    <div className="load-track"><div className="load-fill" style={{ width: `${(st.hours / maxH) * 100}%` }} /></div>
+                    <span className="load-meta font-mono">{st.hours}h · {st.nights}N · {wkend}{t('gen.wk')}</span>
+                  </div>
+                );
+              });
+            })()}
+          </div>
+        </div>
+      )}
+
+      {/* Editor manuale di una cella */}
+      {editing && data && (() => {
+        const s = data.schedule[editing.id];
+        const idx = editing.idx;
+        const code = s.days[idx];
+        const flr = s.floors?.[idx] || '';
+        const dnum = idx + 1;
+        const working = state.shifts[code]?.working;
+        const subs = working ? freeColleagues(editing.id, idx, flr || firstFloorFor(editing.id)) : [];
+        const transfer = (toId) => {
+          setData((prev) => {
+            const from = prev.schedule[editing.id];
+            const c = from.days[idx];
+            const fl = from.floors?.[idx] || firstFloorFor(editing.id);
+            const to = prev.schedule[toId];
+            const fromDays = from.days.slice(); fromDays[idx] = 'R';
+            const fromFloors = (from.floors ? from.floors.slice() : new Array(fromDays.length).fill('')); fromFloors[idx] = '';
+            const toDays = to.days.slice(); toDays[idx] = c;
+            const toFloors = (to.floors ? to.floors.slice() : new Array(toDays.length).fill('')); toFloors[idx] = state.shifts[c]?.working ? fl : '';
+            return { ...prev, schedule: { ...prev.schedule, [editing.id]: { ...from, days: fromDays, floors: fromFloors }, [toId]: { ...to, days: toDays, floors: toFloors } } };
+          });
+          setEditing(null);
+        };
+        return (
+          <div className="editor-overlay" onClick={() => setEditing(null)}>
+            <div className="editor-card" onClick={(e) => e.stopPropagation()}>
+              <div className="editor-head">
+                <span><b>{s.name}</b> <span style={{ color: 'var(--text-mut)' }}>({s.role})</span> · {dnum} {weekdays[weekdayOf(data.year, data.month, dnum)]}</span>
+                <button className="btn btn-sm" onClick={() => setEditing(null)}>✕</button>
+              </div>
+              <div className="editor-label">{t('gen.editShift')}</div>
+              <div className="editor-shifts">
+                {Object.keys(state.shifts).map((c) => (
+                  <button key={c} className={`editor-shift cell cell-${c} ${c === code ? 'sel' : ''}`}
+                    onClick={() => setCell(editing.id, idx, c)}>{c}</button>
+                ))}
+              </div>
+              {multiFloor && working && (
+                <>
+                  <div className="editor-label">{t('gen.editFloor')}</div>
+                  <div className="editor-shifts">
+                    {(state.floors ?? []).map((f) => (
+                      <button key={f.id} className={`editor-floor ${f.id === flr ? 'sel' : ''}`}
+                        onClick={() => setCellFloor(editing.id, idx, f.id)}>{f.name}</button>
+                    ))}
+                  </div>
+                </>
+              )}
+              {subs.length > 0 && (
+                <>
+                  <div className="editor-label">{t('gen.editCover')}</div>
+                  <div className="editor-shifts">
+                    {subs.slice(0, 10).map((c) => (
+                      <button key={c.id} className="editor-floor" onClick={() => transfer(c.id)}>{c.name}</button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        );
+      })()}
     </>
   );
 }
