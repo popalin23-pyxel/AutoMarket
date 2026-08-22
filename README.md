@@ -29,24 +29,26 @@ Porting fedele di `generate_schedule()` dal desktop, con le regole **realmente a
 
 ```bash
 npm install
-npm run dev      # http://localhost:5173/AutoMarket/
+npm run dev      # http://localhost:5173
 npm run build    # build di produzione in dist/
 npm run preview  # anteprima della build
 ```
 
-## Pubblicazione (GitHub Pages)
+## Pubblicazione (Vercel)
 
-Il deploy è automatico tramite GitHub Actions (`.github/workflows/deploy.yml`):
-a ogni push il sito viene ricostruito e pubblicato.
+Il repository include `vercel.json` già configurato per Vite (zero configurazione).
 
-**Attivazione (una volta sola):**
-1. Su GitHub apri il repository → **Settings** → **Pages**
-2. In **Build and deployment → Source** scegli **GitHub Actions**
-3. Attendi che l'azione "Deploy su GitHub Pages" finisca (scheda **Actions**)
-4. Il sito sarà su: `https://popalin23-pyxel.github.io/AutoMarket/`
+**Passi (una volta sola):**
+1. Vai su [vercel.com](https://vercel.com) e accedi con GitHub
+2. **Add New… → Project** e importa il repository `AutoMarket`
+3. Vercel rileva Vite in automatico → **Deploy**
+4. Ottieni un link tipo `https://automarket-xxxx.vercel.app`
 
-> Nota: GitHub Pages su repository **privati** richiede un piano a pagamento.
-> Se il repo è privato e resta gratuito, usa in alternativa Vercel/Netlify.
+> Se il codice non è sul branch `main`: nelle impostazioni del progetto Vercel
+> (**Settings → Git → Production Branch**) imposta il branch corretto, oppure
+> unisci il branch in `main`. Ogni push crea comunque un deploy di anteprima.
+
+> Repository **privati**: Vercel funziona anche gratis con repo privati.
 
 ## Installazione sul telefono (PWA)
 

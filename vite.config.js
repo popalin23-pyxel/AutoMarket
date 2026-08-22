@@ -2,11 +2,10 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
-// Su GitHub Pages il sito è servito sotto /AutoMarket/ (nome del repository).
-// Usato ovunque per coerenza (dev, preview, produzione). Per un altro host
-// imposta VITE_BASE, es. VITE_BASE=/ per la root del dominio.
+// Base della webapp. Su Vercel (e su qualsiasi dominio alla radice) resta '/'.
+// Per GitHub Pages sotto /AutoMarket/ imposta VITE_BASE=/AutoMarket/.
 export default defineConfig(() => ({
-  base: process.env.VITE_BASE ?? '/AutoMarket/',
+  base: process.env.VITE_BASE ?? '/',
   plugins: [
     react(),
     VitePWA({
