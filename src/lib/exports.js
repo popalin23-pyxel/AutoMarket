@@ -69,7 +69,12 @@ export function exportPersonICS(data, shifts, staffId) {
         `DTEND;VALUE=DATE:${d2.getFullYear()}${pad(d2.getMonth() + 1)}${pad(d2.getDate())}`,
       );
     }
-    lines.push(`SUMMARY:${summary}`, 'END:VEVENT');
+    lines.push(
+      `SUMMARY:${summary}`,
+      // Promemoria 1 ora prima
+      'BEGIN:VALARM', 'ACTION:DISPLAY', 'DESCRIPTION:Turno', 'TRIGGER:-PT1H', 'END:VALARM',
+      'END:VEVENT',
+    );
   });
 
   lines.push('END:VCALENDAR');

@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import {
   generateSchedule, monthDays, weekdayOf, staffStats,
   coverageDeficits, coverageHoursDeficits, holidaysOfYear, isHoliday,
-  fillGaps, balance,
+  fillGaps, balance, complianceIssues,
 } from '../lib/scheduler.js';
 import { exportExcel } from '../lib/excel.js';
 import { saveSchedule, removeSchedule, setGenMode } from '../lib/store.js';
@@ -94,6 +94,30 @@ export default function GenerateTab({ state, setState }) {
   const [undo, setUndo] = useState([]);
   const [showWall, setShowWall] = useState(false);
   const [qr, setQr] = useState(null); // { text, title }
+  const [cmd, setCmd] = useState('');
+  const [cmdMsg, setCmdMsg] = useState(null);
+
+  const applyCommand = () => {
+    if (!data) return;
+    const parts = cmd.trim().split(/\s+/);
+    if (parts.length < 3) { setCmdMsg({ t: 'warn', m: 'Formato: Nome TURNO giorno [Piano]' }); return; }
+    const [nameTok, codeTok, dayTok, ...rest] = parts;
+    const code = codeTok.toUpperCase();
+    const day = parseInt(dayTok, 10);
+    const person = Object.entries(data.schedule).find(([, s]) => s.name.toLowerCase().startsWith(nameTok.toLowerCase()));
+    if (!person) { setCmdMsg({ t: 'warn', m: `Persona non trovata: ${nameTok}` }); return; }
+    if (!state.shifts[code]) { setCmdMsg({ t: 'warn', m: `Turno non valido: ${code}` }); return; }
+    if (!(day >= 1 && day <= data.days)) { setCmdMsg({ t: 'warn', m: `Giorno non valido: ${dayTok}` }); return; }
+    const idx = day - 1;
+    setCell(person[0], idx, code); // esegue snap()
+    const floorName = rest.join(' ');
+    if (floorName) {
+      const f = (state.floors ?? []).find((fl) => fl.name.toLowerCase() === floorName.toLowerCase());
+      if (f) setCellFloor(person[0], idx, f.id);
+    }
+    setCmd('');
+    setCmdMsg({ t: 'info', m: `✓ ${person[1].name} → ${code} il ${day}${floorName ? ' · ' + floorName : ''}` });
+  };
 
   const qrForPerson = () => {
     if (!data) return null;
@@ -226,6 +250,18 @@ export default function GenerateTab({ state, setState }) {
             <button className="btn btn-sm" onClick={() => shareEmail(`${personName()} — ${months[data.month - 1]} ${data.year}`, shareText())}>Email</button>
           </div>
         )}
+
+        {data && (
+          <div className="form-row no-print" style={{ marginTop: 12, marginBottom: 0, alignItems: 'center' }}>
+            <div className="field" style={{ flex: 1, minWidth: 200 }}>
+              <label className="field-label">{t('gen.command')}</label>
+              <input type="text" value={cmd} placeholder={t('gen.commandPh')}
+                onChange={(e) => setCmd(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && applyCommand()} />
+            </div>
+            <button className="btn" onClick={applyCommand}>OK</button>
+            {cmdMsg && <span style={{ fontSize: 12, color: cmdMsg.t === 'warn' ? 'var(--red)' : 'var(--green)' }}>{cmdMsg.m}</span>}
+          </div>
+        )}
       </div>
 
       {totals && (
@@ -340,6 +376,21 @@ export default function GenerateTab({ state, setState }) {
               return <div key={d} className={`cov-cell ${bad ? 'bad' : 'ok'}`} title={`${d}${bad ? ' ⚠' : ' ✓'}`}>{d}</div>;
             })}
           </div>
+
+          {(() => {
+            const comp = complianceIssues(data, state.shifts, state.rules);
+            const rest = Object.values(comp).filter((c) => c.restViol > 0);
+            const overc = Object.values(comp).filter((c) => c.weekOver);
+            if (rest.length === 0 && overc.length === 0) return null;
+            const cap = state.rules.max_weekly_hours ?? 48;
+            return (
+              <div className="hint hint-warn" style={{ marginTop: 14 }}>
+                <b>{t('gen.compliance')}:</b>{' '}
+                {rest.length > 0 && <span>⏱ {t('gen.restViol')}: {rest.map((c) => c.name).join(', ')}. </span>}
+                {overc.length > 0 && <span>📈 &gt;{cap}h/sett: {overc.map((c) => `${c.name} (${c.weekPeak}h)`).join(', ')}.</span>}
+              </div>
+            );
+          })()}
 
           <div className="coverage-strip-label" style={{ marginTop: 16 }}>{t('gen.perPerson')}</div>
           <div className="load-bars">

@@ -461,6 +461,35 @@ export function balance(data, ctx) {
   return out;
 }
 
+// Controlli di conformità: riposo minimo 11h tra turni e tetto ore settimanali.
+const SHIFT_TIMES = { M: [7, 14], P: [14, 21], N: [22, 32] }; // ore dalla mezzanotte (N finisce alle 8 del giorno dopo)
+export function complianceIssues(data, shifts, rules) {
+  const cap = Number(rules.max_weekly_hours) || 48;
+  const hoursOf = (c) => Number(shifts[c]?.hours || 0);
+  const out = {};
+  for (const [id, s] of Object.entries(data.schedule)) {
+    let restViol = 0, lastEnd = null;
+    for (let i = 0; i < s.days.length; i++) {
+      const c = s.days[i];
+      if (!shifts[c]?.working) { if (!SHIFT_TIMES[c]) lastEnd = null; continue; }
+      const tm = SHIFT_TIMES[c];
+      if (!tm) { lastEnd = null; continue; } // orario non noto → non valuto
+      const start = i * 24 + tm[0], end = i * 24 + tm[1];
+      if (lastEnd != null && start - lastEnd < 11) restViol++;
+      lastEnd = end;
+    }
+    // settimane calendario (Lun–Dom)
+    let weekPeak = 0, wsum = 0;
+    for (let i = 0; i < s.days.length; i++) {
+      wsum += hoursOf(s.days[i]);
+      const wd = weekdayOf(data.year, data.month, i + 1);
+      if (wd === 6 || i === s.days.length - 1) { weekPeak = Math.max(weekPeak, wsum); wsum = 0; }
+    }
+    out[id] = { name: s.name, restViol, weekPeak, weekOver: weekPeak > cap, cap };
+  }
+  return out;
+}
+
 // Statistiche di un piano individuale
 export function staffStats(dayCodes, shifts) {
   const hoursFor = (c) => Number(shifts[c]?.hours || 0);

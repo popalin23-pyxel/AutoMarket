@@ -20,6 +20,7 @@ export const DEFAULT_FLOORS = [{ id: 'p1', name: 'Piano 1' }];
 export const DEFAULT_RULES = {
   max_nights: 6,       // max notti al mese per persona
   max_work_streak: 6,  // max giorni lavorativi consecutivi
+  max_weekly_hours: 48, // tetto ore settimanali (conformità)
   prefer_alt_mp: true, // (legacy) alterna Mattina/Pomeriggio
   genMode: 'count',    // 'count' (persone) | 'hours' (ore) | 'rotation' (sequenza ciclica)
   // Copertura per piano → ruolo → turno → { feriale, weekend }. Vedi buildCoverage().

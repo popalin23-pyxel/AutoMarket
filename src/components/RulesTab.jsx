@@ -64,6 +64,11 @@ export default function RulesTab({ state, setState }) {
             <NumberInput min={0} max={31} value={state.rules.max_work_streak}
               onChange={(v) => setRule('max_work_streak', v)} />
           </div>
+          <div className="field">
+            <label className="field-label">{t('rules.maxWeekly')}</label>
+            <NumberInput min={0} max={200} value={state.rules.max_weekly_hours ?? 48}
+              onChange={(v) => setRule('max_weekly_hours', v)} />
+          </div>
         </div>
         <div className="hint hint-info">{t('rules.autosave')}</div>
       </div>
