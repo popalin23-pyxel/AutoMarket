@@ -6,6 +6,19 @@ export default function RulesTab({ state, setState }) {
 
   const [newRole, setNewRole] = useState('');
   const shiftCodes = Object.keys(state.shifts);
+  const workingCodes = shiftCodes.filter((c) => state.shifts[c]?.working);
+
+  const setCoverage = (code, kind, value) =>
+    setState((s) => ({
+      ...s,
+      rules: {
+        ...s.rules,
+        coverage: {
+          ...s.rules.coverage,
+          [code]: { ...(s.rules.coverage?.[code] ?? { weekday: 0, weekend: 0 }), [kind]: Math.max(0, value) },
+        },
+      },
+    }));
 
   const toggleRoleShift = (role, code) => {
     setState((s) => {
@@ -62,6 +75,49 @@ export default function RulesTab({ state, setState }) {
         </div>
         <div className="hint hint-info">
           Le modifiche sono salvate automaticamente e usate al prossimo "Genera turni".
+        </div>
+      </div>
+
+      <div className="panel">
+        <h2 className="panel-title">Copertura richiesta</h2>
+        <p className="panel-desc">
+          Quante persone servono per ogni turno, distinguendo giorni feriali da weekend/festivi.
+          La generazione prova a coprire questi numeri e segnala i giorni scoperti.
+        </p>
+
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Turno</th>
+                <th style={{ textAlign: 'center' }}>Feriale</th>
+                <th style={{ textAlign: 'center' }}>Weekend / Festivi</th>
+              </tr>
+            </thead>
+            <tbody>
+              {workingCodes.map((c) => {
+                const cov = state.rules.coverage?.[c] ?? { weekday: 0, weekend: 0 };
+                return (
+                  <tr key={c}>
+                    <td>
+                      <span className={`cell cell-${c}`}>{c}</span>{' '}
+                      {state.shifts[c]?.description}
+                    </td>
+                    <td style={{ textAlign: 'center' }}>
+                      <input type="number" min={0} max={99} value={cov.weekday ?? 0}
+                        onChange={(e) => setCoverage(c, 'weekday', Number(e.target.value))}
+                        style={{ minWidth: 0, width: 70 }} />
+                    </td>
+                    <td style={{ textAlign: 'center' }}>
+                      <input type="number" min={0} max={99} value={cov.weekend ?? 0}
+                        onChange={(e) => setCoverage(c, 'weekend', Number(e.target.value))}
+                        style={{ minWidth: 0, width: 70 }} />
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       </div>
 

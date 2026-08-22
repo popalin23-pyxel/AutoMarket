@@ -258,10 +258,15 @@ tbody tr:hover td { background: rgba(34, 211, 238, 0.06); }
 .grid thead th.sticky { z-index: 4; }
 .grid th.day-h { min-width: 32px; font-size: 11px; }
 .grid th.weekend, .grid td.weekend { background: rgba(167, 139, 250, 0.08); }
+.grid th.holiday { background: rgba(251, 113, 133, 0.12); }
 .grid td.tot {
   font-weight: 800; background: rgba(34, 211, 238, 0.08); color: var(--accent);
   font-family: var(--mono);
 }
+.grid td.tot-ok    { color: var(--green); }
+.grid td.tot-under { color: var(--orange); }
+.grid td.tot-red   { color: var(--red); }
+.grid td[title="Clic per cambiare turno"]:hover { outline: 1px solid var(--accent); outline-offset: -1px; }
 
 /* celle turno colorate come chip luminosi */
 .cell {

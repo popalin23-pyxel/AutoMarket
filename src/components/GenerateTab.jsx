@@ -1,41 +1,74 @@
-import React, { useState } from 'react';
-import { generateSchedule, monthDays, weekdayOf, staffStats } from '../lib/scheduler.js';
+import React, { useState, useMemo } from 'react';
+import {
+  generateSchedule, monthDays, weekdayOf, staffStats,
+  coverageDeficits, holidaysOfYear, isHoliday,
+} from '../lib/scheduler.js';
 import { exportExcel } from '../lib/excel.js';
 import { MONTHS_IT, WEEKDAYS_IT } from '../lib/defaults.js';
 
-export default function GenerateTab({ state }) {
+export default function GenerateTab({ state, onSaveSchedule }) {
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [data, setData] = useState(null);
+  const [showDeficits, setShowDeficits] = useState(false);
 
   const generate = () => {
     const result = generateSchedule(Number(year), Number(month), {
-      shifts: state.shifts,
-      roles: state.roles,
-      rules: state.rules,
-      staff: state.staff,
-      unavailability: state.unavailability,
+      shifts: state.shifts, roles: state.roles, rules: state.rules,
+      staff: state.staff, unavailability: state.unavailability,
     });
     setData(result);
   };
 
-  const doExport = () => {
-    if (!data) return;
-    exportExcel(data, state.shifts);
+  const doExport = () => { if (data) exportExcel(data, state.shifts); };
+
+  const save = () => {
+    if (data && onSaveSchedule) onSaveSchedule(data);
   };
 
-  const hoursFor = (c) => Number(state.shifts[c]?.hours || 0);
   const days = data ? data.days : monthDays(year, month);
+  const holidaySet = useMemo(() => holidaysOfYear(Number(year)), [year]);
 
-  // statistiche globali
+  // avvisi di copertura ricalcolati in tempo reale (anche dopo modifiche manuali)
+  const deficits = useMemo(
+    () => (data ? coverageDeficits(data, state.shifts, state.rules) : []),
+    [data, state.shifts, state.rules],
+  );
+
   const totals = data ? computeTotals(data, state.shifts) : null;
+  const targetById = useMemo(() => {
+    const m = new Map();
+    for (const s of state.staff) m.set(String(s.id), Number(s.contractHours) || 0);
+    return m;
+  }, [state.staff]);
+
+  // modifica manuale: tap sulla cella → prossimo turno ammesso per quel ruolo
+  const cycleCell = (staffId, dayIdx) => {
+    setData((prev) => {
+      if (!prev) return prev;
+      const s = prev.schedule[staffId];
+      const allowed = state.roles[s.role] ?? Object.keys(state.shifts);
+      if (allowed.length === 0) return prev;
+      const cur = s.days[dayIdx];
+      const pos = allowed.indexOf(cur);
+      const next = allowed[(pos + 1) % allowed.length];
+      const newDays = s.days.slice(); newDays[dayIdx] = next;
+      return {
+        ...prev,
+        schedule: { ...prev.schedule, [staffId]: { ...s, days: newDays } },
+      };
+    });
+  };
 
   return (
     <>
       <div className="panel">
         <h2 className="panel-title">Genera & Export</h2>
-        <p className="panel-desc">Genera il planning mensile e scaricalo in Excel (3 fogli: planning, legenda, riepilogo).</p>
+        <p className="panel-desc">
+          Genera il planning mensile rispettando la copertura richiesta e le regole.
+          Poi puoi <b>modificare a mano</b> ogni cella (tap/clic per cambiare turno) ed esportare in Excel.
+        </p>
 
         <div className="form-row">
           <div className="field">
@@ -52,13 +85,33 @@ export default function GenerateTab({ state }) {
           <button className="btn btn-primary" onClick={generate} disabled={state.staff.length === 0}>
             Genera turni
           </button>
-          <button className="btn" onClick={doExport} disabled={!data}>
-            Esporta Excel
-          </button>
+          <button className="btn" onClick={doExport} disabled={!data}>Esporta Excel</button>
+          {onSaveSchedule && (
+            <button className="btn" onClick={save} disabled={!data}>Salva nello storico</button>
+          )}
         </div>
 
         {state.staff.length === 0 && (
           <div className="hint hint-warn">Aggiungi del personale prima di generare il planning.</div>
+        )}
+
+        {data && deficits.length > 0 && (
+          <div className="hint hint-warn" style={{ cursor: 'pointer' }} onClick={() => setShowDeficits((v) => !v)}>
+            ⚠️ {deficits.length} turni sotto-copertura in {new Set(deficits.map((d) => d.day)).size} giorni.
+            {' '}<u>{showDeficits ? 'Nascondi' : 'Dettagli'}</u>
+            {showDeficits && (
+              <div style={{ marginTop: 8, fontSize: 12, color: 'var(--text-dim)' }}>
+                {deficits.map((d, i) => (
+                  <span key={i} style={{ marginRight: 12 }}>
+                    {d.day} {MONTHS_IT[(data.month - 1)].slice(0, 3)}: {d.code} {d.got}/{d.needed}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+        {data && deficits.length === 0 && (
+          <div className="hint hint-info">✓ Copertura completa per tutti i giorni.</div>
         )}
 
         <div className="legend">
@@ -89,11 +142,14 @@ export default function GenerateTab({ state }) {
                   <th className="sticky">Nome</th>
                   {range(1, days).map((d) => {
                     const wd = weekdayOf(data.year, data.month, d);
-                    const weekend = wd >= 5;
+                    const holiday = isHoliday(data.year, data.month, d, holidaySet);
+                    const weekend = wd >= 5 || holiday;
                     return (
-                      <th key={d} className={`day-h ${weekend ? 'weekend' : ''}`}>
+                      <th key={d} className={`day-h ${weekend ? 'weekend' : ''} ${holiday ? 'holiday' : ''}`} title={holiday ? 'Festivo' : ''}>
                         <div>{d}</div>
-                        <div style={{ fontSize: 9, color: 'var(--text-mut)' }}>{WEEKDAYS_IT[wd]}</div>
+                        <div style={{ fontSize: 9, color: holiday ? 'var(--red)' : 'var(--text-mut)' }}>
+                          {holiday ? '★' : WEEKDAYS_IT[wd]}
+                        </div>
                       </th>
                     );
                   })}
@@ -102,7 +158,11 @@ export default function GenerateTab({ state }) {
               </thead>
               <tbody>
                 {Object.entries(data.schedule).map(([id, s]) => {
-                  const st = staffStats(s.days, state.shifts);
+                  const stt = staffStats(s.days, state.shifts);
+                  const target = targetById.get(id) || 0;
+                  const totClass = target > 0
+                    ? (stt.hours > target ? 'red' : stt.hours < target * 0.85 ? 'under' : 'ok')
+                    : '';
                   return (
                     <tr key={id}>
                       <td className="sticky">
@@ -111,13 +171,18 @@ export default function GenerateTab({ state }) {
                       {range(1, days).map((d) => {
                         const code = s.days[d - 1] ?? '';
                         const wd = weekdayOf(data.year, data.month, d);
+                        const holiday = isHoliday(data.year, data.month, d, holidaySet);
                         return (
-                          <td key={d} className={wd >= 5 ? 'weekend' : ''}>
+                          <td key={d} className={(wd >= 5 || holiday) ? 'weekend' : ''}
+                            onClick={() => cycleCell(id, d - 1)}
+                            style={{ cursor: 'pointer' }} title="Clic per cambiare turno">
                             <span className={`cell cell-${code}`}>{code}</span>
                           </td>
                         );
                       })}
-                      <td className="tot">{st.hours}</td>
+                      <td className={`tot tot-${totClass}`} title={target ? `Contratto: ${target}h` : ''}>
+                        {stt.hours}{target ? <span style={{ fontSize: 9, color: 'var(--text-mut)' }}>/{target}</span> : null}
+                      </td>
                     </tr>
                   );
                 })}

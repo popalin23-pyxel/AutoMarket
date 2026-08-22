@@ -101,12 +101,23 @@ export function resetState() {
 
 // Helper immutabili per aggiornare lo stato (usati con setState di React)
 
-export function addStaff(state, name, role) {
+export function addStaff(state, name, role, opts = {}) {
   const id = state.seq.staff;
   return {
     ...state,
-    staff: [...state.staff, { id, name, role }],
+    staff: [...state.staff, {
+      id, name, role,
+      contractHours: Number(opts.contractHours) || 0, // 0 = nessun target
+      preferredShift: opts.preferredShift || '',       // '', 'M', 'P', 'N'
+    }],
     seq: { ...state.seq, staff: id + 1 },
+  };
+}
+
+export function updateStaff(state, id, patch) {
+  return {
+    ...state,
+    staff: state.staff.map((s) => (s.id === id ? { ...s, ...patch } : s)),
   };
 }
 

@@ -17,7 +17,13 @@ export const DEFAULT_ROLES = {
 export const DEFAULT_RULES = {
   max_nights: 6,       // max notti al mese per persona
   max_work_streak: 6,  // max giorni lavorativi consecutivi
-  prefer_alt_mp: true, // alterna Mattina/Pomeriggio
+  prefer_alt_mp: true, // (legacy) alterna Mattina/Pomeriggio
+  // Fabbisogno di personale per turno, distinto tra giorni feriali e weekend/festivi
+  coverage: {
+    M: { weekday: 1, weekend: 1 },
+    P: { weekday: 1, weekend: 1 },
+    N: { weekday: 1, weekend: 1 },
+  },
 };
 
 export const UNAV_KINDS = ['ferie', 'malattia', 'permesso', 'indisp'];
