@@ -6,6 +6,9 @@ import {
 import { exportExcel } from '../lib/excel.js';
 import { MONTHS_IT, WEEKDAYS_IT } from '../lib/defaults.js';
 import { saveSchedule, removeSchedule } from '../lib/store.js';
+import {
+  exportPersonICS, personSummaryText, shareWhatsApp, shareEmail,
+} from '../lib/exports.js';
 
 export default function GenerateTab({ state, setState }) {
   const now = new Date();
@@ -13,6 +16,7 @@ export default function GenerateTab({ state, setState }) {
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [data, setData] = useState(null);
   const [showDeficits, setShowDeficits] = useState(false);
+  const [personId, setPersonId] = useState('');
 
   const generate = () => {
     const result = generateSchedule(Number(year), Number(month), {
@@ -34,6 +38,11 @@ export default function GenerateTab({ state, setState }) {
 
   const reopen = (entry) => { setData(entry.data); setYear(entry.year); setMonth(entry.month); };
   const delHist = (id) => setState((s) => removeSchedule(s, id));
+
+  const doPrint = () => window.print();
+  const pid = () => personId || (data ? Object.keys(data.schedule)[0] : '');
+  const shareText = () => (data ? personSummaryText(data, state.shifts, pid()) : '');
+  const personName = () => (data ? data.schedule[pid()]?.name : '');
 
   const days = data ? data.days : monthDays(year, month);
   const holidaySet = useMemo(() => holidaysOfYear(Number(year)), [year]);
@@ -71,7 +80,7 @@ export default function GenerateTab({ state, setState }) {
 
   return (
     <>
-      <div className="panel">
+      <div className="panel no-print">
         <h2 className="panel-title">Genera & Export</h2>
         <p className="panel-desc">
           Genera il planning mensile rispettando la copertura richiesta e le regole.
@@ -128,10 +137,27 @@ export default function GenerateTab({ state, setState }) {
             </span>
           ))}
         </div>
+
+        {data && (
+          <div className="form-row no-print" style={{ marginTop: 16, marginBottom: 0, alignItems: 'center' }}>
+            <button className="btn" onClick={doPrint}>🖨 Stampa / PDF</button>
+            <span style={{ color: 'var(--text-mut)', fontSize: 12 }}>Calendario personale:</span>
+            <div className="field" style={{ minWidth: 160 }}>
+              <select value={pid()} onChange={(e) => setPersonId(e.target.value)}>
+                {Object.entries(data.schedule).map(([id, s]) => (
+                  <option key={id} value={id}>{s.name}</option>
+                ))}
+              </select>
+            </div>
+            <button className="btn btn-sm" onClick={() => exportPersonICS(data, state.shifts, pid())}>📅 .ics</button>
+            <button className="btn btn-sm" onClick={() => shareWhatsApp(shareText())}>WhatsApp</button>
+            <button className="btn btn-sm" onClick={() => shareEmail(`Turni ${personName()} — ${MONTHS_IT[data.month - 1]} ${data.year}`, shareText())}>Email</button>
+          </div>
+        )}
       </div>
 
       {totals && (
-        <div className="stats-row">
+        <div className="stats-row no-print">
           <div className="stat"><div className="stat-label">Persone</div><div className="stat-value">{Object.keys(data.schedule).length}</div></div>
           <div className="stat"><div className="stat-label">Ore totali</div><div className="stat-value">{totals.hours}</div></div>
           <div className="stat"><div className="stat-label">Notti</div><div className="stat-value">{totals.nights}</div></div>
@@ -141,6 +167,7 @@ export default function GenerateTab({ state, setState }) {
 
       {data && (
         <div className="panel" style={{ padding: 0, overflow: 'hidden' }}>
+          <div className="print-only print-title">Turni — {MONTHS_IT[data.month - 1]} {data.year}</div>
           <div className="grid-wrap">
             <table className="grid">
               <thead>
@@ -199,7 +226,7 @@ export default function GenerateTab({ state, setState }) {
       )}
 
       {(state.history?.length > 0) && (
-        <div className="panel">
+        <div className="panel no-print">
           <h2 className="panel-title">Storico planning</h2>
           <p className="panel-desc">Planning salvati su questo dispositivo. “Riapri” lo carica nella griglia per rivederlo, modificarlo o riesportarlo.</p>
           <div className="table-wrap">

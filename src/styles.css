@@ -348,3 +348,24 @@ tbody tr:hover td { background: rgba(34, 211, 238, 0.06); }
   body::before, .brand-logo::before, .app-body { animation: none; }
   * { transition: none !important; }
 }
+
+/* ── Stampa / PDF: solo la griglia, su sfondo chiaro ───── */
+.print-only { display: none; }
+@media print {
+  body::before, body::after { display: none !important; }
+  html, body { background: #fff !important; color: #000 !important; }
+  .app-header, .tabs, .app-footer, .no-print { display: none !important; }
+  .app-body { padding: 0 !important; max-width: none !important; }
+  .panel { background: #fff !important; border: none !important; box-shadow: none !important; backdrop-filter: none !important; padding: 0 !important; margin: 0 !important; }
+  .print-only { display: block; }
+  .print-title { font-size: 16px; font-weight: 700; color: #000; margin: 0 0 8px; }
+  .grid-wrap { border: none !important; background: #fff !important; overflow: visible !important; }
+  .grid, .grid th, .grid td { color: #000 !important; background: #fff !important; border-color: #999 !important; }
+  .grid thead th, .grid th.sticky, .grid td.sticky { background: #eee !important; color: #000 !important; }
+  .grid td.tot { background: #eee !important; color: #000 !important; }
+  .cell { background: transparent !important; box-shadow: none !important; }
+  .cell-M { color: #0369a1 !important; } .cell-P { color: #a16207 !important; }
+  .cell-N { color: #6d28d9 !important; } .cell-S { color: #475569 !important; }
+  .cell-R { color: #64748b !important; }
+  @page { size: landscape; margin: 8mm; }
+}
