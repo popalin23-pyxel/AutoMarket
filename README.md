@@ -7,22 +7,29 @@ gira nel browser, i dati restano in locale (`localStorage`), nessun server.
 
 ## Funzioni
 
-- **Personale** — anagrafica con ruolo (OSS, Infermiere, Coordinatore, …)
+- **Personale** — anagrafica con ruolo, **ore contrattuali** (part-time/full-time) e **turno preferito**
 - **Turni** — codici turno configurabili (ore, lavorativo, notturno)
-- **Regole** — vincoli di generazione + mappatura ruolo → turni ammessi
-  - max notti/mese, max giorni consecutivi, alternanza Mattina/Pomeriggio
+- **Regole** — vincoli di generazione, **copertura richiesta** per turno (feriale/weekend) e ruolo → turni ammessi
 - **Indisponibilità** — ferie, malattie, permessi (riposo forzato nei giorni indicati)
-- **Genera & Export** — planning mensile a griglia colorata + statistiche
-  - Export Excel a 3 fogli (planning, Legenda, Riepilogo) tramite SheetJS
+- **Genera & Export**
+  - planning mensile a griglia colorata + statistiche, **festività italiane** evidenziate
+  - **avvisi di sotto-copertura** in tempo reale
+  - **modifica manuale** di ogni cella (tap/clic per cambiare turno)
+  - **storico planning** (salva, riapri, riesporta)
+  - export **Excel** (3 fogli), **Stampa/PDF**, **calendario .ics** per persona, condivisione **WhatsApp/Email**
+- **Dati** — backup/ripristino JSON e **sincronizzazione cloud opzionale** (Supabase)
+- **Lingua** — interfaccia IT / EN
+- **PWA** — installabile su telefono, funziona offline
 
 ## Logica di generazione
 
-Porting fedele di `generate_schedule()` dal desktop, con le regole **realmente applicate**
-(nell'originale erano fisse nel codice):
+Scheduler *coverage-aware*: assegna i turni giorno per giorno per coprire il fabbisogno
+richiesto, bilanciando **ore, notti e weekend** tra il personale.
 
+- copertura per turno distinta tra feriali e weekend/festivi (festività italiane incluse)
 - dopo una **Notte** → **Smonto** + **Riposo**
-- rispetto del numero massimo di notti al mese e di giorni consecutivi
-- alternanza Mattina/Pomeriggio configurabile
+- rispetto di max notti/mese e max giorni consecutivi
+- ore contrattuali e turno preferito come pesi nell'assegnazione
 - turni consentiti in base al ruolo
 
 ## Sviluppo
@@ -58,10 +65,16 @@ Aperta la pagina dal browser del telefono:
 
 Si aprirà a schermo intero come un'app e funziona anche **offline**.
 
+## Sincronizzazione tra dispositivi
+
+- **Backup/Ripristino** (tab Dati): esporta un file `.json` e reimportalo su un altro dispositivo.
+- **Cloud (opzionale)**: con un progetto **Supabase** gratuito i dati si sincronizzano tra
+  telefono e PC tramite un *codice team*. Istruzioni e script SQL nel tab **Dati**.
+
 ## Stack
 
-- React 18 + Vite 5
-- SheetJS (`xlsx`) per l'export
-- Nessun backend — persistenza su `localStorage`
+- React 18 + Vite 5 (PWA con service worker)
+- SheetJS (`xlsx`) per l'export Excel
+- Persistenza locale su `localStorage`; sync cloud opzionale via Supabase (REST)
 
-I dati sono salvati **solo nel browser corrente**. Svuotando i dati del sito si azzera tutto.
+Senza configurazione cloud i dati restano **solo nel browser corrente**.

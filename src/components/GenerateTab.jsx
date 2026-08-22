@@ -4,13 +4,18 @@ import {
   coverageDeficits, holidaysOfYear, isHoliday,
 } from '../lib/scheduler.js';
 import { exportExcel } from '../lib/excel.js';
-import { MONTHS_IT, WEEKDAYS_IT } from '../lib/defaults.js';
 import { saveSchedule, removeSchedule } from '../lib/store.js';
 import {
   exportPersonICS, personSummaryText, shareWhatsApp, shareEmail,
 } from '../lib/exports.js';
+import { useT, useLang, monthsFor, weekdaysFor } from '../lib/i18n.js';
 
 export default function GenerateTab({ state, setState }) {
+  const t = useT();
+  const lang = useLang();
+  const months = monthsFor(lang);
+  const weekdays = weekdaysFor(lang);
+
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
@@ -19,19 +24,18 @@ export default function GenerateTab({ state, setState }) {
   const [personId, setPersonId] = useState('');
 
   const generate = () => {
-    const result = generateSchedule(Number(year), Number(month), {
+    setData(generateSchedule(Number(year), Number(month), {
       shifts: state.shifts, roles: state.roles, rules: state.rules,
       staff: state.staff, unavailability: state.unavailability,
-    });
-    setData(result);
+    }));
   };
 
   const doExport = () => { if (data) exportExcel(data, state.shifts); };
 
   const save = () => {
     if (!data) return;
-    const def = `${MONTHS_IT[data.month - 1]} ${data.year}`;
-    const name = prompt('Nome del planning da salvare:', def);
+    const def = `${months[data.month - 1]} ${data.year}`;
+    const name = prompt(t('gen.promptName'), def);
     if (name === null) return;
     setState((s) => saveSchedule(s, data, name.trim() || def));
   };
@@ -46,13 +50,10 @@ export default function GenerateTab({ state, setState }) {
 
   const days = data ? data.days : monthDays(year, month);
   const holidaySet = useMemo(() => holidaysOfYear(Number(year)), [year]);
-
-  // avvisi di copertura ricalcolati in tempo reale (anche dopo modifiche manuali)
   const deficits = useMemo(
     () => (data ? coverageDeficits(data, state.shifts, state.rules) : []),
     [data, state.shifts, state.rules],
   );
-
   const totals = data ? computeTotals(data, state.shifts) : null;
   const targetById = useMemo(() => {
     const m = new Map();
@@ -60,74 +61,60 @@ export default function GenerateTab({ state, setState }) {
     return m;
   }, [state.staff]);
 
-  // modifica manuale: tap sulla cella → prossimo turno ammesso per quel ruolo
   const cycleCell = (staffId, dayIdx) => {
     setData((prev) => {
       if (!prev) return prev;
       const s = prev.schedule[staffId];
       const allowed = state.roles[s.role] ?? Object.keys(state.shifts);
       if (allowed.length === 0) return prev;
-      const cur = s.days[dayIdx];
-      const pos = allowed.indexOf(cur);
+      const pos = allowed.indexOf(s.days[dayIdx]);
       const next = allowed[(pos + 1) % allowed.length];
       const newDays = s.days.slice(); newDays[dayIdx] = next;
-      return {
-        ...prev,
-        schedule: { ...prev.schedule, [staffId]: { ...s, days: newDays } },
-      };
+      return { ...prev, schedule: { ...prev.schedule, [staffId]: { ...s, days: newDays } } };
     });
   };
 
   return (
     <>
       <div className="panel no-print">
-        <h2 className="panel-title">Genera & Export</h2>
-        <p className="panel-desc">
-          Genera il planning mensile rispettando la copertura richiesta e le regole.
-          Poi puoi <b>modificare a mano</b> ogni cella (tap/clic per cambiare turno) ed esportare in Excel.
-        </p>
+        <h2 className="panel-title">{t('gen.title')}</h2>
+        <p className="panel-desc">{t('gen.desc')}</p>
 
         <div className="form-row">
           <div className="field">
-            <label className="field-label">Mese</label>
+            <label className="field-label">{t('gen.month')}</label>
             <select value={month} onChange={(e) => setMonth(Number(e.target.value))}>
-              {MONTHS_IT.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
+              {months.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
             </select>
           </div>
           <div className="field" style={{ maxWidth: 110 }}>
-            <label className="field-label">Anno</label>
+            <label className="field-label">{t('gen.year')}</label>
             <input type="number" min={2000} max={2100} value={year}
               onChange={(e) => setYear(Number(e.target.value))} />
           </div>
-          <button className="btn btn-primary" onClick={generate} disabled={state.staff.length === 0}>
-            Genera turni
-          </button>
-          <button className="btn" onClick={doExport} disabled={!data}>Esporta Excel</button>
-          <button className="btn" onClick={save} disabled={!data}>Salva nello storico</button>
+          <button className="btn btn-primary" onClick={generate} disabled={state.staff.length === 0}>{t('gen.generate')}</button>
+          <button className="btn" onClick={doExport} disabled={!data}>{t('gen.excel')}</button>
+          <button className="btn" onClick={save} disabled={!data}>{t('gen.saveHist')}</button>
         </div>
 
-        {state.staff.length === 0 && (
-          <div className="hint hint-warn">Aggiungi del personale prima di generare il planning.</div>
-        )}
+        {state.staff.length === 0 && <div className="hint hint-warn">{t('gen.needStaff')}</div>}
 
         {data && deficits.length > 0 && (
           <div className="hint hint-warn" style={{ cursor: 'pointer' }} onClick={() => setShowDeficits((v) => !v)}>
-            ⚠️ {deficits.length} turni sotto-copertura in {new Set(deficits.map((d) => d.day)).size} giorni.
-            {' '}<u>{showDeficits ? 'Nascondi' : 'Dettagli'}</u>
+            ⚠️ {deficits.length} {t('gen.deficitPre')} {new Set(deficits.map((d) => d.day)).size} {t('gen.deficitDays')}
+            {' '}<u>{showDeficits ? t('gen.hide') : t('gen.details')}</u>
             {showDeficits && (
               <div style={{ marginTop: 8, fontSize: 12, color: 'var(--text-dim)' }}>
                 {deficits.map((d, i) => (
                   <span key={i} style={{ marginRight: 12 }}>
-                    {d.day} {MONTHS_IT[(data.month - 1)].slice(0, 3)}: {d.code} {d.got}/{d.needed}
+                    {d.day} {months[data.month - 1].slice(0, 3)}: {d.code} {d.got}/{d.needed}
                   </span>
                 ))}
               </div>
             )}
           </div>
         )}
-        {data && deficits.length === 0 && (
-          <div className="hint hint-info">✓ Copertura completa per tutti i giorni.</div>
-        )}
+        {data && deficits.length === 0 && <div className="hint hint-info">{t('gen.covOK')}</div>}
 
         <div className="legend">
           {Object.entries(state.shifts).map(([c, m]) => (
@@ -140,53 +127,51 @@ export default function GenerateTab({ state, setState }) {
 
         {data && (
           <div className="form-row no-print" style={{ marginTop: 16, marginBottom: 0, alignItems: 'center' }}>
-            <button className="btn" onClick={doPrint}>🖨 Stampa / PDF</button>
-            <span style={{ color: 'var(--text-mut)', fontSize: 12 }}>Calendario personale:</span>
+            <button className="btn" onClick={doPrint}>{t('gen.print')}</button>
+            <span style={{ color: 'var(--text-mut)', fontSize: 12 }}>{t('gen.calPerson')}</span>
             <div className="field" style={{ minWidth: 160 }}>
               <select value={pid()} onChange={(e) => setPersonId(e.target.value)}>
-                {Object.entries(data.schedule).map(([id, s]) => (
-                  <option key={id} value={id}>{s.name}</option>
-                ))}
+                {Object.entries(data.schedule).map(([id, s]) => <option key={id} value={id}>{s.name}</option>)}
               </select>
             </div>
             <button className="btn btn-sm" onClick={() => exportPersonICS(data, state.shifts, pid())}>📅 .ics</button>
             <button className="btn btn-sm" onClick={() => shareWhatsApp(shareText())}>WhatsApp</button>
-            <button className="btn btn-sm" onClick={() => shareEmail(`Turni ${personName()} — ${MONTHS_IT[data.month - 1]} ${data.year}`, shareText())}>Email</button>
+            <button className="btn btn-sm" onClick={() => shareEmail(`${personName()} — ${months[data.month - 1]} ${data.year}`, shareText())}>Email</button>
           </div>
         )}
       </div>
 
       {totals && (
         <div className="stats-row no-print">
-          <div className="stat"><div className="stat-label">Persone</div><div className="stat-value">{Object.keys(data.schedule).length}</div></div>
-          <div className="stat"><div className="stat-label">Ore totali</div><div className="stat-value">{totals.hours}</div></div>
-          <div className="stat"><div className="stat-label">Notti</div><div className="stat-value">{totals.nights}</div></div>
-          <div className="stat"><div className="stat-label">Riposi</div><div className="stat-value">{totals.rests}</div></div>
+          <div className="stat"><div className="stat-label">{t('gen.people')}</div><div className="stat-value">{Object.keys(data.schedule).length}</div></div>
+          <div className="stat"><div className="stat-label">{t('gen.totHours')}</div><div className="stat-value">{totals.hours}</div></div>
+          <div className="stat"><div className="stat-label">{t('gen.nights')}</div><div className="stat-value">{totals.nights}</div></div>
+          <div className="stat"><div className="stat-label">{t('gen.rests')}</div><div className="stat-value">{totals.rests}</div></div>
         </div>
       )}
 
       {data && (
         <div className="panel" style={{ padding: 0, overflow: 'hidden' }}>
-          <div className="print-only print-title">Turni — {MONTHS_IT[data.month - 1]} {data.year}</div>
+          <div className="print-only print-title">{months[data.month - 1]} {data.year}</div>
           <div className="grid-wrap">
             <table className="grid">
               <thead>
                 <tr>
-                  <th className="sticky">Nome</th>
+                  <th className="sticky">{t('gen.colName')}</th>
                   {range(1, days).map((d) => {
                     const wd = weekdayOf(data.year, data.month, d);
                     const holiday = isHoliday(data.year, data.month, d, holidaySet);
                     const weekend = wd >= 5 || holiday;
                     return (
-                      <th key={d} className={`day-h ${weekend ? 'weekend' : ''} ${holiday ? 'holiday' : ''}`} title={holiday ? 'Festivo' : ''}>
+                      <th key={d} className={`day-h ${weekend ? 'weekend' : ''} ${holiday ? 'holiday' : ''}`} title={holiday ? t('gen.holiday') : ''}>
                         <div>{d}</div>
                         <div style={{ fontSize: 9, color: holiday ? 'var(--red)' : 'var(--text-mut)' }}>
-                          {holiday ? '★' : WEEKDAYS_IT[wd]}
+                          {holiday ? '★' : weekdays[wd]}
                         </div>
                       </th>
                     );
                   })}
-                  <th className="day-h">Ore</th>
+                  <th className="day-h">{t('gen.colHours')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -194,8 +179,7 @@ export default function GenerateTab({ state, setState }) {
                   const stt = staffStats(s.days, state.shifts);
                   const target = targetById.get(id) || 0;
                   const totClass = target > 0
-                    ? (stt.hours > target ? 'red' : stt.hours < target * 0.85 ? 'under' : 'ok')
-                    : '';
+                    ? (stt.hours > target ? 'red' : stt.hours < target * 0.85 ? 'under' : 'ok') : '';
                   return (
                     <tr key={id}>
                       <td className="sticky">
@@ -207,13 +191,12 @@ export default function GenerateTab({ state, setState }) {
                         const holiday = isHoliday(data.year, data.month, d, holidaySet);
                         return (
                           <td key={d} className={(wd >= 5 || holiday) ? 'weekend' : ''}
-                            onClick={() => cycleCell(id, d - 1)}
-                            style={{ cursor: 'pointer' }} title="Clic per cambiare turno">
+                            onClick={() => cycleCell(id, d - 1)} style={{ cursor: 'pointer' }} title={t('gen.changeShift')}>
                             <span className={`cell cell-${code}`}>{code}</span>
                           </td>
                         );
                       })}
-                      <td className={`tot tot-${totClass}`} title={target ? `Contratto: ${target}h` : ''}>
+                      <td className={`tot tot-${totClass}`} title={target ? `${target}h` : ''}>
                         {stt.hours}{target ? <span style={{ fontSize: 9, color: 'var(--text-mut)' }}>/{target}</span> : null}
                       </td>
                     </tr>
@@ -227,26 +210,26 @@ export default function GenerateTab({ state, setState }) {
 
       {(state.history?.length > 0) && (
         <div className="panel no-print">
-          <h2 className="panel-title">Storico planning</h2>
-          <p className="panel-desc">Planning salvati su questo dispositivo. “Riapri” lo carica nella griglia per rivederlo, modificarlo o riesportarlo.</p>
+          <h2 className="panel-title">{t('gen.histTitle')}</h2>
+          <p className="panel-desc">{t('gen.histDesc')}</p>
           <div className="table-wrap">
             <table>
               <thead>
-                <tr><th>Nome</th><th>Periodo</th><th>Salvato il</th><th style={{ width: 260 }}></th></tr>
+                <tr><th>{t('c.name')}</th><th>{t('c.period')}</th><th>{t('gen.savedAt')}</th><th style={{ width: 220 }}></th></tr>
               </thead>
               <tbody>
                 {state.history.map((h) => (
                   <tr key={h.id}>
                     <td>{h.name}</td>
-                    <td>{MONTHS_IT[h.month - 1]} {h.year}</td>
+                    <td>{months[h.month - 1]} {h.year}</td>
                     <td className="mono" style={{ fontSize: 12, color: 'var(--text-dim)' }}>
-                      {new Date(h.savedAt).toLocaleString('it-IT', { dateStyle: 'short', timeStyle: 'short' })}
+                      {new Date(h.savedAt).toLocaleString(lang === 'en' ? 'en-GB' : 'it-IT', { dateStyle: 'short', timeStyle: 'short' })}
                     </td>
                     <td>
                       <div className="row-actions">
-                        <button className="btn btn-sm" onClick={() => reopen(h)}>Riapri</button>
+                        <button className="btn btn-sm" onClick={() => reopen(h)}>{t('gen.reopen')}</button>
                         <button className="btn btn-sm" onClick={() => exportExcel(h.data, state.shifts)}>Excel</button>
-                        <button className="btn btn-sm btn-danger" onClick={() => delHist(h.id)}>Elimina</button>
+                        <button className="btn btn-sm btn-danger" onClick={() => delHist(h.id)}>{t('c.delete')}</button>
                       </div>
                     </td>
                   </tr>

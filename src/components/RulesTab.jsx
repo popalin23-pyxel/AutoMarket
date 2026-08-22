@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
+import { useT } from '../lib/i18n.js';
 
 export default function RulesTab({ state, setState }) {
+  const t = useT();
   const setRule = (key, value) =>
     setState((s) => ({ ...s, rules: { ...s.rules, [key]: value } }));
 
@@ -23,9 +25,7 @@ export default function RulesTab({ state, setState }) {
   const toggleRoleShift = (role, code) => {
     setState((s) => {
       const current = s.roles[role] ?? [];
-      const next = current.includes(code)
-        ? current.filter((c) => c !== code)
-        : [...current, code];
+      const next = current.includes(code) ? current.filter((c) => c !== code) : [...current, code];
       return { ...s, roles: { ...s.roles, [role]: next } };
     });
   };
@@ -48,50 +48,45 @@ export default function RulesTab({ state, setState }) {
   return (
     <>
       <div className="panel">
-        <h2 className="panel-title">Regole di generazione</h2>
-        <p className="panel-desc">Questi vincoli vengono applicati durante la generazione automatica del planning.</p>
+        <h2 className="panel-title">{t('rules.title')}</h2>
+        <p className="panel-desc">{t('rules.desc')}</p>
 
         <div className="form-row">
           <div className="field">
-            <label className="field-label">Max notti / mese</label>
+            <label className="field-label">{t('rules.maxNights')}</label>
             <input type="number" min={0} max={31} value={state.rules.max_nights}
               onChange={(e) => setRule('max_nights', Number(e.target.value))} />
           </div>
           <div className="field">
-            <label className="field-label">Max giorni consecutivi</label>
+            <label className="field-label">{t('rules.maxStreak')}</label>
             <input type="number" min={0} max={31} value={state.rules.max_work_streak}
               onChange={(e) => setRule('max_work_streak', Number(e.target.value))} />
           </div>
           <div className="field">
-            <label className="field-label">Alterna Mattina / Pomeriggio</label>
+            <label className="field-label">{t('rules.altMP')}</label>
             <div className="inline-check" style={{ height: 38 }}>
               <input type="checkbox" checked={state.rules.prefer_alt_mp}
                 onChange={(e) => setRule('prefer_alt_mp', e.target.checked)} />
               <span style={{ fontSize: 13, color: 'var(--text-dim)' }}>
-                {state.rules.prefer_alt_mp ? 'Attiva' : 'Disattiva'}
+                {state.rules.prefer_alt_mp ? t('rules.on') : t('rules.off')}
               </span>
             </div>
           </div>
         </div>
-        <div className="hint hint-info">
-          Le modifiche sono salvate automaticamente e usate al prossimo "Genera turni".
-        </div>
+        <div className="hint hint-info">{t('rules.autosave')}</div>
       </div>
 
       <div className="panel">
-        <h2 className="panel-title">Copertura richiesta</h2>
-        <p className="panel-desc">
-          Quante persone servono per ogni turno, distinguendo giorni feriali da weekend/festivi.
-          La generazione prova a coprire questi numeri e segnala i giorni scoperti.
-        </p>
+        <h2 className="panel-title">{t('rules.coverage')}</h2>
+        <p className="panel-desc">{t('rules.coverageDesc')}</p>
 
         <div className="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>Turno</th>
-                <th style={{ textAlign: 'center' }}>Feriale</th>
-                <th style={{ textAlign: 'center' }}>Weekend / Festivi</th>
+                <th>{t('rules.shift')}</th>
+                <th style={{ textAlign: 'center' }}>{t('rules.weekday')}</th>
+                <th style={{ textAlign: 'center' }}>{t('rules.weekend')}</th>
               </tr>
             </thead>
             <tbody>
@@ -99,10 +94,7 @@ export default function RulesTab({ state, setState }) {
                 const cov = state.rules.coverage?.[c] ?? { weekday: 0, weekend: 0 };
                 return (
                   <tr key={c}>
-                    <td>
-                      <span className={`cell cell-${c}`}>{c}</span>{' '}
-                      {state.shifts[c]?.description}
-                    </td>
+                    <td><span className={`cell cell-${c}`}>{c}</span> {state.shifts[c]?.description}</td>
                     <td style={{ textAlign: 'center' }}>
                       <input type="number" min={0} max={99} value={cov.weekday ?? 0}
                         onChange={(e) => setCoverage(c, 'weekday', Number(e.target.value))}
@@ -122,24 +114,24 @@ export default function RulesTab({ state, setState }) {
       </div>
 
       <div className="panel">
-        <h2 className="panel-title">Ruoli e turni ammessi</h2>
-        <p className="panel-desc">Spunta i turni che ogni ruolo può ricevere. Un ruolo senza turni diurni lavorativi verrà messo a riposo.</p>
+        <h2 className="panel-title">{t('rules.rolesTitle')}</h2>
+        <p className="panel-desc">{t('rules.rolesDesc')}</p>
 
         <div className="form-row">
           <div className="field" style={{ flex: 1 }}>
-            <label className="field-label">Nuovo ruolo</label>
-            <input type="text" value={newRole} placeholder="Es. Caposala"
+            <label className="field-label">{t('rules.newRole')}</label>
+            <input type="text" value={newRole} placeholder={t('rules.newRolePh')}
               onChange={(e) => setNewRole(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && addRole()} />
           </div>
-          <button className="btn btn-primary" onClick={addRole}>Aggiungi ruolo</button>
+          <button className="btn btn-primary" onClick={addRole}>{t('rules.addRole')}</button>
         </div>
 
         <div className="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>Ruolo</th>
+                <th>{t('c.role')}</th>
                 {shiftCodes.map((c) => <th key={c} style={{ textAlign: 'center' }}>{c}</th>)}
                 <th style={{ width: 90 }}></th>
               </tr>
@@ -150,11 +142,10 @@ export default function RulesTab({ state, setState }) {
                   <td><span className="badge badge-role">{role}</span></td>
                   {shiftCodes.map((c) => (
                     <td key={c} style={{ textAlign: 'center' }}>
-                      <input type="checkbox" checked={codes.includes(c)}
-                        onChange={() => toggleRoleShift(role, c)} />
+                      <input type="checkbox" checked={codes.includes(c)} onChange={() => toggleRoleShift(role, c)} />
                     </td>
                   ))}
-                  <td><button className="btn btn-sm btn-danger" onClick={() => delRole(role)}>Elimina</button></td>
+                  <td><button className="btn btn-sm btn-danger" onClick={() => delRole(role)}>{t('c.delete')}</button></td>
                 </tr>
               ))}
             </tbody>
