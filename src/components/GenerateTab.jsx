@@ -10,6 +10,8 @@ import {
   exportPersonICS, personSummaryText, shareWhatsApp, shareEmail,
 } from '../lib/exports.js';
 import { useT, useLang, monthsFor, weekdaysFor } from '../lib/i18n.js';
+import Wallboard from './Wallboard.jsx';
+import QrModal from './QrModal.jsx';
 
 export default function GenerateTab({ state, setState }) {
   const t = useT();
@@ -90,6 +92,16 @@ export default function GenerateTab({ state, setState }) {
 
   const [editing, setEditing] = useState(null); // { id, idx }
   const [undo, setUndo] = useState([]);
+  const [showWall, setShowWall] = useState(false);
+  const [qr, setQr] = useState(null); // { text, title }
+
+  const qrForPerson = () => {
+    if (!data) return null;
+    const s = data.schedule[pid()];
+    if (!s) return null;
+    const compact = s.days.map((c, i) => (state.shifts[c]?.working ? `${i + 1}${c}` : '')).filter(Boolean).join(' ');
+    return { title: `${s.name} · ${months[data.month - 1]} ${data.year}`, text: `${s.name} ${months[data.month - 1].slice(0, 3)}${data.year}: ${compact}` };
+  };
   const openEditor = (id, idx) => setEditing({ id, idx });
   const snap = () => setUndo((u) => (data ? [data, ...u].slice(0, 30) : u));
   const doUndo = () => setUndo((u) => { if (u.length) setData(u[0]); return u.slice(1); });
@@ -200,6 +212,7 @@ export default function GenerateTab({ state, setState }) {
             <button className="btn btn-primary" onClick={doFill}>{t('gen.fill')}</button>
             <button className="btn" onClick={doBalance}>{t('gen.balance')}</button>
             <button className="btn" onClick={doUndo} disabled={undo.length === 0}>{t('gen.undo')}</button>
+            <button className="btn" onClick={() => setShowWall(true)}>{t('gen.wallboard')}</button>
             <button className="btn" onClick={doPrint}>{t('gen.print')}</button>
             <span style={{ color: 'var(--text-mut)', fontSize: 12 }}>{t('gen.calPerson')}</span>
             <div className="field" style={{ minWidth: 160 }}>
@@ -208,6 +221,7 @@ export default function GenerateTab({ state, setState }) {
               </select>
             </div>
             <button className="btn btn-sm" onClick={() => exportPersonICS(data, state.shifts, pid())}>📅 .ics</button>
+            <button className="btn btn-sm" onClick={() => setQr(qrForPerson())}>{t('gen.qr')}</button>
             <button className="btn btn-sm" onClick={() => shareWhatsApp(shareText())}>WhatsApp</button>
             <button className="btn btn-sm" onClick={() => shareEmail(`${personName()} — ${months[data.month - 1]} ${data.year}`, shareText())}>Email</button>
           </div>
@@ -414,6 +428,12 @@ export default function GenerateTab({ state, setState }) {
           </div>
         );
       })()}
+
+      {showWall && data && (
+        <Wallboard data={data} shifts={state.shifts} floors={state.floors}
+          months={months} weekdays={weekdays} onClose={() => setShowWall(false)} />
+      )}
+      {qr && <QrModal text={qr.text} title={qr.title} onClose={() => setQr(null)} />}
     </>
   );
 }

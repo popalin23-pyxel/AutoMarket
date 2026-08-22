@@ -396,6 +396,32 @@ tbody tr:hover td { background: rgba(34, 211, 238, 0.06); }
 .load-meta { width: 130px; flex-shrink: 0; text-align: right; font-size: 11px; color: var(--text-dim); }
 @media (max-width: 560px) { .load-name { width: 80px; } .load-meta { width: 110px; } }
 
+/* Vista muro (wallboard) */
+.wall-overlay {
+  position: fixed; inset: 0; z-index: 300; background: var(--bg);
+  display: flex; flex-direction: column; padding: 20px; overflow-y: auto;
+}
+.wall-top { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; }
+.wall-top .btn { font-size: 22px; padding: 4px 16px; }
+.wall-close { margin-left: auto; }
+.wall-date { text-align: center; }
+.wall-day { font-size: 44px; font-weight: 800; line-height: 1;
+  background: linear-gradient(120deg, var(--accent), var(--accent-2));
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+.wall-mon { display: block; font-size: 14px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; }
+.wall-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+.wall-floor {
+  background: linear-gradient(160deg, var(--glass-hi), var(--glass));
+  border: 1px solid var(--border); border-radius: var(--radius); padding: 18px;
+}
+.wall-floor-name { font-size: 18px; font-weight: 700; color: var(--accent); margin-bottom: 14px; }
+.wall-shift { display: flex; align-items: flex-start; gap: 14px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.wall-shift:last-child { border-bottom: none; }
+.wall-code { font-size: 20px; min-width: 44px; text-align: center; padding: 6px 8px !important; }
+.wall-names { display: flex; flex-direction: column; gap: 3px; }
+.wall-name { font-size: 17px; font-weight: 600; }
+.wall-empty { color: var(--text-mut); font-size: 22px; text-align: center; padding: 20px; }
+
 /* ── Responsive ────────────────────────────────────────── */
 @media (max-width: 560px) {
   .app-header { padding: 14px 16px; }
