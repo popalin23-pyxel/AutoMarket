@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { loadState, saveState } from './lib/store.js';
+import { getCloudConfig, isCloudConfigured, pullState } from './lib/cloud.js';
 import StaffTab from './components/StaffTab.jsx';
 import ShiftsTab from './components/ShiftsTab.jsx';
 import RulesTab from './components/RulesTab.jsx';
@@ -22,6 +23,16 @@ export default function App() {
 
   // salva su localStorage a ogni modifica
   useEffect(() => { saveState(state); }, [state]);
+
+  // caricamento automatico dal cloud all'avvio (se configurato e attivato)
+  useEffect(() => {
+    const cfg = getCloudConfig();
+    if (cfg.autoLoad && isCloudConfigured(cfg)) {
+      pullState(cfg)
+        .then((r) => { if (r?.state) setState(r.state); })
+        .catch(() => { /* offline o non configurato: resta il dato locale */ });
+    }
+  }, []); // solo al mount
 
   const badge = {
     staff: state.staff.length || null,
