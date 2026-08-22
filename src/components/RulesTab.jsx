@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useT } from '../lib/i18n.js';
 import { addFloor, renameFloor, removeFloor, setCoverage, setCoverageHours, setSequence } from '../lib/store.js';
+import NumberInput from './NumberInput.jsx';
 
 export default function RulesTab({ state, setState }) {
   const t = useT();
@@ -8,6 +9,7 @@ export default function RulesTab({ state, setState }) {
 
   const [newRole, setNewRole] = useState('');
   const [newFloor, setNewFloor] = useState('');
+  const [seqText, setSeqText] = useState({}); // testo grezzo digitato per ruolo
   const shiftCodes = Object.keys(state.shifts);
   const workingCodes = shiftCodes.filter((c) => state.shifts[c]?.working);
   const roleKeys = Object.keys(state.roles);
@@ -18,7 +20,12 @@ export default function RulesTab({ state, setState }) {
   const hoursVal = (fid, role, kind) =>
     state.rules.coverageHours?.[fid]?.[role]?.[kind] ?? 0;
   const seqStr = (role) => (state.rules.sequences?.[role] ?? []).join(' ');
-  const setSeq = (role, str) => setState((s) => setSequence(s, role, str.split(/[\s,]+/).filter(Boolean)));
+  // valore mostrato: il testo grezzo se lo stai digitando, altrimenti dallo stato
+  const seqValue = (role) => (seqText[role] !== undefined ? seqText[role] : seqStr(role));
+  const setSeq = (role, str) => {
+    setSeqText((m) => ({ ...m, [role]: str })); // preserva spazi mentre digiti
+    setState((s) => setSequence(s, role, str.split(/[\s,]+/).filter(Boolean)));
+  };
 
   const toggleRoleShift = (role, code) => {
     setState((s) => {
@@ -49,13 +56,13 @@ export default function RulesTab({ state, setState }) {
         <div className="form-row">
           <div className="field">
             <label className="field-label">{t('rules.maxNights')}</label>
-            <input type="number" min={0} max={31} value={state.rules.max_nights}
-              onChange={(e) => setRule('max_nights', Number(e.target.value))} />
+            <NumberInput min={0} max={31} value={state.rules.max_nights}
+              onChange={(v) => setRule('max_nights', v)} />
           </div>
           <div className="field">
             <label className="field-label">{t('rules.maxStreak')}</label>
-            <input type="number" min={0} max={31} value={state.rules.max_work_streak}
-              onChange={(e) => setRule('max_work_streak', Number(e.target.value))} />
+            <NumberInput min={0} max={31} value={state.rules.max_work_streak}
+              onChange={(v) => setRule('max_work_streak', v)} />
           </div>
         </div>
         <div className="hint hint-info">{t('rules.autosave')}</div>
@@ -123,9 +130,9 @@ export default function RulesTab({ state, setState }) {
                           <React.Fragment key={c}>
                             {['weekday', 'weekend'].map((kind) => (
                               <td key={kind} style={{ textAlign: 'center', padding: 4 }}>
-                                <input type="number" min={0} max={99} disabled={!allowed}
+                                <NumberInput min={0} max={99} disabled={!allowed}
                                   value={covVal(f.id, role, c, kind)}
-                                  onChange={(e) => setState((s) => setCoverage(s, f.id, role, c, kind, e.target.value))}
+                                  onChange={(v) => setState((s) => setCoverage(s, f.id, role, c, kind, v))}
                                   style={{ minWidth: 0, width: 46, opacity: allowed ? 1 : 0.35 }} />
                               </td>
                             ))}
@@ -163,8 +170,8 @@ export default function RulesTab({ state, setState }) {
                       <td><span className="badge badge-role">{role}</span></td>
                       {['weekday', 'weekend'].map((kind) => (
                         <td key={kind} style={{ textAlign: 'center' }}>
-                          <input type="number" min={0} max={999} step={1} value={hoursVal(f.id, role, kind)}
-                            onChange={(e) => setState((s) => setCoverageHours(s, f.id, role, kind, e.target.value))}
+                          <NumberInput min={0} max={999} value={hoursVal(f.id, role, kind)}
+                            onChange={(v) => setState((s) => setCoverageHours(s, f.id, role, kind, v))}
                             style={{ minWidth: 0, width: 70 }} /> h
                         </td>
                       ))}
@@ -184,7 +191,7 @@ export default function RulesTab({ state, setState }) {
         {roleKeys.map((role) => (
           <div className="form-row" key={role} style={{ alignItems: 'center', marginBottom: 10 }}>
             <span className="badge badge-role" style={{ minWidth: 90 }}>{role}</span>
-            <input type="text" value={seqStr(role)} placeholder="P M N S R"
+            <input type="text" value={seqValue(role)} placeholder="P M N S R"
               onChange={(e) => setSeq(role, e.target.value)} style={{ flex: 1, minWidth: 200 }} />
           </div>
         ))}

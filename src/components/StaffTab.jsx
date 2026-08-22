@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { addStaff, removeStaff, updateStaff } from '../lib/store.js';
 import { useT } from '../lib/i18n.js';
+import NumberInput from './NumberInput.jsx';
 
 export default function StaffTab({ state, setState }) {
   const t = useT();
@@ -117,8 +118,8 @@ export default function StaffTab({ state, setState }) {
                 <td>{s.name}</td>
                 <td><span className="badge badge-role">{s.role}</span></td>
                 <td>
-                  <input type="number" min={0} max={400} value={s.contractHours || 0}
-                    onChange={(e) => patch(s.id, { contractHours: Number(e.target.value) })}
+                  <NumberInput min={0} max={400} value={s.contractHours || 0}
+                    onChange={(v) => patch(s.id, { contractHours: v })}
                     style={{ minWidth: 0, width: 70 }} />
                 </td>
                 <td>
