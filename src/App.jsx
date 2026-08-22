@@ -5,6 +5,7 @@ import ShiftsTab from './components/ShiftsTab.jsx';
 import RulesTab from './components/RulesTab.jsx';
 import UnavailabilityTab from './components/UnavailabilityTab.jsx';
 import GenerateTab from './components/GenerateTab.jsx';
+import DataTab from './components/DataTab.jsx';
 
 const TABS = [
   { id: 'staff',    label: 'Personale' },
@@ -12,6 +13,7 @@ const TABS = [
   { id: 'rules',    label: 'Regole' },
   { id: 'unav',     label: 'Indisponibilità' },
   { id: 'generate', label: 'Genera & Export' },
+  { id: 'data',     label: 'Dati' },
 ];
 
 export default function App() {
@@ -55,6 +57,7 @@ export default function App() {
         {active === 'rules'    && <RulesTab state={state} setState={setState} />}
         {active === 'unav'     && <UnavailabilityTab state={state} setState={setState} />}
         {active === 'generate' && <GenerateTab state={state} />}
+        {active === 'data'     && <DataTab state={state} setState={setState} />}
       </div>
 
       <footer className="app-footer">

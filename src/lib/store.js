@@ -16,23 +16,73 @@ function freshState() {
   };
 }
 
+// Merge difensivo: garantisce che tutte le chiavi esistano e siano valide
+function sanitizeState(parsed) {
+  if (!parsed || typeof parsed !== 'object') return freshState();
+  return {
+    ...freshState(),
+    ...parsed,
+    staff: Array.isArray(parsed.staff) ? parsed.staff : [],
+    unavailability: Array.isArray(parsed.unavailability) ? parsed.unavailability : [],
+    shifts: parsed.shifts ?? structuredClone(DEFAULT_SHIFTS),
+    roles: parsed.roles ?? structuredClone(DEFAULT_ROLES),
+    rules: { ...DEFAULT_RULES, ...(parsed.rules ?? {}) },
+    seq: parsed.seq ?? { staff: 1, unav: 1 },
+  };
+}
+
 export function loadState() {
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw) return freshState();
-    const parsed = JSON.parse(raw);
-    // merge difensivo: garantisce che tutte le chiavi esistano
-    return {
-      ...freshState(),
-      ...parsed,
-      shifts: parsed.shifts ?? structuredClone(DEFAULT_SHIFTS),
-      roles: parsed.roles ?? structuredClone(DEFAULT_ROLES),
-      rules: { ...DEFAULT_RULES, ...(parsed.rules ?? {}) },
-      seq: parsed.seq ?? { staff: 1, unav: 1 },
-    };
+    return sanitizeState(JSON.parse(raw));
   } catch {
     return freshState();
   }
+}
+
+// ── Backup / Ripristino (portabilità dei dati tra dispositivi) ──────────
+const BACKUP_VERSION = 1;
+
+export function exportBackup(state) {
+  const payload = {
+    app: 'turnify',
+    version: BACKUP_VERSION,
+    exportedAt: new Date().toISOString(),
+    state,
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const stamp = new Date().toISOString().slice(0, 10);
+  a.href = url;
+  a.download = `turnify-backup-${stamp}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+// Legge un file di backup e restituisce lo stato pulito (Promise).
+// Accetta sia il formato con wrapper { app, state } sia uno stato "nudo".
+export function importBackup(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const parsed = JSON.parse(String(reader.result));
+        const raw = parsed && parsed.state ? parsed.state : parsed;
+        if (parsed && parsed.app && parsed.app !== 'turnify') {
+          return reject(new Error('Il file non è un backup di Turnify.'));
+        }
+        resolve(sanitizeState(raw));
+      } catch {
+        reject(new Error('File non valido o danneggiato.'));
+      }
+    };
+    reader.onerror = () => reject(new Error('Impossibile leggere il file.'));
+    reader.readAsText(file);
+  });
 }
 
 export function saveState(state) {
