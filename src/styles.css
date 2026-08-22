@@ -1,0 +1,203 @@
+/* Turnify Web — tema scuro, ispirato al desktop PyQt6 (accento azzurro #0ea5e9) */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:        #1e2128;
+  --bg-panel:  #181a20;
+  --bg-elev:   #23272e;
+  --border:    #333842;
+  --border-hi: #454b57;
+  --text:      #f0f0f0;
+  --text-dim:  #a0a6b0;
+  --text-mut:  #6b7280;
+  --accent:    #0ea5e9;
+  --accent-dk: #0284c7;
+  --green:     #22c55e;
+  --red:       #ef4444;
+  --orange:    #f59e0b;
+  --radius:    8px;
+  --radius-sm: 5px;
+  --mono:      'SF Mono', 'Courier New', monospace;
+}
+
+html, body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  min-height: 100vh;
+}
+
+button, input, select { font-family: inherit; font-size: 14px; }
+.mono { font-family: var(--mono); }
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: var(--bg-panel); }
+::-webkit-scrollbar-thumb { background: var(--border-hi); border-radius: 4px; }
+
+/* ── Layout ────────────────────────────────────────────── */
+.app { min-height: 100vh; display: flex; flex-direction: column; }
+
+.app-header {
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 20px;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap;
+}
+.brand { display: flex; align-items: baseline; gap: 10px; }
+.brand-logo { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
+.brand-logo .accent { color: var(--accent); }
+.brand-ver { font-size: 11px; color: var(--text-mut); font-weight: 600; }
+.brand-sub { font-size: 12px; color: var(--text-dim); }
+
+.app-body { flex: 1; max-width: 1300px; width: 100%; margin: 0 auto; padding: 20px; }
+
+/* ── Tabs ──────────────────────────────────────────────── */
+.tabs {
+  display: flex; gap: 2px; border-bottom: 1px solid var(--border);
+  margin-bottom: 20px; overflow-x: auto;
+}
+.tab {
+  padding: 10px 18px; background: none; border: none;
+  border-bottom: 2px solid transparent; color: var(--text-dim);
+  cursor: pointer; white-space: nowrap; font-weight: 500;
+  transition: color 0.15s, border-color 0.15s;
+}
+.tab:hover { color: var(--text); }
+.tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.tab-badge {
+  display: inline-block; margin-left: 6px; padding: 1px 7px;
+  font-size: 11px; font-weight: 700; border-radius: 10px;
+  background: var(--bg-elev); color: var(--text-dim);
+}
+.tab.active .tab-badge { background: var(--accent); color: #001018; }
+
+/* ── Cards / Panels ────────────────────────────────────── */
+.panel {
+  background: var(--bg-panel); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 20px; margin-bottom: 20px;
+}
+.panel-title {
+  font-size: 15px; font-weight: 700; margin-bottom: 4px;
+}
+.panel-desc { font-size: 12px; color: var(--text-dim); margin-bottom: 16px; }
+
+/* ── Forms ─────────────────────────────────────────────── */
+.form-row {
+  display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end;
+  margin-bottom: 16px;
+}
+.field { display: flex; flex-direction: column; gap: 5px; }
+.field-label {
+  font-size: 11px; color: var(--text-mut); text-transform: uppercase;
+  letter-spacing: 0.4px; font-weight: 600;
+}
+input[type=text], input[type=number], input[type=date], select {
+  background: var(--bg); border: 1px solid var(--border-hi);
+  color: var(--text); border-radius: var(--radius-sm);
+  padding: 8px 10px; min-width: 120px;
+}
+input:focus, select:focus { outline: none; border-color: var(--accent); }
+select option { background: var(--bg-panel); }
+input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer; }
+
+.btn {
+  padding: 8px 16px; border-radius: var(--radius-sm); border: 1px solid var(--border-hi);
+  background: var(--bg-elev); color: var(--text); cursor: pointer;
+  font-weight: 600; transition: all 0.15s; white-space: nowrap;
+}
+.btn:hover { border-color: var(--accent); color: var(--accent); }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: #001018; }
+.btn-primary:hover { background: var(--accent-dk); border-color: var(--accent-dk); color: #fff; }
+.btn-danger:hover { border-color: var(--red); color: var(--red); }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn-sm { padding: 4px 10px; font-size: 12px; }
+
+/* ── Tables ────────────────────────────────────────────── */
+.table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); }
+table { width: 100%; border-collapse: collapse; }
+th {
+  background: var(--bg-elev); text-align: left; padding: 10px 12px;
+  font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px;
+  color: var(--text-dim); font-weight: 700; white-space: nowrap;
+  border-bottom: 1px solid var(--border);
+}
+td { padding: 9px 12px; border-bottom: 1px solid var(--border); }
+tr:last-child td { border-bottom: none; }
+tbody tr:hover td { background: var(--bg-elev); }
+.empty-row td { text-align: center; color: var(--text-mut); font-style: italic; padding: 24px; }
+
+/* ── Grid preview del planning ─────────────────────────── */
+.grid-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); }
+.grid { border-collapse: collapse; font-size: 12px; }
+.grid th, .grid td {
+  border: 1px solid var(--border); padding: 5px 6px; text-align: center;
+  white-space: nowrap;
+}
+.grid th.sticky, .grid td.sticky {
+  position: sticky; left: 0; z-index: 2; text-align: left;
+  background: var(--bg-elev); min-width: 120px;
+}
+.grid th.day-h { min-width: 30px; font-size: 11px; }
+.grid th.weekend, .grid td.weekend { background: rgba(14,165,233,0.06); }
+.grid td.tot { font-weight: 700; background: var(--bg-elev); }
+
+/* celle turno colorate */
+.cell { font-weight: 700; border-radius: 3px; }
+.cell-M { color: #7dd3fc; }
+.cell-P { color: #fcd34d; }
+.cell-N { color: #c4b5fd; background: rgba(196,181,253,0.12); }
+.cell-S { color: #94a3b8; }
+.cell-R { color: var(--text-mut); }
+
+/* ── Badge ruolo ───────────────────────────────────────── */
+.badge {
+  display: inline-block; padding: 2px 9px; border-radius: 12px;
+  font-size: 11px; font-weight: 700;
+}
+.badge-role { background: rgba(14,165,233,0.15); color: var(--accent); }
+.badge-kind { background: var(--bg-elev); color: var(--text-dim); }
+
+/* ── Legend chips ──────────────────────────────────────── */
+.legend { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+.legend-chip {
+  display: flex; align-items: center; gap: 6px;
+  padding: 5px 10px; background: var(--bg); border: 1px solid var(--border);
+  border-radius: 20px; font-size: 12px;
+}
+.legend-chip b { font-family: var(--mono); }
+
+/* ── Stat cards ────────────────────────────────────────── */
+.stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; margin-bottom: 18px; }
+.stat {
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 12px 14px;
+}
+.stat-label { font-size: 11px; color: var(--text-mut); text-transform: uppercase; letter-spacing: 0.4px; }
+.stat-value { font-size: 22px; font-weight: 800; margin-top: 2px; }
+
+/* ── Toast / hint ──────────────────────────────────────── */
+.hint {
+  padding: 10px 14px; border-radius: var(--radius-sm);
+  font-size: 13px; margin-bottom: 16px;
+}
+.hint-info  { background: rgba(14,165,233,0.1); border: 1px solid rgba(14,165,233,0.3); color: #7dd3fc; }
+.hint-warn  { background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3); color: #fcd34d; }
+
+.app-footer {
+  padding: 14px 20px; text-align: center; font-size: 12px;
+  color: var(--text-mut); border-top: 1px solid var(--border);
+}
+
+.row-actions { display: flex; gap: 6px; }
+.inline-check { display: flex; align-items: center; gap: 8px; }
+
+@media (max-width: 560px) {
+  .app-body { padding: 14px; }
+  .form-row { gap: 8px; }
+  input[type=text], input[type=number], input[type=date], select { min-width: 0; width: 100%; }
+  .field { flex: 1; min-width: 130px; }
+}
