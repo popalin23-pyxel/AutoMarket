@@ -29,10 +29,32 @@ Porting fedele di `generate_schedule()` dal desktop, con le regole **realmente a
 
 ```bash
 npm install
-npm run dev      # http://localhost:5173
+npm run dev      # http://localhost:5173/AutoMarket/
 npm run build    # build di produzione in dist/
 npm run preview  # anteprima della build
 ```
+
+## Pubblicazione (GitHub Pages)
+
+Il deploy è automatico tramite GitHub Actions (`.github/workflows/deploy.yml`):
+a ogni push il sito viene ricostruito e pubblicato.
+
+**Attivazione (una volta sola):**
+1. Su GitHub apri il repository → **Settings** → **Pages**
+2. In **Build and deployment → Source** scegli **GitHub Actions**
+3. Attendi che l'azione "Deploy su GitHub Pages" finisca (scheda **Actions**)
+4. Il sito sarà su: `https://popalin23-pyxel.github.io/AutoMarket/`
+
+> Nota: GitHub Pages su repository **privati** richiede un piano a pagamento.
+> Se il repo è privato e resta gratuito, usa in alternativa Vercel/Netlify.
+
+## Installazione sul telefono (PWA)
+
+Aperta la pagina dal browser del telefono:
+- **Android (Chrome):** menu ⋮ → *Aggiungi a schermata Home*
+- **iPhone (Safari):** tasto Condividi → *Aggiungi a Home*
+
+Si aprirà a schermo intero come un'app e funziona anche **offline**.
 
 ## Stack
 
