@@ -1,17 +1,21 @@
 // Store persistente su localStorage — equivalente browser del SQLite/config del desktop.
 // Un solo oggetto stato serializzato, con API semplici e id incrementali.
 
-import { DEFAULT_SHIFTS, DEFAULT_ROLES, DEFAULT_RULES } from './defaults.js';
+import {
+  DEFAULT_SHIFTS, DEFAULT_ROLES, DEFAULT_RULES, DEFAULT_FLOORS, buildCoverage, defaultFloorCoverage,
+} from './defaults.js';
 
 const KEY = 'turnify_state_v1';
 
 function freshState() {
+  const floors = structuredClone(DEFAULT_FLOORS);
   return {
-    staff: [],           // [{ id, name, role, contractHours, preferredShift }]
+    staff: [],           // [{ id, name, role, contractHours, preferredShift, floors: [floorId] }]
     unavailability: [],  // [{ id, staffId, day: 'YYYY-MM-DD', kind }]
     shifts: structuredClone(DEFAULT_SHIFTS),
     roles: structuredClone(DEFAULT_ROLES),
-    rules: structuredClone(DEFAULT_RULES),
+    floors,              // [{ id, name }]
+    rules: { ...structuredClone(DEFAULT_RULES), coverage: buildCoverage(floors, DEFAULT_ROLES, DEFAULT_SHIFTS) },
     history: [],         // [{ id, name, year, month, savedAt, data }]
     lang: 'it',
     seq: { staff: 1, unav: 1 },
@@ -21,18 +25,30 @@ function freshState() {
 // Merge difensivo: garantisce che tutte le chiavi esistano e siano valide
 function sanitizeState(parsed) {
   if (!parsed || typeof parsed !== 'object') return freshState();
+  const shifts = parsed.shifts ?? structuredClone(DEFAULT_SHIFTS);
+  const roles = parsed.roles ?? structuredClone(DEFAULT_ROLES);
+
+  // Piani: se assenti (dato pre-piani) usa il default
+  const floors = Array.isArray(parsed.floors) && parsed.floors.length > 0
+    ? parsed.floors
+    : structuredClone(DEFAULT_FLOORS);
+
+  // Copertura: nuova struttura è per-piano (chiavi = id piano). Se manca o è
+  // nel vecchio formato (chiavi = codici turno), ricostruisci i default.
+  const parsedCov = parsed.rules?.coverage;
+  const isNewCoverage = parsedCov && typeof parsedCov === 'object'
+    && floors.some((f) => parsedCov[f.id] && typeof parsedCov[f.id] === 'object');
+  const coverage = isNewCoverage ? parsedCov : buildCoverage(floors, roles, shifts);
+
   return {
     ...freshState(),
     ...parsed,
     staff: Array.isArray(parsed.staff) ? parsed.staff : [],
     unavailability: Array.isArray(parsed.unavailability) ? parsed.unavailability : [],
-    shifts: parsed.shifts ?? structuredClone(DEFAULT_SHIFTS),
-    roles: parsed.roles ?? structuredClone(DEFAULT_ROLES),
-    rules: {
-      ...DEFAULT_RULES,
-      ...(parsed.rules ?? {}),
-      coverage: { ...DEFAULT_RULES.coverage, ...(parsed.rules?.coverage ?? {}) },
-    },
+    shifts,
+    roles,
+    floors,
+    rules: { ...DEFAULT_RULES, ...(parsed.rules ?? {}), coverage },
     history: Array.isArray(parsed.history) ? parsed.history : [],
     lang: parsed.lang === 'en' ? 'en' : 'it',
     seq: parsed.seq ?? { staff: 1, unav: 1 },
@@ -117,8 +133,64 @@ export function addStaff(state, name, role, opts = {}) {
       id, name, role,
       contractHours: Number(opts.contractHours) || 0, // 0 = nessun target
       preferredShift: opts.preferredShift || '',       // '', 'M', 'P', 'N'
+      floors: Array.isArray(opts.floors) ? opts.floors : [], // [] = tutti i piani
     }],
     seq: { ...state.seq, staff: id + 1 },
+  };
+}
+
+// ── Piani / reparti ─────────────────────────────────────────────────────
+export function addFloor(state, name) {
+  const nm = (name || '').trim();
+  if (!nm) return state;
+  const id = 'f' + Date.now().toString(36);
+  const roles = state.roles, shifts = state.shifts;
+  return {
+    ...state,
+    floors: [...state.floors, { id, name: nm }],
+    rules: {
+      ...state.rules,
+      coverage: { ...state.rules.coverage, [id]: defaultFloorCoverage(roles, shifts) },
+    },
+  };
+}
+
+export function renameFloor(state, id, name) {
+  return { ...state, floors: state.floors.map((f) => (f.id === id ? { ...f, name } : f)) };
+}
+
+export function removeFloor(state, id) {
+  const coverage = { ...state.rules.coverage };
+  delete coverage[id];
+  return {
+    ...state,
+    floors: state.floors.filter((f) => f.id !== id),
+    rules: { ...state.rules, coverage },
+    // rimuove il piano dalle assegnazioni del personale
+    staff: state.staff.map((s) => (
+      Array.isArray(s.floors) ? { ...s, floors: s.floors.filter((x) => x !== id) } : s
+    )),
+  };
+}
+
+// Imposta la copertura per piano → ruolo → turno → { feriale|weekend }
+export function setCoverage(state, floorId, role, code, kind, value) {
+  const cov = state.rules.coverage ?? {};
+  const floorCov = cov[floorId] ?? {};
+  const roleCov = floorCov[role] ?? {};
+  const cell = roleCov[code] ?? { weekday: 0, weekend: 0 };
+  return {
+    ...state,
+    rules: {
+      ...state.rules,
+      coverage: {
+        ...cov,
+        [floorId]: {
+          ...floorCov,
+          [role]: { ...roleCov, [code]: { ...cell, [kind]: Math.max(0, Number(value) || 0) } },
+        },
+      },
+    },
   };
 }
 

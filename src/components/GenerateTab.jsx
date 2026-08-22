@@ -26,8 +26,25 @@ export default function GenerateTab({ state, setState }) {
   const generate = () => {
     setData(generateSchedule(Number(year), Number(month), {
       shifts: state.shifts, roles: state.roles, rules: state.rules,
-      staff: state.staff, unavailability: state.unavailability,
+      staff: state.staff, unavailability: state.unavailability, floors: state.floors,
     }));
+  };
+
+  const workingSet = new Set(Object.keys(state.shifts).filter((c) => state.shifts[c]?.working));
+  const multiFloor = (state.floors?.length ?? 0) > 1;
+  const floorLabelMap = useMemo(() => {
+    const m = {};
+    (state.floors ?? []).forEach((f, i) => {
+      const num = (String(f.name).match(/\d+/) || [])[0];
+      m[f.id] = num || String(i + 1);
+    });
+    return m;
+  }, [state.floors]);
+  const floorTag = (fid) => (fid && multiFloor ? (floorLabelMap[fid] ?? '') : '');
+  const firstFloorFor = (staffId) => {
+    const person = state.staff.find((p) => String(p.id) === String(staffId));
+    const allowed = person?.floors?.length ? person.floors : (state.floors ?? []).map((f) => f.id);
+    return allowed[0] ?? '';
   };
 
   const doExport = () => { if (data) exportExcel(data, state.shifts); };
@@ -70,7 +87,10 @@ export default function GenerateTab({ state, setState }) {
       const pos = allowed.indexOf(s.days[dayIdx]);
       const next = allowed[(pos + 1) % allowed.length];
       const newDays = s.days.slice(); newDays[dayIdx] = next;
-      return { ...prev, schedule: { ...prev.schedule, [staffId]: { ...s, days: newDays } } };
+      const newFloors = (s.floors ? s.floors.slice() : new Array(newDays.length).fill(''));
+      // aggiorna il piano assegnato in base al nuovo turno
+      newFloors[dayIdx] = workingSet.has(next) ? (newFloors[dayIdx] || firstFloorFor(staffId)) : '';
+      return { ...prev, schedule: { ...prev.schedule, [staffId]: { ...s, days: newDays, floors: newFloors } } };
     });
   };
 
@@ -105,9 +125,9 @@ export default function GenerateTab({ state, setState }) {
             {' '}<u>{showDeficits ? t('gen.hide') : t('gen.details')}</u>
             {showDeficits && (
               <div style={{ marginTop: 8, fontSize: 12, color: 'var(--text-dim)' }}>
-                {deficits.map((d, i) => (
+                {deficits.slice(0, 40).map((d, i) => (
                   <span key={i} style={{ marginRight: 12 }}>
-                    {d.day} {months[data.month - 1].slice(0, 3)}: {d.code} {d.got}/{d.needed}
+                    {d.day}: {multiFloor && d.floorName ? `${d.floorName} · ` : ''}{d.role} {d.code} {d.got}/{d.needed}
                   </span>
                 ))}
               </div>
@@ -193,6 +213,8 @@ export default function GenerateTab({ state, setState }) {
                           <td key={d} className={(wd >= 5 || holiday) ? 'weekend' : ''}
                             onClick={() => cycleCell(id, d - 1)} style={{ cursor: 'pointer' }} title={t('gen.changeShift')}>
                             <span className={`cell cell-${code}`}>{code}</span>
+                            {workingSet.has(code) && floorTag(s.floors?.[d - 1]) &&
+                              <span className="floor-tag">{floorTag(s.floors?.[d - 1])}</span>}
                           </td>
                         );
                       })}

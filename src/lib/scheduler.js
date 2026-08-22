@@ -54,21 +54,22 @@ export function dayKind(year, month, day, holidaySet) {
 }
 
 // Fabbisogno per un turno in un certo tipo di giorno
-function requiredFor(code, kind, rules) {
-  const cov = rules?.coverage?.[code];
-  if (!cov) return 0;
-  const v = kind === 'weekend' ? cov.weekend : cov.weekday;
-  return Math.max(0, Number(v) || 0);
+// Fabbisogno per (piano, ruolo, turno) in un certo tipo di giorno
+function requiredFor(rules, floorId, role, code, kind) {
+  const cell = rules?.coverage?.[floorId]?.[role]?.[code];
+  if (!cell) return 0;
+  return Math.max(0, Number(kind === 'weekend' ? cell.weekend : cell.weekday) || 0);
 }
 
 /**
- * Genera il planning mensile.
- * @returns {{ year, month, days, schedule, warnings, holidays }}
- *  schedule: { [staffId]: { name, role, days: string[] } }
- *  warnings: [{ day, code, needed, got }]
+ * Genera il planning mensile con copertura per piano e per ruolo.
+ * @returns {{ year, month, days, floors, schedule, warnings, holidays }}
+ *  schedule: { [staffId]: { name, role, days: string[], floors: string[] } }
+ *  warnings: [{ day, floor, role, code, needed, got }]
  */
 export function generateSchedule(year, month, cfg) {
   const { shifts, roles, rules, staff, unavailability } = cfg;
+  const floors = (cfg.floors && cfg.floors.length) ? cfg.floors : [{ id: '_', name: '' }];
   const days = monthDays(year, month);
   const holidaySet = holidaysOfYear(year);
 
@@ -88,28 +89,23 @@ export function generateSchedule(year, month, cfg) {
     }
   }
 
-  // Codici turno lavorativi presenti
   const workingCodes = Object.keys(shifts).filter((c) => isWorking(c));
   const nightCodes = workingCodes.filter(isNight);
   const dayCodes = workingCodes.filter((c) => !isNight(c));
   const restCode = Object.keys(shifts).find((c) => c === 'R') ?? 'R';
   const hasSmonto = Object.keys(shifts).includes('S');
 
-  // Stato per persona
   const st = staff.map((s) => ({
     ref: s,
     allowed: roles[s.role] ?? Object.keys(shifts),
-    plan: new Array(days).fill('R'),
-    last: null,
-    streak: 0,
-    nights: 0,
-    hours: 0,
-    weekends: 0,
-    forced: [],           // coda di codici imposti (es. dopo notte: S,R)
-    target: Number(s.contractHours) || 0,  // ore contrattuali mensili (0 = nessun target)
+    // piani coperti: vuoto = tutti i piani
+    canFloor: (fid) => !Array.isArray(s.floors) || s.floors.length === 0 || s.floors.includes(fid),
+    plan: new Array(days).fill(restCode),
+    planFloor: new Array(days).fill(''),
+    last: null, streak: 0, nights: 0, hours: 0, weekends: 0, forced: [],
+    target: Number(s.contractHours) || 0,
     prefer: s.preferredShift || '',
   }));
-  const byId = new Map(st.map((x) => [x.ref.id, x]));
 
   const warnings = [];
 
@@ -117,63 +113,75 @@ export function generateSchedule(year, month, cfg) {
     const kind = dayKind(year, month, d, holidaySet);
     const isWknd = kind === 'weekend';
     const idx = d - 1;
-
     const assignedToday = new Set();
 
     // 1) Stati forzati: indisponibilità e coda post-notte
     for (const p of st) {
       if (unav[p.ref.id]?.has(d)) {
-        p.plan[idx] = restCode; p.last = restCode; p.streak = 0; p.forced = [];
-        assignedToday.add(p);
-        continue;
+        p.plan[idx] = restCode; p.planFloor[idx] = ''; p.last = restCode; p.streak = 0; p.forced = [];
+        assignedToday.add(p); continue;
       }
       if (p.forced.length > 0) {
         let code = p.forced.shift();
         if (!p.allowed.includes(code)) code = restCode;
-        p.plan[idx] = code;
-        p.last = code;
-        p.streak = 0; // S/R interrompono la serie
+        p.plan[idx] = code; p.planFloor[idx] = ''; p.last = code; p.streak = 0;
         p.hours += hoursOf(code);
         assignedToday.add(p);
       }
     }
 
-    // 2) Candidati liberi per la copertura
-    const candidates = st.filter(
-      (p) => !assignedToday.has(p) && p.streak < maxStreak,
-    );
+    const candidates = st.filter((p) => !assignedToday.has(p) && p.streak < maxStreak);
 
-    // 3) Costruisci gli "slot" da coprire: prima le notti, poi i turni diurni (round-robin)
-    const slots = [];
-    for (const c of nightCodes) {
-      const need = requiredFor(c, kind, rules);
-      for (let k = 0; k < need; k++) slots.push(c);
+    // 2) Slot da coprire: (piano, ruolo, turno). Prima le notti, poi i diurni round-robin.
+    const nightSlots = [];
+    const daySlots = [];
+    for (const f of floors) {
+      for (const role of Object.keys(roles)) {
+        for (const c of nightCodes) {
+          const need = requiredFor(rules, f.id, role, c, kind);
+          for (let k = 0; k < need; k++) nightSlots.push({ floor: f.id, role, code: c });
+        }
+      }
     }
-    const dayNeeds = dayCodes.map((c) => ({ c, n: requiredFor(c, kind, rules) }));
+    // diurni: raccogli i bisogni e distribuiscili a giro per bilanciare M/P
+    const dayNeeds = [];
+    for (const f of floors) {
+      for (const role of Object.keys(roles)) {
+        for (const c of dayCodes) {
+          const need = requiredFor(rules, f.id, role, c, kind);
+          if (need > 0) dayNeeds.push({ floor: f.id, role, code: c, n: need });
+        }
+      }
+    }
     let remaining = dayNeeds.reduce((a, x) => a + x.n, 0);
     while (remaining > 0) {
       for (const dn of dayNeeds) {
-        if (dn.n > 0) { slots.push(dn.c); dn.n--; remaining--; }
+        if (dn.n > 0) { daySlots.push({ floor: dn.floor, role: dn.role, code: dn.code }); dn.n--; remaining--; }
       }
     }
 
-    // 4) Riempi ogni slot con il miglior candidato eleggibile
-    const deficit = {};
-    for (const code of slots) {
-      const pool = candidates.filter(
-        (p) =>
-          !assignedToday.has(p) &&
-          p.allowed.includes(code) &&
-          (!isNight(code) || ((maxNights == null || p.nights < maxNights) && p.last !== 'N')),
-      );
-      if (pool.length === 0) { deficit[code] = (deficit[code] || 0) + 1; continue; }
+    const slots = [...nightSlots, ...daySlots];
 
+    // 3) Riempi ogni slot con il miglior candidato eleggibile
+    const deficit = {}; // key "floor|role|code" -> mancanti
+    for (const slot of slots) {
+      const { floor, role, code } = slot;
+      const pool = candidates.filter((p) =>
+        !assignedToday.has(p) &&
+        p.ref.role === role &&
+        p.allowed.includes(code) &&
+        p.canFloor(floor) &&
+        (!isNight(code) || ((maxNights == null || p.nights < maxNights) && p.last !== 'N')),
+      );
+      if (pool.length === 0) {
+        const key = `${floor}|${role}|${code}`;
+        deficit[key] = (deficit[key] || 0) + 1;
+        continue;
+      }
       pool.sort((a, b) => scoreForShift(a, code, isWknd) - scoreForShift(b, code, isWknd));
       const chosen = pool[0];
-      chosen.plan[idx] = code;
-      chosen.last = code;
-      chosen.streak += 1;
-      chosen.hours += hoursOf(code);
+      chosen.plan[idx] = code; chosen.planFloor[idx] = floor === '_' ? '' : floor;
+      chosen.last = code; chosen.streak += 1; chosen.hours += hoursOf(code);
       if (isNight(code)) {
         chosen.nights += 1;
         chosen.forced = hasSmonto && chosen.allowed.includes('S') ? ['S', restCode] : [restCode];
@@ -182,68 +190,72 @@ export function generateSchedule(year, month, cfg) {
       assignedToday.add(chosen);
     }
 
-    for (const [code, n] of Object.entries(deficit)) {
-      warnings.push({ day: d, code, needed: requiredFor(code, kind, rules), got: requiredFor(code, kind, rules) - n });
+    for (const [key, miss] of Object.entries(deficit)) {
+      const [floor, role, code] = key.split('|');
+      const needed = requiredFor(rules, floor, role, code, kind);
+      warnings.push({ day: d, floor, role, code, needed, got: needed - miss });
     }
 
-    // 5) Tutti gli altri riposano
+    // 4) Tutti gli altri riposano
     for (const p of st) {
-      if (!assignedToday.has(p)) {
-        p.plan[idx] = restCode; p.last = restCode; p.streak = 0;
-      }
+      if (!assignedToday.has(p)) { p.plan[idx] = restCode; p.planFloor[idx] = ''; p.last = restCode; p.streak = 0; }
     }
   }
 
   const schedule = {};
   for (const p of st) {
-    schedule[String(p.ref.id)] = { name: p.ref.name, role: p.ref.role, days: p.plan };
+    schedule[String(p.ref.id)] = {
+      name: p.ref.name, role: p.ref.role,
+      days: p.plan, floors: p.planFloor,
+    };
   }
-  return { year, month, days, schedule, warnings, holidays: [...holidaySet] };
+  return { year, month, days, floors: cfg.floors ?? [], schedule, warnings, holidays: [...holidaySet] };
 
-  // Punteggio: più basso = scelto per primo
   function scoreForShift(p, code, isWknd) {
     let s = 0;
-    // 1) notti: chi ne ha fatte meno
     if (isNight(code)) s += p.nights * 1000;
-    // 2) weekend/festivi: chi ne ha lavorati meno
     if (isWknd) s += p.weekends * 100;
-    // 3) carico di lavoro (ore, relativo al contratto se impostato)
-    const load = p.target > 0 ? (p.hours / p.target) * 50 : p.hours * 0.5;
-    s += load;
-    // 4) turno preferito: piccolo sconto
+    s += p.target > 0 ? (p.hours / p.target) * 50 : p.hours * 0.5;
     if (p.prefer && p.prefer === code) s -= 5;
-    // 5) tiebreak deterministico
     s += (p.ref.id % 7) * 0.01;
     return s;
   }
 }
 
-// Conteggio copertura effettiva per giorno/turno (per avvisi live dopo modifiche manuali)
-export function coverageCounts(data, shifts) {
-  const counts = {}; // day -> code -> n
+// Conteggio copertura effettiva per (giorno, piano, ruolo, turno)
+export function coverageCounts(data) {
+  const counts = {}; // day -> floor -> role -> code -> n
   for (const s of Object.values(data.schedule)) {
     s.days.forEach((code, i) => {
       const day = i + 1;
-      if (!shifts[code]?.working) return;
-      (counts[day] ??= {})[code] = (counts[day]?.[code] || 0) + 1;
+      const floor = (s.floors && s.floors[i]) || '';
+      const role = s.role;
+      ((((counts[day] ??= {})[floor] ??= {})[role] ??= {})[code] =
+        (counts[day]?.[floor]?.[role]?.[code] || 0) + 1);
     });
   }
   return counts;
 }
 
-// Ricalcola gli avvisi di sotto-copertura da uno schedule (anche modificato a mano)
+// Ricalcola gli avvisi di sotto-copertura (anche dopo modifiche manuali)
 export function coverageDeficits(data, shifts, rules) {
-  const counts = coverageCounts(data, shifts);
+  const counts = coverageCounts(data);
   const holidaySet = holidaysOfYear(data.year);
   const out = [];
   const workingCodes = Object.keys(shifts).filter((c) => shifts[c]?.working);
+  const floors = (data.floors && data.floors.length) ? data.floors : [{ id: '', name: '' }];
   for (let d = 1; d <= data.days; d++) {
     const kind = dayKind(data.year, data.month, d, holidaySet);
-    for (const c of workingCodes) {
-      const needed = requiredFor(c, kind, rules);
-      if (needed <= 0) continue;
-      const got = counts[d]?.[c] || 0;
-      if (got < needed) out.push({ day: d, code: c, needed, got });
+    for (const f of floors) {
+      const roleKeys = Object.keys(rules.coverage?.[f.id] ?? {});
+      for (const role of roleKeys) {
+        for (const c of workingCodes) {
+          const needed = requiredFor(rules, f.id, role, c, kind);
+          if (needed <= 0) continue;
+          const got = counts[d]?.[f.id]?.[role]?.[c] || 0;
+          if (got < needed) out.push({ day: d, floor: f.id, floorName: f.name, role, code: c, needed, got });
+        }
+      }
     }
   }
   return out;
