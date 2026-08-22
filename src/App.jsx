@@ -56,7 +56,7 @@ export default function App() {
         {active === 'shifts'   && <ShiftsTab state={state} setState={setState} />}
         {active === 'rules'    && <RulesTab state={state} setState={setState} />}
         {active === 'unav'     && <UnavailabilityTab state={state} setState={setState} />}
-        {active === 'generate' && <GenerateTab state={state} />}
+        {active === 'generate' && <GenerateTab state={state} setState={setState} />}
         {active === 'data'     && <DataTab state={state} setState={setState} />}
       </div>
 

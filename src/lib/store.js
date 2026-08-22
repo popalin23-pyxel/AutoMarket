@@ -7,11 +7,13 @@ const KEY = 'turnify_state_v1';
 
 function freshState() {
   return {
-    staff: [],           // [{ id, name, role }]
+    staff: [],           // [{ id, name, role, contractHours, preferredShift }]
     unavailability: [],  // [{ id, staffId, day: 'YYYY-MM-DD', kind }]
     shifts: structuredClone(DEFAULT_SHIFTS),
     roles: structuredClone(DEFAULT_ROLES),
     rules: structuredClone(DEFAULT_RULES),
+    history: [],         // [{ id, name, year, month, savedAt, data }]
+    lang: 'it',
     seq: { staff: 1, unav: 1 },
   };
 }
@@ -26,7 +28,13 @@ function sanitizeState(parsed) {
     unavailability: Array.isArray(parsed.unavailability) ? parsed.unavailability : [],
     shifts: parsed.shifts ?? structuredClone(DEFAULT_SHIFTS),
     roles: parsed.roles ?? structuredClone(DEFAULT_ROLES),
-    rules: { ...DEFAULT_RULES, ...(parsed.rules ?? {}) },
+    rules: {
+      ...DEFAULT_RULES,
+      ...(parsed.rules ?? {}),
+      coverage: { ...DEFAULT_RULES.coverage, ...(parsed.rules?.coverage ?? {}) },
+    },
+    history: Array.isArray(parsed.history) ? parsed.history : [],
+    lang: parsed.lang === 'en' ? 'en' : 'it',
     seq: parsed.seq ?? { staff: 1, unav: 1 },
   };
 }
@@ -144,4 +152,25 @@ export function removeUnav(state, id) {
     ...state,
     unavailability: state.unavailability.filter((u) => u.id !== id),
   };
+}
+
+// ── Storico planning ────────────────────────────────────────────────────
+export function saveSchedule(state, data, name) {
+  const entry = {
+    id: Date.now(),
+    name: name || `${data.year}-${String(data.month).padStart(2, '0')}`,
+    year: data.year,
+    month: data.month,
+    savedAt: new Date().toISOString(),
+    data,
+  };
+  return { ...state, history: [entry, ...(state.history ?? [])].slice(0, 60) };
+}
+
+export function removeSchedule(state, id) {
+  return { ...state, history: (state.history ?? []).filter((h) => h.id !== id) };
+}
+
+export function setLang(state, lang) {
+  return { ...state, lang: lang === 'en' ? 'en' : 'it' };
 }
