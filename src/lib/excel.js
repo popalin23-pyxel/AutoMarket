@@ -3,13 +3,21 @@
 import * as XLSX from 'xlsx';
 import { MONTHS_IT } from './defaults.js';
 
+// Protezione da "formula injection": un nome sede come "=cmd|'/c calc'!A0"
+// o "=HYPERLINK(...)" diventerebbe una formula eseguibile se aperto in Excel.
+// Prefissando con un apice si forza la cella a essere trattata come testo.
+const FORMULA_TRIGGER = /^[=+\-@\t\r]/;
+function safeText(v) {
+  return typeof v === 'string' && FORMULA_TRIGGER.test(v) ? `'${v}` : v;
+}
+
 export function exportMonthExcel(sum) {
   const wb = XLSX.utils.book_new();
   const title = `${MONTHS_IT[sum.month - 1]} ${sum.year}`;
 
   const rows = [
     ['Sede', 'Ore', '€/h', 'Fatturato', 'Rivalsa %', 'Rivalsa €', 'Totale'],
-    ...sum.perSite.map((p) => [p.name, p.hours, p.rate, p.revenue, p.rivalsaPercent, p.rivalsa, p.total]),
+    ...sum.perSite.map((p) => [safeText(p.name), p.hours, p.rate, p.revenue, p.rivalsaPercent, p.rivalsa, p.total]),
     [],
     ['Ore totali', sum.totalHours],
     ['Fatturato totale', '', '', '', '', '', sum.totalInvoice],
