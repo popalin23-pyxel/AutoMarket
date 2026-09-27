@@ -1,10 +1,17 @@
 import React, { useRef, useState } from 'react';
 import { updateSettings, exportBackup, importBackup, resetState } from '../lib/store.js';
+import { useAuth } from '../lib/AuthContext.jsx';
 import NumberInput from './NumberInput.jsx';
 
-export default function SettingsTab({ state, setState }) {
+export default function SettingsTab({ state, setState, onLogout }) {
+  const { user, updatePassword } = useAuth();
   const fileRef = useRef(null);
   const [msg, setMsg] = useState(null);
+
+  const [pw, setPw] = useState('');
+  const [pw2, setPw2] = useState('');
+  const [pwMsg, setPwMsg] = useState(null);
+  const [pwBusy, setPwBusy] = useState(false);
 
   const setTax = (v) => setState((s) => updateSettings(s, { taxPercent: v }));
   const setRivalsa = (v) => setState((s) => updateSettings(s, { rivalsaPercent: v }));
@@ -27,8 +34,43 @@ export default function SettingsTab({ state, setState }) {
     setMsg({ type: 'info', text: 'Tutti i dati sono stati azzerati.' });
   };
 
+  const changePassword = async (e) => {
+    e.preventDefault();
+    setPwMsg(null);
+    if (pw.length < 6) { setPwMsg({ type: 'warn', text: 'Almeno 6 caratteri.' }); return; }
+    if (pw !== pw2) { setPwMsg({ type: 'warn', text: 'Le due password non coincidono.' }); return; }
+    setPwBusy(true);
+    try {
+      await updatePassword(pw);
+      setPwMsg({ type: 'info', text: 'Password aggiornata.' });
+      setPw(''); setPw2('');
+    } catch (err) {
+      setPwMsg({ type: 'warn', text: err.message });
+    } finally { setPwBusy(false); }
+  };
+
   return (
     <>
+      <div className="panel">
+        <h2 className="panel-title">Account</h2>
+        <p className="panel-desc">Accesso effettuato come <b>{user?.email}</b>. I tuoi dati sono privati e sincronizzati con il cloud.</p>
+
+        <form onSubmit={changePassword} className="form-row" style={{ alignItems: 'flex-end' }}>
+          <div className="field">
+            <label className="field-label">Nuova password</label>
+            <input type="password" autoComplete="new-password" value={pw} onChange={(e) => setPw(e.target.value)} />
+          </div>
+          <div className="field">
+            <label className="field-label">Conferma</label>
+            <input type="password" autoComplete="new-password" value={pw2} onChange={(e) => setPw2(e.target.value)} />
+          </div>
+          <button className="btn" disabled={pwBusy}>{pwBusy ? '…' : 'Cambia password'}</button>
+        </form>
+        {pwMsg && <div className={`hint hint-${pwMsg.type}`} style={{ marginTop: 10, marginBottom: 0 }}>{pwMsg.text}</div>}
+
+        <button className="btn btn-danger" style={{ marginTop: 14 }} onClick={onLogout}>Esci</button>
+      </div>
+
       <div className="panel">
         <h2 className="panel-title">Tasse e rivalsa</h2>
         <p className="panel-desc">
@@ -53,8 +95,8 @@ export default function SettingsTab({ state, setState }) {
       <div className="panel">
         <h2 className="panel-title">Dati & Backup</h2>
         <p className="panel-desc">
-          I dati restano solo su questo dispositivo. Esporta un backup per spostarli su un altro
-          telefono/PC o per tenerne una copia di sicurezza.
+          I tuoi dati sono sincronizzati sul tuo account. Esporta comunque un backup ogni tanto,
+          come copia di sicurezza personale.
         </p>
         {msg && <div className={`hint hint-${msg.type}`}>{msg.text}</div>}
         <div className="form-row">

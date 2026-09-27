@@ -106,7 +106,7 @@ button, input, select, textarea { font-family: inherit; font-size: 14px; }
 .form-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 14px; }
 .field { display: flex; flex-direction: column; gap: 5px; }
 .field-label { font-size: 10.5px; color: var(--text-mut); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700; }
-input[type=text], input[type=number], input[type=date], input[type=time], input[type=password], select {
+input[type=text], input[type=email], input[type=number], input[type=date], input[type=time], input[type=password], select {
   background: rgba(6, 12, 11, 0.6); border: 1px solid var(--border-hi); color: var(--text);
   border-radius: var(--radius-sm); padding: 8px 11px; min-width: 110px; transition: border-color 0.2s, box-shadow 0.2s;
 }
@@ -248,9 +248,47 @@ tbody tr:hover td { background: rgba(45, 212, 191, 0.05); }
 
 @media (max-width: 560px) {
   .app-header { padding: 12px 14px; } .app-body { padding: 12px; }
-  input[type=text], input[type=number], input[type=date], input[type=time], select { min-width: 0; width: 100%; }
+  input[type=text], input[type=email], input[type=number], input[type=date], input[type=time], select { min-width: 0; width: 100%; }
   .field { flex: 1; min-width: 120px; }
   .hist-month-stats { flex-direction: column; gap: 2px; align-items: flex-end; }
 }
 
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+/* ── Autenticazione ────────────────────────────────────── */
+.auth-wrap {
+  min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px;
+}
+.auth-card {
+  width: 100%; max-width: 380px;
+  background: linear-gradient(160deg, var(--glass-hi), var(--glass));
+  border: 1px solid var(--border-hi); border-radius: var(--radius); padding: 28px 24px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4), var(--glow-soft);
+}
+.auth-brand { text-align: center; margin-bottom: 22px; }
+.auth-brand .brand-logo { font-size: 28px; }
+.auth-tagline { display: block; font-size: 12px; color: var(--text-dim); margin-top: 4px; }
+.auth-desc { font-size: 13px; color: var(--text-dim); margin-bottom: 14px; }
+.auth-switch { text-align: center; margin-top: 16px; font-size: 13px; color: var(--text-dim); }
+.auth-link { background: none; border: none; color: var(--accent); cursor: pointer; font-size: 13px; font-weight: 600; padding: 0; text-decoration: underline; }
+.pw-field { position: relative; }
+.pw-toggle { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 15px; padding: 4px; }
+code { background: rgba(255,255,255,0.08); padding: 1px 5px; border-radius: 4px; font-family: var(--mono); font-size: 12px; }
+
+/* ── Header (email + stato sync) ──────────────────────── */
+.header-right { display: flex; align-items: center; gap: 10px; }
+.sync-flag { font-size: 10px; color: var(--orange); }
+
+/* ── Pannello Admin ────────────────────────────────────── */
+.admin-list { display: flex; flex-direction: column; gap: 10px; }
+.admin-row { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px; background: rgba(255,255,255,0.02); }
+.admin-email { font-weight: 700; margin-bottom: 8px; word-break: break-all; }
+.admin-you { font-weight: 400; color: var(--text-mut); font-size: 12px; }
+.admin-controls { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.admin-controls select { min-width: 0; flex: 1; }
+
+.loading-spinner {
+  width: 36px; height: 36px; border: 3px solid var(--border-hi); border-top-color: var(--accent);
+  border-radius: 50%; animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }

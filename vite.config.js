@@ -57,6 +57,7 @@ export default defineConfig(() => ({
         manualChunks: (id) => {
           if (id.includes('node_modules/react') || id.includes('node_modules/react-dom')) return 'react';
           if (id.includes('node_modules/xlsx')) return 'xlsx';
+          if (id.includes('@supabase')) return 'supabase';
         },
       },
     },
