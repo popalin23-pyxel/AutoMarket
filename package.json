@@ -1,16 +1,15 @@
 {
-  "name": "turnify-web",
-  "version": "3.3.0",
+  "name": "turnio-web",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Turnify — Generatore di turni per personale (webapp)",
+  "description": "Turnio — registro turni e calcolo compensi/tasse per liberi professionisti",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview"
   },
   "dependencies": {
-    "qrcode": "^1.5.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "xlsx": "^0.18.5"
