@@ -1,4 +1,6 @@
-// Calcoli: ore, fatturato, rivalsa, tasse, netto.
+// Calcoli: ore, fatturato, rivalsa, tasse, netto — mese, settimana, confronti, festività.
+
+import { MONTHS_IT } from './defaults.js';
 
 export function monthDays(year, month) {
   return new Date(year, month, 0).getDate(); // month 1-based
@@ -9,7 +11,10 @@ export function weekdayOf(year, month, day) {
 }
 
 export function todayISO() {
-  const d = new Date();
+  return toISO(new Date());
+}
+
+function toISO(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
@@ -40,19 +45,79 @@ export function shiftsOnDay(shifts, dateISO) {
   return shifts.filter((s) => s.date === dateISO);
 }
 
+export function shiftsInRange(shifts, startISO, endISO) {
+  return shifts.filter((s) => s.date >= startISO && s.date <= endISO);
+}
+
+// ── Settimane (lunedì–domenica) ─────────────────────────────────────────
+export function startOfWeek(dateISO) {
+  const d = new Date(dateISO + 'T00:00:00');
+  const wd = (d.getDay() + 6) % 7; // 0 = lunedì
+  d.setDate(d.getDate() - wd);
+  return toISO(d);
+}
+
+export function endOfWeek(dateISO) {
+  const d = new Date(startOfWeek(dateISO) + 'T00:00:00');
+  d.setDate(d.getDate() + 6);
+  return toISO(d);
+}
+
+function addDaysISO(dateISO, days) {
+  const d = new Date(dateISO + 'T00:00:00');
+  d.setDate(d.getDate() + days);
+  return toISO(d);
+}
+
+function shortRangeLabel(startISO, endISO) {
+  const [, , sd] = startISO.split('-');
+  const [ey, em, ed] = endISO.split('-');
+  return `${Number(sd)}–${Number(ed)} ${MONTHS_IT[Number(em) - 1].slice(0, 3)}`;
+}
+
+// ── Festività italiane ───────────────────────────────────────────────────
+function easterSunday(year) {
+  const a = year % 19, b = Math.floor(year / 100), c = year % 100;
+  const d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3), h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4), k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const month = Math.floor((h + l - 7 * m + 114) / 31);
+  const day = ((h + l - 7 * m + 114) % 31) + 1;
+  return { month, day };
+}
+
+export function holidaysOfYear(year) {
+  const fixed = [[1, 1], [1, 6], [4, 25], [5, 1], [6, 2], [8, 15], [11, 1], [12, 8], [12, 25], [12, 26]];
+  const set = new Set(fixed.map(([m, d]) => `${m}-${d}`));
+  const es = easterSunday(year);
+  set.add(`${es.month}-${es.day}`);
+  const mon = new Date(year, es.month - 1, es.day); mon.setDate(mon.getDate() + 1);
+  set.add(`${mon.getMonth() + 1}-${mon.getDate()}`);
+  return set;
+}
+
+export function isHoliday(year, month, day, holidaySet) {
+  return (holidaySet ?? holidaysOfYear(year)).has(`${month}-${day}`);
+}
+
+// 'weekday' | 'weekend' (sabato/domenica o festivo)
+export function dayKind(year, month, day, holidaySet) {
+  const wd = weekdayOf(year, month, day);
+  if (wd >= 5 || isHoliday(year, month, day, holidaySet)) return 'weekend';
+  return 'weekday';
+}
+
+// ── Aggregazione (nucleo condiviso da riepilogo mese/settimana) ─────────
 const rivalsaFor = (site, settings) =>
   (site?.rivalsaPercent != null ? Number(site.rivalsaPercent) : Number(settings.rivalsaPercent) || 0);
 
-/**
- * Riepilogo di un mese: ore/fatturato per sede, totali, tasse, netto.
- */
-export function computeMonthSummary(shifts, sites, settings, year, month) {
-  const monthShifts = shiftsInMonth(shifts, year, month);
+function aggregate(filteredShifts, sites, settings) {
   const siteById = new Map(sites.map((s) => [s.id, s]));
-
-  const bySite = new Map(); // siteId -> { hours }
-  const unknown = { hours: 0 }; // turni la cui sede è stata eliminata
-  for (const sh of monthShifts) {
+  const bySite = new Map();
+  const unknown = { hours: 0 };
+  for (const sh of filteredShifts) {
     const h = hoursOfShift(sh);
     const site = siteById.get(sh.siteId);
     if (!site) { unknown.hours += h; continue; }
@@ -88,7 +153,22 @@ export function computeMonthSummary(shifts, sites, settings, year, month) {
   const taxes = round2(totalInvoice * (taxPercent / 100));
   const net = round2(totalInvoice - taxes);
 
-  return { year, month, perSite, totalHours, totalRevenue, totalRivalsa, totalInvoice, taxPercent, taxes, net, shiftCount: monthShifts.length };
+  return { perSite, totalHours, totalRevenue, totalRivalsa, totalInvoice, taxPercent, taxes, net, shiftCount: filteredShifts.length };
+}
+
+/** Riepilogo di un mese: ore/fatturato per sede, totali, tasse, netto. */
+export function computeMonthSummary(shifts, sites, settings, year, month) {
+  return { year, month, ...aggregate(shiftsInMonth(shifts, year, month), sites, settings) };
+}
+
+/** Riepilogo di un intervallo di date [startISO, endISO] incluso. */
+export function computeRangeSummary(shifts, sites, settings, startISO, endISO) {
+  return { startISO, endISO, label: shortRangeLabel(startISO, endISO), ...aggregate(shiftsInRange(shifts, startISO, endISO), sites, settings) };
+}
+
+/** Riepilogo della settimana (lun–dom) che contiene dateISO. */
+export function computeWeekSummary(shifts, sites, settings, dateISO = todayISO()) {
+  return computeRangeSummary(shifts, sites, settings, startOfWeek(dateISO), endOfWeek(dateISO));
 }
 
 export function computeYearSummary(shifts, sites, settings, year) {
@@ -113,6 +193,54 @@ export function monthsWithData(shifts) {
   }
   return [...set].map((k) => { const [year, month] = k.split('-').map(Number); return { year, month }; })
     .sort((a, b) => (b.year - a.year) || (b.month - a.month));
+}
+
+// ── Andamento (per grafici) ──────────────────────────────────────────────
+export function lastNWeeksSummaries(shifts, sites, settings, n, refDateISO = todayISO()) {
+  const out = [];
+  let cursor = startOfWeek(refDateISO);
+  for (let i = 0; i < n; i++) {
+    out.unshift(computeRangeSummary(shifts, sites, settings, cursor, endOfWeek(cursor)));
+    cursor = addDaysISO(cursor, -7);
+  }
+  return out;
+}
+
+export function lastNMonthsSummaries(shifts, sites, settings, n, refYear, refMonth) {
+  const out = [];
+  let y = refYear, m = refMonth;
+  for (let i = 0; i < n; i++) {
+    out.unshift({ ...computeMonthSummary(shifts, sites, settings, y, m), label: MONTHS_IT[m - 1].slice(0, 3) });
+    m -= 1; if (m < 1) { m = 12; y -= 1; }
+  }
+  return out;
+}
+
+// ── Confronti (periodo corrente vs precedente) ──────────────────────────
+function pctDelta(cur, prev) {
+  if (!prev) return cur ? null : 0; // null = "nuovo" (nessun dato precedente da confrontare)
+  return round2(((cur - prev) / prev) * 100);
+}
+
+export function compareWeeks(shifts, sites, settings, refDateISO = todayISO()) {
+  const curStart = startOfWeek(refDateISO);
+  const current = computeRangeSummary(shifts, sites, settings, curStart, endOfWeek(refDateISO));
+  const prevStart = addDaysISO(curStart, -7);
+  const previous = computeRangeSummary(shifts, sites, settings, prevStart, endOfWeek(prevStart));
+  return { current, previous, deltaHoursPct: pctDelta(current.totalHours, previous.totalHours), deltaNetPct: pctDelta(current.net, previous.net) };
+}
+
+export function compareMonths(shifts, sites, settings, year, month) {
+  const current = computeMonthSummary(shifts, sites, settings, year, month);
+  const py = month === 1 ? year - 1 : year, pm = month === 1 ? 12 : month - 1;
+  const previous = computeMonthSummary(shifts, sites, settings, py, pm);
+  return { current, previous, deltaHoursPct: pctDelta(current.totalHours, previous.totalHours), deltaNetPct: pctDelta(current.net, previous.net) };
+}
+
+export function compareYears(shifts, sites, settings, year) {
+  const current = computeYearSummary(shifts, sites, settings, year);
+  const previous = computeYearSummary(shifts, sites, settings, year - 1);
+  return { current, previous, deltaHoursPct: pctDelta(current.totalHours, previous.totalHours), deltaNetPct: pctDelta(current.totalNet, previous.totalNet) };
 }
 
 function round2(n) { return Math.round((n + Number.EPSILON) * 100) / 100; }

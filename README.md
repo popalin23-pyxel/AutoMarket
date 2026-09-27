@@ -10,15 +10,19 @@ il Super Admin non li attiva dal pannello di amministrazione.
 ## Funzioni
 
 - **Accesso** — registrazione/login con email e password, recupero password via email
+- **Home** — statistiche della settimana (ore/netto) con confronto vs settimana scorsa,
+  andamento a grafico delle ultime 8 settimane e ultimi 6 mesi, confronto mese/anno
 - **Sedi** — aggiungi i posti dove lavori, ognuno con colore, paga oraria e
   (opzionale) una percentuale di rivalsa diversa da quella di default
-- **Turni** — calendario mensile: per ogni giorno registri uno o più turni
-  (sede + orario inizio/fine). Modificabili in qualsiasi momento — cambi un
-  orario e tutto si ricalcola subito (es. previste 8h, fatte 7h → correggi e via)
+- **Turni** — vista a lista o a calendario tradizionale (a scelta): per ogni giorno
+  registri uno o più turni (sede + orario inizio/fine), colorati per sede. Weekend e
+  festività italiane evidenziate automaticamente. Modificabili in qualsiasi momento —
+  cambi un orario e tutto si ricalcola subito (es. previste 8h, fatte 7h → correggi e via)
 - **Riepilogo** — per il mese selezionato: ore e fatturato per sede, rivalsa,
-  totale fatturato, tasse da accantonare (percentuale che imposti tu) e netto stimato
-- **Storico** — naviga tra i mesi passati e vedi il totale dell'anno (ore,
-  fatturato, tasse accantonate, netto)
+  totale fatturato, grafico a anello tasse/netto, tasse da accantonare (percentuale
+  che imposti tu) e netto stimato
+- **Storico** — naviga tra i mesi passati, grafico dell'andamento annuale e il
+  totale dell'anno (ore, fatturato, tasse accantonate, netto)
 - **Impostazioni** — cambio password, percentuale tasse, percentuale rivalsa di
   default, backup/ripristino JSON
 - **⚡ Admin** (solo Super Admin) — elenco utenti registrati, approvazione e ruoli

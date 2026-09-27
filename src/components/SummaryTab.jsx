@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { computeMonthSummary } from '../lib/calc.js';
 import { MONTHS_IT } from '../lib/defaults.js';
 import { exportMonthExcel } from '../lib/excel.js';
+import RingChart from './charts/RingChart.jsx';
 
 const fmt = (n) => n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -19,7 +20,7 @@ export default function SummaryTab({ state, year, month, setYear, setMonth }) {
       <div className="panel">
         <div className="month-nav">
           <button className="btn" onClick={prevMonth}>‹</button>
-          <span className="month-label">{MONTHS_IT[month - 1]} {year}</span>
+          <span key={`${year}-${month}`} className="month-label month-slide">{MONTHS_IT[month - 1]} {year}</span>
           <button className="btn" onClick={nextMonth}>›</button>
         </div>
 
@@ -56,6 +57,17 @@ export default function SummaryTab({ state, year, month, setYear, setMonth }) {
 
       <div className="panel">
         <h2 className="panel-title">Riepilogo</h2>
+        {sum.totalInvoice > 0 && (
+          <div className="ring-row">
+            <RingChart
+              segments={[{ value: sum.net, color: 'var(--green)' }, { value: sum.taxes, color: 'var(--red)' }]}
+              centerValue={`€${Math.round(sum.net)}`} centerLabel="netto" />
+            <div className="ring-legend">
+              <div className="ring-legend-item"><span className="dot" style={{ background: 'var(--green)' }} /> Netto {sum.totalInvoice ? Math.round((sum.net / sum.totalInvoice) * 100) : 0}%</div>
+              <div className="ring-legend-item"><span className="dot" style={{ background: 'var(--red)' }} /> Tasse {sum.totalInvoice ? Math.round((sum.taxes / sum.totalInvoice) * 100) : 0}%</div>
+            </div>
+          </div>
+        )}
         <div className="stats-row">
           <div className="stat"><div className="stat-label">Ore totali</div><div className="stat-value">{fmt(sum.totalHours)}</div></div>
           <div className="stat"><div className="stat-label">Fatturato</div><div className="stat-value">€{fmt(sum.totalInvoice)}</div></div>

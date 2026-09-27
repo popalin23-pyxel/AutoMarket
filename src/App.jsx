@@ -6,6 +6,7 @@ import AuthScreen from './components/AuthScreen.jsx';
 import ResetPasswordForm from './components/ResetPasswordForm.jsx';
 import PendingApproval from './components/PendingApproval.jsx';
 import AdminTab from './components/AdminTab.jsx';
+import DashboardTab from './components/DashboardTab.jsx';
 import ShiftsTab from './components/ShiftsTab.jsx';
 import SitesTab from './components/SitesTab.jsx';
 import SummaryTab from './components/SummaryTab.jsx';
@@ -13,6 +14,13 @@ import HistoryTab from './components/HistoryTab.jsx';
 import SettingsTab from './components/SettingsTab.jsx';
 
 const now = new Date();
+const AVATAR_PALETTE = ['#2dd4bf', '#f59e0b', '#818cf8', '#fb7185', '#a3e635', '#22d3ee', '#c084fc', '#fbbf24'];
+
+function avatarColor(email) {
+  let hash = 0;
+  for (const ch of email || '') hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
+  return AVATAR_PALETTE[hash % AVATAR_PALETTE.length];
+}
 
 function NotConfigured() {
   return (
@@ -31,7 +39,7 @@ function NotConfigured() {
 function Shell() {
   const { user, isAdmin, isApproved, signOut } = useAuth();
   const [state, setState] = useState(loadState);
-  const [active, setActive] = useState('shifts');
+  const [active, setActive] = useState('dashboard');
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [syncError, setSyncError] = useState(false);
@@ -83,13 +91,16 @@ function Shell() {
   };
 
   const TABS = [
-    { id: 'shifts', label: 'Turni' },
-    { id: 'summary', label: 'Riepilogo' },
-    { id: 'sites', label: 'Sedi' },
-    { id: 'history', label: 'Storico' },
-    { id: 'settings', label: 'Impostazioni' },
-    ...(isAdmin ? [{ id: 'admin', label: '⚡ Admin' }] : []),
+    { id: 'dashboard', label: 'Home', icon: '📊' },
+    { id: 'shifts', label: 'Turni', icon: '📅' },
+    { id: 'summary', label: 'Riepilogo', icon: '💶' },
+    { id: 'sites', label: 'Sedi', icon: '📍' },
+    { id: 'history', label: 'Storico', icon: '🕑' },
+    { id: 'settings', label: 'Profilo', icon: '⚙️' },
+    ...(isAdmin ? [{ id: 'admin', label: 'Admin', icon: '⚡' }] : []),
   ];
+
+  const initial = (user?.email || '?').trim()[0]?.toUpperCase() || '?';
 
   return (
     <div className="app">
@@ -99,19 +110,15 @@ function Shell() {
         </div>
         <div className="header-right">
           {syncError && <span className="sync-flag" title="Sincronizzazione non riuscita, riprovo automaticamente">⚠ offline</span>}
-          <span className="brand-sub">{user?.email}</span>
+          <button className="avatar" style={{ background: avatarColor(user?.email) }}
+            onClick={() => setActive('settings')} title={user?.email}>
+            {initial}
+          </button>
         </div>
       </header>
 
       <div className="app-body">
-        <nav className="tabs">
-          {TABS.map((t) => (
-            <button key={t.id} className={`tab ${active === t.id ? 'active' : ''}`} onClick={() => setActive(t.id)}>
-              {t.label}
-            </button>
-          ))}
-        </nav>
-
+        {active === 'dashboard' && <DashboardTab state={state} />}
         {active === 'shifts' && (
           <ShiftsTab state={state} setState={setState} year={year} month={month} setYear={setYear} setMonth={setMonth} />
         )}
@@ -124,9 +131,14 @@ function Shell() {
         {active === 'admin' && isAdmin && <AdminTab />}
       </div>
 
-      <footer className="app-footer">
-        Turnio — i tuoi dati sono privati, protetti dal tuo account.
-      </footer>
+      <nav className="bottom-nav">
+        {TABS.map((t) => (
+          <button key={t.id} className={`bnav-btn ${active === t.id ? 'active' : ''}`} onClick={() => setActive(t.id)}>
+            <span className="bnav-icon">{t.icon}</span>
+            <span className="bnav-label">{t.label}</span>
+          </button>
+        ))}
+      </nav>
     </div>
   );
 }

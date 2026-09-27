@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { computeYearSummary, monthsWithData } from '../lib/calc.js';
 import { MONTHS_IT } from '../lib/defaults.js';
+import BarChart from './charts/BarChart.jsx';
 
 const fmt = (n) => n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -38,6 +39,16 @@ export default function HistoryTab({ state, onOpenMonth }) {
           </div>
         )}
       </div>
+
+      {y.months.length > 0 && (
+        <div className="panel">
+          <h2 className="panel-title">Andamento {year}</h2>
+          <p className="panel-desc">Netto per mese</p>
+          <BarChart
+            data={y.months.map((m) => ({ label: MONTHS_IT[m.month - 1].slice(0, 3), net: m.net }))}
+            valueKey="net" labelKey="label" color="var(--gold)" formatValue={(v) => `${Math.round(v)}`} height={130} />
+        </div>
+      )}
 
       {y.months.length > 0 && (
         <div className="panel">
