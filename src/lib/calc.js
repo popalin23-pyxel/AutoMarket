@@ -14,6 +14,12 @@ export function todayISO() {
   return toISO(new Date());
 }
 
+export function tomorrowISO() {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  return toISO(d);
+}
+
 function toISO(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }

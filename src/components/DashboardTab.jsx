@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import {
   compareWeeks, compareMonths, compareYears,
-  lastNWeeksSummaries, lastNMonthsSummaries, todayISO,
+  lastNWeeksSummaries, lastNMonthsSummaries, todayISO, tomorrowISO,
   shiftsToday, nextShiftAfter, weekdayOf, shiftsInMonth, monthsWithData,
 } from '../lib/calc.js';
 import { MONTHS_IT, WEEKDAYS_IT_LONG } from '../lib/defaults.js';
@@ -41,6 +41,11 @@ function TodayCard({ state, today, firstName }) {
   const upcoming = useMemo(() => (todays.length ? null : nextShiftAfter(state.shifts, today)),
     [state.shifts, today, todays.length]);
 
+  const isEvening = new Date().getHours() >= 18;
+  const tomorrow = tomorrowISO();
+  const tomorrowShifts = useMemo(() => (isEvening ? shiftsToday(state.shifts, tomorrow) : []),
+    [state.shifts, tomorrow, isEvening]);
+
   return (
     <div className="panel hero-today">
       <div className="hero-greeting">{greetingWord()}{firstName ? `, ${firstName}` : ''} <span aria-hidden>👋</span></div>
@@ -73,6 +78,24 @@ function TodayCard({ state, today, firstName }) {
       ) : (
         <div className="hero-today-box off">
           <div className="hero-today-label">Nessun turno in programma</div>
+        </div>
+      )}
+
+      {tomorrowShifts.length > 0 && (
+        <div className="tomorrow-banner">
+          <span className="tomorrow-banner-icon">🔔</span>
+          <div>
+            <div className="tomorrow-banner-title">Promemoria: domani lavori</div>
+            {tomorrowShifts.map((sh) => {
+              const site = siteFor(state.sites, sh.siteId);
+              return (
+                <div key={sh.id} className="tomorrow-banner-row">
+                  <span className="site-dot" style={{ background: site.color }} />
+                  {site.name} · {sh.start}–{sh.end}
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
     </div>
