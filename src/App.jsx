@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { loadState, saveState, resetState } from './lib/store.js';
 import { computeMonthSummary } from './lib/calc.js';
+import { loadTheme, applyTheme } from './lib/theme.js';
 import { AuthProvider, useAuth } from './lib/AuthContext.jsx';
 import { fetchCloudState, saveCloudState } from './lib/cloudState.js';
 import AuthScreen from './components/AuthScreen.jsx';
@@ -14,6 +15,9 @@ import SummaryTab from './components/SummaryTab.jsx';
 import HistoryTab from './components/HistoryTab.jsx';
 import SettingsTab from './components/SettingsTab.jsx';
 import Icon from './components/icons/Icon.jsx';
+import Splash from './components/Splash.jsx';
+
+applyTheme(loadTheme()); // applicato subito al caricamento del modulo, prima del primo render
 
 const now = new Date();
 const AVATAR_PALETTE = ['#2dd4bf', '#f59e0b', '#818cf8', '#fb7185', '#a3e635', '#22d3ee', '#c084fc', '#fbbf24'];
@@ -171,10 +175,10 @@ function Gate() {
   const { configured, loading, session, recovery, isApproved, profileLoading } = useAuth();
 
   if (!configured) return <NotConfigured />;
-  if (loading) return <div className="auth-wrap"><div className="loading-spinner" /></div>;
+  if (loading) return <Splash />;
   if (recovery) return <ResetPasswordForm />;
   if (!session) return <AuthScreen />;
-  if (profileLoading) return <div className="auth-wrap"><div className="loading-spinner" /></div>;
+  if (profileLoading) return <Splash />;
   if (!isApproved) return <PendingApproval />;
   return <Shell />;
 }

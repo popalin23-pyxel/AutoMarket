@@ -2,8 +2,10 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { monthDays, weekdayOf, shiftsOnDay, hoursOfShift, todayISO, holidaysOfYear, isHoliday } from '../lib/calc.js';
 import { MONTHS_IT, WEEKDAYS_IT, hexToRgba } from '../lib/defaults.js';
 import { addShift, updateShift, removeShift, addFavorite, removeFavorite } from '../lib/store.js';
+import { useSwipe } from '../lib/useSwipe.js';
 import ShiftEditor from './ShiftEditor.jsx';
 import CalendarGridView from './charts/CalendarGridView.jsx';
+import SiteAvatar from './SiteAvatar.jsx';
 
 const VIEW_KEY = 'turnio_view_pref';
 
@@ -23,6 +25,7 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
   const prevMonth = () => { if (month === 1) { setYear(year - 1); setMonth(12); } else setMonth(month - 1); };
   const nextMonth = () => { if (month === 12) { setYear(year + 1); setMonth(1); } else setMonth(month + 1); };
   const goToday = () => { const n = new Date(); setYear(n.getFullYear()); setMonth(n.getMonth() + 1); };
+  const swipe = useSwipe(nextMonth, prevMonth);
 
   const openNew = (dateISO) => { setDayPopover(null); setEditing({ date: dateISO, shift: null }); };
   const openEdit = (dateISO, shift) => { setDayPopover(null); setEditing({ date: dateISO, shift }); };
@@ -73,7 +76,7 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
           return (
             <div key={sh.id} className="shift-chip" style={{ borderLeftColor: color, background: color + '14' }}
               onClick={() => openEdit(dateISO, sh)}>
-              <span className="site-dot" style={{ background: color }} />
+              <SiteAvatar site={site} size={18} />
               <span className="shift-site">{site?.name ?? 'Sede eliminata'}</span>
               <span className="shift-time">{sh.start}–{sh.end}</span>
               <span className="shift-hours">{hoursOfShift(sh)}h</span>
@@ -89,7 +92,7 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
 
   return (
     <>
-      <div className="panel" style={monthAccent ? {
+      <div className="panel" onTouchStart={swipe.onTouchStart} onTouchEnd={swipe.onTouchEnd} style={monthAccent ? {
         borderTopColor: monthAccent, borderTopWidth: 3,
         background: `linear-gradient(160deg, ${hexToRgba(monthAccent, 0.10)}, var(--glass))`,
       } : undefined}>

@@ -4,6 +4,8 @@ import { MONTHS_IT, hexToRgba } from '../lib/defaults.js';
 import { exportMonthExcel } from '../lib/excel.js';
 import RingChart from './charts/RingChart.jsx';
 import EmptyState from './EmptyState.jsx';
+import SiteAvatar from './SiteAvatar.jsx';
+import { useSwipe } from '../lib/useSwipe.js';
 
 const fmt = (n) => n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -16,10 +18,11 @@ export default function SummaryTab({ state, year, month, setYear, setMonth }) {
   const prevMonth = () => { if (month === 1) { setYear(year - 1); setMonth(12); } else setMonth(month - 1); };
   const nextMonth = () => { if (month === 12) { setYear(year + 1); setMonth(1); } else setMonth(month + 1); };
   const monthAccent = sum.perSite[0]?.color;
+  const swipe = useSwipe(nextMonth, prevMonth);
 
   return (
     <>
-      <div className="panel" style={monthAccent ? {
+      <div className="panel" onTouchStart={swipe.onTouchStart} onTouchEnd={swipe.onTouchEnd} style={monthAccent ? {
         borderTopColor: monthAccent, borderTopWidth: 3,
         background: `linear-gradient(160deg, ${hexToRgba(monthAccent, 0.10)}, var(--glass))`,
       } : undefined}>
@@ -44,7 +47,7 @@ export default function SummaryTab({ state, year, month, setYear, setMonth }) {
               <div key={p.siteId ?? 'unknown'} className="site-summary-card" style={{ borderColor: p.color + '33' }}>
                 <div className="ssc-head">
                   <span className="site-badge" style={{ background: p.color + '22', color: p.color }}>
-                    <span className="site-dot" style={{ background: p.color }} />{p.name}
+                    <SiteAvatar site={{ name: p.name, color: p.color }} size={18} />{p.name}
                   </span>
                   <span className="ssc-total mono">€{fmt(p.total)}</span>
                 </div>

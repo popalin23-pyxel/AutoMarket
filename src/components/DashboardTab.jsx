@@ -8,6 +8,7 @@ import { MONTHS_IT, WEEKDAYS_IT_LONG } from '../lib/defaults.js';
 import BarChart from './charts/BarChart.jsx';
 import Icon from './icons/Icon.jsx';
 import EmptyState from './EmptyState.jsx';
+import SiteAvatar from './SiteAvatar.jsx';
 
 const fmt = (n) => n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const fmt0 = (n) => n.toLocaleString('it-IT', { maximumFractionDigits: 1 });
@@ -58,7 +59,7 @@ function TodayCard({ state, today, firstName }) {
             const site = siteFor(state.sites, sh.siteId);
             return (
               <div key={sh.id} className="hero-today-row">
-                <span className="site-dot" style={{ background: site.color }} />
+                <SiteAvatar site={site} size={20} />
                 <span className="hero-today-site">{site.name}</span>
                 <span className="hero-today-time">{sh.start}–{sh.end}</span>
                 {sh.note && <span className="hero-today-note">{sh.note}</span>}
@@ -70,7 +71,7 @@ function TodayCard({ state, today, firstName }) {
         <div className="hero-today-box off">
           <div className="hero-today-label">Oggi non lavori 🎉</div>
           <div className="hero-today-row">
-            <span className="site-dot" style={{ background: siteFor(state.sites, upcoming.siteId).color }} />
+            <SiteAvatar site={siteFor(state.sites, upcoming.siteId)} size={20} />
             <span className="hero-today-site">Prossimo turno: {formatDateLong(upcoming.date)} — {siteFor(state.sites, upcoming.siteId).name}</span>
             <span className="hero-today-time">{upcoming.start}–{upcoming.end}</span>
           </div>
@@ -90,7 +91,7 @@ function TodayCard({ state, today, firstName }) {
               const site = siteFor(state.sites, sh.siteId);
               return (
                 <div key={sh.id} className="tomorrow-banner-row">
-                  <span className="site-dot" style={{ background: site.color }} />
+                  <SiteAvatar site={site} size={18} />
                   {site.name} · {sh.start}–{sh.end}
                 </div>
               );

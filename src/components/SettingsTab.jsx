@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { updateSettings, exportBackup, importBackup, importBackupFromText, resetState } from '../lib/store.js';
+import { loadTheme, applyTheme } from '../lib/theme.js';
 import { useAuth } from '../lib/AuthContext.jsx';
 import NumberInput from './NumberInput.jsx';
 
@@ -9,6 +10,7 @@ export default function SettingsTab({ state, setState, onLogout }) {
   const [msg, setMsg] = useState(null);
   const [pasteOpen, setPasteOpen] = useState(false);
   const [pasteText, setPasteText] = useState('');
+  const [theme, setTheme] = useState(loadTheme);
 
   const [pw, setPw] = useState('');
   const [pw2, setPw2] = useState('');
@@ -67,6 +69,19 @@ export default function SettingsTab({ state, setState, onLogout }) {
 
   return (
     <>
+      <div className="panel">
+        <h2 className="panel-title">Aspetto</h2>
+        <p className="panel-desc">Scegli come vuoi vedere l'app.</p>
+        <div className="theme-switch">
+          <button className={`theme-opt ${theme === 'light' ? 'active' : ''}`} onClick={() => { applyTheme('light'); setTheme('light'); }}>
+            ☀️ Chiaro
+          </button>
+          <button className={`theme-opt ${theme === 'dark' ? 'active' : ''}`} onClick={() => { applyTheme('dark'); setTheme('dark'); }}>
+            🌙 Scuro
+          </button>
+        </div>
+      </div>
+
       <div className="panel">
         <h2 className="panel-title">Account</h2>
         <p className="panel-desc">Accesso effettuato come <b>{user?.email}</b>. I tuoi dati sono privati e sincronizzati con il cloud.</p>

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { hoursOfShift } from '../lib/calc.js';
+import SiteAvatar from './SiteAvatar.jsx';
 
 export default function ShiftEditor({
   date, shift, sites, favorites = [], lastSiteId,
@@ -46,7 +47,7 @@ export default function ShiftEditor({
                     const site = sites.find((s) => s.id === f.siteId);
                     return (
                       <span key={f.id} className="fav-chip" onClick={() => applyFavorite(f)}>
-                        {site && <span className="site-dot" style={{ background: site.color }} />}
+                        {site && <SiteAvatar site={site} size={16} />}
                         {f.label || `${site?.name ?? 'Sede'} ${f.start}–${f.end}`}
                         <button type="button" className="fav-chip-x"
                           onClick={(e) => { e.stopPropagation(); onDeleteFavorite?.(f.id); }}>✕</button>
