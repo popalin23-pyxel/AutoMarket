@@ -5,6 +5,8 @@ import { exportMonthExcel } from '../lib/excel.js';
 import RingChart from './charts/RingChart.jsx';
 import EmptyState from './EmptyState.jsx';
 import SiteAvatar from './SiteAvatar.jsx';
+import CountUpText from './CountUpText.jsx';
+import { useCountUp } from '../lib/useCountUp.js';
 import { useSwipe } from '../lib/useSwipe.js';
 
 const fmt = (n) => n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -19,6 +21,7 @@ export default function SummaryTab({ state, year, month, setYear, setMonth }) {
   const nextMonth = () => { if (month === 12) { setYear(year + 1); setMonth(1); } else setMonth(month + 1); };
   const monthAccent = sum.perSite[0]?.color;
   const swipe = useSwipe(nextMonth, prevMonth);
+  const animatedNet = useCountUp(sum.net);
 
   return (
     <>
@@ -69,7 +72,7 @@ export default function SummaryTab({ state, year, month, setYear, setMonth }) {
           <div className="ring-row">
             <RingChart
               segments={[{ value: sum.net, color: 'var(--green)' }, { value: sum.taxes, color: 'var(--red)' }]}
-              centerValue={`€${Math.round(sum.net)}`} centerLabel="netto" />
+              centerValue={`€${Math.round(animatedNet)}`} centerLabel="netto" />
             <div className="ring-legend">
               <div className="ring-legend-item"><span className="dot" style={{ background: 'var(--green)' }} /> Netto {sum.totalInvoice ? Math.round((sum.net / sum.totalInvoice) * 100) : 0}%</div>
               <div className="ring-legend-item"><span className="dot" style={{ background: 'var(--red)' }} /> Tasse {sum.totalInvoice ? Math.round((sum.taxes / sum.totalInvoice) * 100) : 0}%</div>
@@ -77,9 +80,9 @@ export default function SummaryTab({ state, year, month, setYear, setMonth }) {
           </div>
         )}
         <div className="stats-row">
-          <div className="stat"><div className="stat-label">Ore totali</div><div className="stat-value">{fmt(sum.totalHours)}</div></div>
-          <div className="stat"><div className="stat-label">Fatturato</div><div className="stat-value">€{fmt(sum.totalInvoice)}</div></div>
-          <div className="stat"><div className="stat-label">Netto stimato</div><div className="stat-value gold">€{fmt(sum.net)}</div></div>
+          <div className="stat"><div className="stat-label">Ore totali</div><div className="stat-value"><CountUpText value={sum.totalHours} format={fmt} /></div></div>
+          <div className="stat"><div className="stat-label">Fatturato</div><div className="stat-value">€<CountUpText value={sum.totalInvoice} format={fmt} /></div></div>
+          <div className="stat"><div className="stat-label">Netto stimato</div><div className="stat-value gold">€<CountUpText value={sum.net} format={fmt} /></div></div>
         </div>
 
         <div className="summary-flow">

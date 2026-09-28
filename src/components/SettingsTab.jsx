@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react';
 import { updateSettings, exportBackup, importBackup, importBackupFromText, resetState } from '../lib/store.js';
 import { loadTheme, applyTheme } from '../lib/theme.js';
 import { loadAccent, applyAccent, ACCENT_COLORS } from '../lib/accentColor.js';
+import { loadDensity, applyDensity } from '../lib/density.js';
 import { useAuth } from '../lib/AuthContext.jsx';
 import { useConfirm } from '../lib/ConfirmContext.jsx';
 import NumberInput from './NumberInput.jsx';
@@ -15,6 +16,7 @@ export default function SettingsTab({ state, setState, onLogout }) {
   const [pasteText, setPasteText] = useState('');
   const [theme, setTheme] = useState(loadTheme);
   const [accent, setAccent] = useState(loadAccent);
+  const [density, setDensity] = useState(loadDensity);
 
   const [pw, setPw] = useState('');
   const [pw2, setPw2] = useState('');
@@ -94,6 +96,18 @@ export default function SettingsTab({ state, setState, onLogout }) {
               style={{ background: c.swatch }} title={c.label}
               onClick={() => { applyAccent(c.id); setAccent(c.id); }} />
           ))}
+        </div>
+
+        <div className="field-label" style={{ marginTop: 16, marginBottom: 8 }}>Densità</div>
+        <div className="theme-switch">
+          <button className={`theme-opt ${density === 'comfortable' ? 'active' : ''}`}
+            onClick={() => { applyDensity('comfortable'); setDensity('comfortable'); }}>
+            Comoda
+          </button>
+          <button className={`theme-opt ${density === 'compact' ? 'active' : ''}`}
+            onClick={() => { applyDensity('compact'); setDensity('compact'); }}>
+            Compatta
+          </button>
         </div>
       </div>
 

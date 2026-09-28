@@ -3,6 +3,7 @@ import { loadState, saveState, resetState } from './lib/store.js';
 import { computeMonthSummary } from './lib/calc.js';
 import { loadTheme, applyTheme } from './lib/theme.js';
 import { loadAccent, applyAccent } from './lib/accentColor.js';
+import { loadDensity, applyDensity } from './lib/density.js';
 import { AuthProvider, useAuth } from './lib/AuthContext.jsx';
 import { ConfirmProvider } from './lib/ConfirmContext.jsx';
 import { fetchCloudState, saveCloudState } from './lib/cloudState.js';
@@ -22,6 +23,7 @@ import OnboardingTour, { needsOnboarding } from './components/OnboardingTour.jsx
 
 applyTheme(loadTheme()); // applicato subito al caricamento del modulo, prima del primo render
 applyAccent(loadAccent());
+applyDensity(loadDensity());
 
 const now = new Date();
 const AVATAR_PALETTE = ['#2dd4bf', '#f59e0b', '#818cf8', '#fb7185', '#a3e635', '#22d3ee', '#c084fc', '#fbbf24'];
@@ -52,9 +54,10 @@ function Shell() {
   const [active, setActive] = useState('dashboard');
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
-  const [syncError, setSyncError] = useState(false);
+  const [syncStatus, setSyncStatus] = useState('idle'); // idle | syncing | ok | error
   const [showOnboarding, setShowOnboarding] = useState(needsOnboarding);
   const saveTimer = useRef(null);
+  const syncOkTimer = useRef(null);
   const cloudReady = useRef(false);
   const loadedUserId = useRef(null);
 
@@ -85,7 +88,7 @@ function Shell() {
         cloudReady.current = true;
       } catch (e) {
         console.warn('Turnio: sync cloud iniziale fallita', e);
-        setSyncError(true);
+        setSyncStatus('error');
       }
     })();
     return () => { alive = false; };
@@ -96,8 +99,16 @@ function Shell() {
     if (!user || !isApproved || !cloudReady.current) return;
     clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(async () => {
-      try { await saveCloudState(user.id, state); setSyncError(false); }
-      catch (e) { console.warn('Turnio: sync cloud fallita', e); setSyncError(true); }
+      setSyncStatus('syncing');
+      try {
+        await saveCloudState(user.id, state);
+        setSyncStatus('ok');
+        clearTimeout(syncOkTimer.current);
+        syncOkTimer.current = setTimeout(() => setSyncStatus('idle'), 1800);
+      } catch (e) {
+        console.warn('Turnio: sync cloud fallita', e);
+        setSyncStatus('error');
+      }
     }, 600);
     return () => clearTimeout(saveTimer.current);
   }, [state, user, isApproved]);
@@ -138,7 +149,11 @@ function Shell() {
           )}
         </div>
         <div className="header-right">
-          {syncError && <span className="sync-flag" title="Sincronizzazione non riuscita, riprovo automaticamente">⚠ offline</span>}
+          {syncStatus !== 'idle' && (
+            <span className={`sync-dot sync-${syncStatus}`}
+              title={syncStatus === 'error' ? 'Sincronizzazione non riuscita, riprovo automaticamente'
+                : syncStatus === 'syncing' ? 'Sincronizzazione in corso…' : 'Sincronizzato'} />
+          )}
           <button className="avatar" style={{ background: avatarColor(user?.email) }}
             onClick={() => setActive('settings')} title={user?.email}>
             {initial}

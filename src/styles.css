@@ -511,7 +511,12 @@ code { background: rgba(var(--ink), 0.08); padding: 1px 5px; border-radius: 4px;
 
 /* ── Header (email + stato sync) ──────────────────────── */
 .header-right { display: flex; align-items: center; gap: 10px; }
-.sync-flag { font-size: 10px; color: var(--orange); }
+.sync-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.sync-dot.sync-syncing { background: var(--text-mut); animation: syncPulse 0.9s ease-in-out infinite; }
+.sync-dot.sync-ok { background: var(--green-text); animation: syncPop 0.4s ease both; }
+.sync-dot.sync-error { background: var(--red); box-shadow: 0 0 0 3px rgba(244, 63, 94, 0.18); }
+@keyframes syncPulse { 0%, 100% { opacity: 0.35; transform: scale(0.85); } 50% { opacity: 1; transform: scale(1.1); } }
+@keyframes syncPop { from { opacity: 0; transform: scale(0.4); } to { opacity: 1; transform: scale(1); } }
 
 /* ── Pannello Admin ────────────────────────────────────── */
 .admin-list { display: flex; flex-direction: column; gap: 10px; }
@@ -745,3 +750,20 @@ code { background: rgba(var(--ink), 0.08); padding: 1px 5px; border-radius: 4px;
   .bnav-btn { max-width: none; width: 100%; padding: 10px 2px; }
   .save-toast, .undo-toast { left: calc(50% + 46px); }
 }
+
+/* ── Densità compatta (Profilo → Aspetto) ─────────────────── */
+:root[data-density="compact"] .app-body { padding: 12px; padding-bottom: 92px; }
+:root[data-density="compact"] .panel { padding: 12px; margin-bottom: 12px; }
+:root[data-density="compact"] .nav-grid { gap: 7px; margin-bottom: 12px; }
+:root[data-density="compact"] .nav-card { padding: 10px 12px; }
+:root[data-density="compact"] .stats-row { gap: 8px; margin-bottom: 12px; }
+:root[data-density="compact"] .stat { padding: 10px 12px; }
+:root[data-density="compact"] .hist-month-row { padding: 8px 10px; margin-bottom: 6px; }
+:root[data-density="compact"] .site-summary-card { padding: 8px 10px; }
+:root[data-density="compact"] .site-summary-list { gap: 6px; }
+:root[data-density="compact"] .flow-row { padding: 7px 10px; }
+:root[data-density="compact"] .summary-flow { gap: 6px; }
+:root[data-density="compact"] .compare-card { padding: 8px; }
+:root[data-density="compact"] .compare-grid { gap: 6px; }
+:root[data-density="compact"] .shift-chip { padding: 4px 8px; }
+:root[data-density="compact"] .day-shifts { gap: 3px; }

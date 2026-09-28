@@ -9,6 +9,7 @@ import AreaChart from './charts/AreaChart.jsx';
 import Icon from './icons/Icon.jsx';
 import EmptyState from './EmptyState.jsx';
 import SiteAvatar from './SiteAvatar.jsx';
+import CountUpText from './CountUpText.jsx';
 
 const fmt = (n) => n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const fmt0 = (n) => n.toLocaleString('it-IT', { maximumFractionDigits: 1 });
@@ -113,7 +114,7 @@ function GoalCard({ goal, net }) {
     <div className="panel">
       <div className="goal-head">
         <h2 className="panel-title" style={{ marginBottom: 0 }}>Obiettivo del mese</h2>
-        <span className="goal-pct">{pct}%</span>
+        <span className="goal-pct"><CountUpText value={pct} format={(v) => Math.round(v)} />%</span>
       </div>
       <div className="goal-bar-track">
         <div className={`goal-bar-fill ${reached ? 'reached' : ''}`} style={{ width: `${pct}%` }} />
@@ -190,11 +191,11 @@ export default function DashboardTab({ state, userEmail, isAdmin, onNavigate }) 
           <>
             <div className="hero-week-row">
               <div className="hero-stat">
-                <span className="hero-num">{fmt0(week.current.totalHours)}<span className="hero-unit">h</span></span>
+                <span className="hero-num"><CountUpText value={week.current.totalHours} format={fmt0} /><span className="hero-unit">h</span></span>
                 <span className="hero-caption">ore lavorate</span>
               </div>
               <div className="hero-stat">
-                <span className="hero-num gold">€{fmt(week.current.net)}</span>
+                <span className="hero-num gold">€<CountUpText value={week.current.net} format={fmt} /></span>
                 <span className="hero-caption">netto stimato</span>
               </div>
             </div>

@@ -4,6 +4,7 @@ import { MONTHS_IT } from '../lib/defaults.js';
 import AreaChart from './charts/AreaChart.jsx';
 import YearHeatmap from './charts/YearHeatmap.jsx';
 import EmptyState from './EmptyState.jsx';
+import CountUpText from './CountUpText.jsx';
 
 const fmt = (n) => n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -34,10 +35,10 @@ export default function HistoryTab({ state, onOpenMonth }) {
           <EmptyState icon="history" title="Nessun turno in questo anno" hint="Cambia anno oppure registra il tuo primo turno." />
         ) : (
           <div className="stats-row">
-            <div className="stat"><div className="stat-label">Ore anno</div><div className="stat-value">{fmt(y.totalHours)}</div></div>
-            <div className="stat"><div className="stat-label">Fatturato anno</div><div className="stat-value">€{fmt(y.totalInvoice)}</div></div>
-            <div className="stat"><div className="stat-label">Tasse accantonate</div><div className="stat-value">€{fmt(y.totalTaxes)}</div></div>
-            <div className="stat"><div className="stat-label">Netto anno</div><div className="stat-value gold">€{fmt(y.totalNet)}</div></div>
+            <div className="stat"><div className="stat-label">Ore anno</div><div className="stat-value"><CountUpText value={y.totalHours} format={fmt} /></div></div>
+            <div className="stat"><div className="stat-label">Fatturato anno</div><div className="stat-value">€<CountUpText value={y.totalInvoice} format={fmt} /></div></div>
+            <div className="stat"><div className="stat-label">Tasse accantonate</div><div className="stat-value">€<CountUpText value={y.totalTaxes} format={fmt} /></div></div>
+            <div className="stat"><div className="stat-label">Netto anno</div><div className="stat-value gold">€<CountUpText value={y.totalNet} format={fmt} /></div></div>
           </div>
         )}
       </div>
