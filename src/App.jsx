@@ -126,7 +126,9 @@ function Shell() {
       </header>
 
       <div className="app-body">
-        {active === 'dashboard' && <DashboardTab state={state} userEmail={user?.email} />}
+        {active === 'dashboard' && (
+          <DashboardTab state={state} userEmail={user?.email} isAdmin={isAdmin} onNavigate={setActive} />
+        )}
         {active === 'shifts' && (
           <ShiftsTab state={state} setState={setState} year={year} month={month} setYear={setYear} setMonth={setMonth} />
         )}

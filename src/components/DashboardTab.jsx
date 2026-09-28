@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import {
   compareWeeks, compareMonths, compareYears,
   lastNWeeksSummaries, lastNMonthsSummaries, todayISO,
-  shiftsToday, nextShiftAfter, weekdayOf,
+  shiftsToday, nextShiftAfter, weekdayOf, shiftsInMonth, monthsWithData,
 } from '../lib/calc.js';
 import { MONTHS_IT, WEEKDAYS_IT_LONG } from '../lib/defaults.js';
 import BarChart from './charts/BarChart.jsx';
@@ -77,7 +77,31 @@ function TodayCard({ state, today, firstName }) {
   );
 }
 
-export default function DashboardTab({ state, userEmail }) {
+function NavGrid({ state, y, m, onNavigate, isAdmin }) {
+  const shiftsThisMonth = shiftsInMonth(state.shifts, y, m).length;
+  const monthsCount = monthsWithData(state.shifts).length;
+  const items = [
+    { id: 'shifts', icon: '📅', label: 'Turni', hint: `${shiftsThisMonth} questo mese` },
+    { id: 'summary', icon: '💶', label: 'Riepilogo', hint: 'Ore, fatturato, tasse' },
+    { id: 'sites', icon: '📍', label: 'Sedi', hint: `${state.sites.length} configurate` },
+    { id: 'history', icon: '🕑', label: 'Storico', hint: `${monthsCount} mesi registrati` },
+    { id: 'settings', icon: '⚙️', label: 'Profilo', hint: 'Account e backup' },
+    ...(isAdmin ? [{ id: 'admin', icon: '⚡', label: 'Admin', hint: 'Utenti e approvazioni' }] : []),
+  ];
+  return (
+    <div className="nav-grid">
+      {items.map((it) => (
+        <button key={it.id} className="nav-card" onClick={() => onNavigate(it.id)}>
+          <span className="nav-card-icon">{it.icon}</span>
+          <span className="nav-card-label">{it.label}</span>
+          <span className="nav-card-hint">{it.hint}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+export default function DashboardTab({ state, userEmail, isAdmin, onNavigate }) {
   const today = todayISO();
   const y = Number(today.slice(0, 4));
   const m = Number(today.slice(5, 7));
@@ -102,6 +126,8 @@ export default function DashboardTab({ state, userEmail }) {
   return (
     <>
       <TodayCard state={state} today={today} firstName={firstName} />
+
+      <NavGrid state={state} y={y} m={m} onNavigate={onNavigate} isAdmin={isAdmin} />
 
       <div className="panel hero-week">
         <div className="hero-week-label">Questa settimana</div>
