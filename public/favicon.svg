@@ -1,12 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
-    <rect width="64" height="64" fill="#0d9488"/>
+    <rect width="64" height="64" fill="#38bdf8"/>
     <g transform="translate(4,4)">
-      <rect x="8.96" y="5.6000000000000005" width="32.48" height="44.800000000000004" rx="3.36" fill="#0f2624"/>
-      <rect x="13.44" y="12.32" width="23.52" height="3.36" rx="1.68" fill="#5eead4"/>
-      <rect x="13.44" y="20.16" width="19.040000000000003" height="2.8000000000000003" rx="1.4000000000000001" fill="#2dd4bf"/>
-      <rect x="13.44" y="25.76" width="19.040000000000003" height="2.8000000000000003" rx="1.4000000000000001" fill="#2dd4bf"/>
-      <rect x="13.44" y="31.360000000000003" width="16.8" height="2.8000000000000003" rx="1.4000000000000001" fill="#134e4a"/>
-      <rect x="13.44" y="36.96" width="16.8" height="2.8000000000000003" rx="1.4000000000000001" fill="#2dd4bf"/>
+      <rect x="8.96" y="5.6000000000000005" width="32.48" height="44.800000000000004" rx="3.36" fill="#ffffff"/>
+      <rect x="13.44" y="12.32" width="23.52" height="3.36" rx="1.68" fill="#0ea5e9"/>
+      <rect x="13.44" y="20.16" width="19.040000000000003" height="2.8000000000000003" rx="1.4000000000000001" fill="#7dd3fc"/>
+      <rect x="13.44" y="25.76" width="19.040000000000003" height="2.8000000000000003" rx="1.4000000000000001" fill="#7dd3fc"/>
+      <rect x="13.44" y="31.360000000000003" width="16.8" height="2.8000000000000003" rx="1.4000000000000001" fill="#bae6fd"/>
+      <rect x="13.44" y="36.96" width="16.8" height="2.8000000000000003" rx="1.4000000000000001" fill="#7dd3fc"/>
       <circle cx="41.44" cy="41.44" r="16.8" fill="#f59e0b"/>
       <circle cx="41.44" cy="41.44" r="16.8" fill="none" stroke="#fbbf24" stroke-width="1.12"/>
       <text x="41.44" y="45.919999999999995" text-anchor="middle" font-family="Arial, sans-serif" font-weight="700" font-size="16.8" fill="#78350f">&#8364;</text>
