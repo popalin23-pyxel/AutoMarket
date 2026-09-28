@@ -8,8 +8,9 @@ import { useConfirm } from '../lib/ConfirmContext.jsx';
 import NumberInput from './NumberInput.jsx';
 
 export default function SettingsTab({ state, setState, onLogout, isAdmin, onOpenAdmin, onOpenFiscal }) {
-  const { user, updatePassword } = useAuth();
+  const { user, updatePassword, deleteAccount } = useAuth();
   const confirmAction = useConfirm();
+  const [deleting, setDeleting] = useState(false);
   const fileRef = useRef(null);
   const [msg, setMsg] = useState(null);
   const [pasteOpen, setPasteOpen] = useState(false);
@@ -56,6 +57,17 @@ export default function SettingsTab({ state, setState, onLogout, isAdmin, onOpen
     if (!ok) return;
     setState(resetState());
     setMsg({ type: 'info', text: 'Tutti i dati sono stati azzerati.' });
+  };
+
+  const doDeleteAccount = async () => {
+    const ok = await confirmAction(
+      'Il tuo account e TUTTI i tuoi dati (turni, sedi, impostazioni, backup) verranno cancellati per sempre, su ogni dispositivo. Non si può annullare.',
+      { title: 'Eliminare il tuo account', danger: true, confirmLabel: 'Elimina definitivamente' },
+    );
+    if (!ok) return;
+    setDeleting(true);
+    try { await deleteAccount(); }
+    catch (err) { setMsg({ type: 'warn', text: err.message }); setDeleting(false); }
   };
 
   const changePassword = async (e) => {
@@ -136,6 +148,10 @@ export default function SettingsTab({ state, setState, onLogout, isAdmin, onOpen
           <button className="btn btn-block" style={{ marginTop: 14 }} onClick={onOpenAdmin}>⚡ Pannello Amministrazione</button>
         )}
         <button className="btn btn-danger" style={{ marginTop: 14 }} onClick={onLogout}>Esci</button>
+
+        <button className="danger-link" style={{ marginTop: 16 }} onClick={doDeleteAccount} disabled={deleting}>
+          {deleting ? 'Eliminazione in corso…' : 'Elimina il mio account e tutti i dati'}
+        </button>
       </div>
 
       <div className="panel">

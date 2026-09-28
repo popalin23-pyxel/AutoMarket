@@ -83,4 +83,18 @@ $$;
 drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
   after insert on auth.users
-  for each row execute function public.handle_new_user();`;
+  for each row execute function public.handle_new_user();
+
+-- ════════════════════════════════════════════════════════════
+-- 3) Cancellazione account self-service (l'utente elimina solo se stesso)
+-- ════════════════════════════════════════════════════════════
+create or replace function public.delete_own_account()
+returns void
+language plpgsql security definer set search_path = public
+as $$
+begin
+  delete from auth.users where id = auth.uid();
+end;
+$$;
+
+grant execute on function public.delete_own_account() to authenticated;`;

@@ -80,6 +80,15 @@ export function AuthProvider({ children }) {
     setRecovery(false);
   }, []);
 
+  // Cancella definitivamente l'account e tutti i dati (righe collegate via ON DELETE CASCADE).
+  const deleteAccount = useCallback(async () => {
+    const { error } = await supabase.rpc('delete_own_account');
+    if (error) throw friendlyAuthError(error);
+    await supabase.auth.signOut();
+    setSession(null);
+    setProfile(null);
+  }, []);
+
   const refreshProfile = useCallback(() => {
     if (session?.user) return loadProfile(session.user.id);
   }, [session, loadProfile]);
@@ -91,7 +100,7 @@ export function AuthProvider({ children }) {
     profile, profileLoading, refreshProfile,
     isAdmin: profile?.role === 'admin',
     isApproved: !!profile?.approved || profile?.role === 'admin',
-    signUp, signIn, signOut, sendPasswordReset, updatePassword,
+    signUp, signIn, signOut, sendPasswordReset, updatePassword, deleteAccount,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -522,6 +522,12 @@ tbody tr:hover td { background: rgba(var(--accent-rgb), 0.07); }
 .auth-desc { font-size: 13px; color: var(--text-dim); margin-bottom: 14px; }
 .auth-switch { text-align: center; margin-top: 16px; font-size: 13px; color: var(--text-dim); }
 .auth-link { background: none; border: none; color: var(--accent); cursor: pointer; font-size: 13px; font-weight: 600; padding: 0; text-decoration: underline; }
+.danger-link {
+  display: block; width: 100%; background: none; border: none; color: var(--red); cursor: pointer;
+  font-size: 12px; text-align: center; padding: 4px; text-decoration: underline; opacity: 0.75;
+}
+.danger-link:hover:not(:disabled) { opacity: 1; }
+.danger-link:disabled { opacity: 0.4; cursor: not-allowed; }
 .pw-field { position: relative; }
 .pw-toggle { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 15px; padding: 4px; }
 code { background: rgba(var(--ink), 0.08); padding: 1px 5px; border-radius: 4px; font-family: var(--mono); font-size: 12px; }
