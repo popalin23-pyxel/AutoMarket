@@ -399,6 +399,30 @@ code { background: rgba(255,255,255,0.08); padding: 1px 5px; border-radius: 4px;
 .barchart-lbl { font-size: 9px; color: var(--text-mut); white-space: nowrap; }
 
 /* ── Dashboard ──────────────────────────────────────────── */
+.hero-today { padding: 20px; }
+.hero-greeting { font-size: 21px; font-weight: 800; letter-spacing: -0.2px; }
+.hero-date { font-size: 13px; color: var(--text-mut); margin-top: 3px; margin-bottom: 16px; text-transform: capitalize; }
+
+.hero-today-box {
+  border-radius: var(--radius-sm); padding: 14px 16px;
+  border: 1px solid var(--border-hi);
+}
+.hero-today-box.working {
+  background: linear-gradient(120deg, rgba(45, 212, 191, 0.18), rgba(13, 148, 136, 0.10));
+  box-shadow: var(--glow-soft);
+}
+.hero-today-box.off { background: rgba(255,255,255,0.03); }
+
+.hero-today-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-dim); margin-bottom: 10px; font-weight: 700; }
+.hero-today-row {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  font-size: 14px; padding: 6px 0;
+}
+.hero-today-row + .hero-today-row { border-top: 1px dashed var(--border); }
+.hero-today-site { font-weight: 700; }
+.hero-today-time { font-family: var(--mono); font-size: 12px; color: var(--text-dim); margin-left: auto; }
+.hero-today-note { flex-basis: 100%; font-size: 12px; color: var(--text-mut); font-style: italic; }
+
 .hero-week { text-align: center; }
 .hero-week-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-mut); margin-bottom: 12px; }
 .hero-week-row { display: flex; justify-content: center; gap: 32px; margin-bottom: 16px; flex-wrap: wrap; }

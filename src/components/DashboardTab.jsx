@@ -2,8 +2,9 @@ import React, { useMemo } from 'react';
 import {
   compareWeeks, compareMonths, compareYears,
   lastNWeeksSummaries, lastNMonthsSummaries, todayISO,
+  shiftsToday, nextShiftAfter, weekdayOf,
 } from '../lib/calc.js';
-import { MONTHS_IT } from '../lib/defaults.js';
+import { MONTHS_IT, WEEKDAYS_IT_LONG } from '../lib/defaults.js';
 import BarChart from './charts/BarChart.jsx';
 
 const fmt = (n) => n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -16,10 +17,74 @@ function DeltaBadge({ pct }) {
   return <span className={`delta-badge ${up ? 'up' : 'down'}`}>{up ? '▲' : '▼'} {Math.abs(pct)}%</span>;
 }
 
-export default function DashboardTab({ state }) {
+function greetingWord() {
+  const h = new Date().getHours();
+  if (h < 6) return 'Buonanotte';
+  if (h < 12) return 'Buongiorno';
+  if (h < 18) return 'Buon pomeriggio';
+  return 'Buonasera';
+}
+
+function formatDateLong(dateISO) {
+  const [y, m, d] = dateISO.split('-').map(Number);
+  return `${WEEKDAYS_IT_LONG[weekdayOf(y, m, d)]} ${d} ${MONTHS_IT[m - 1]}`;
+}
+
+function siteFor(sites, siteId) {
+  return sites.find((s) => s.id === siteId) || { name: 'Sede eliminata', color: '#6b7280' };
+}
+
+function TodayCard({ state, today, firstName }) {
+  const todays = useMemo(() => shiftsToday(state.shifts, today), [state.shifts, today]);
+  const upcoming = useMemo(() => (todays.length ? null : nextShiftAfter(state.shifts, today)),
+    [state.shifts, today, todays.length]);
+
+  return (
+    <div className="panel hero-today">
+      <div className="hero-greeting">{greetingWord()}{firstName ? `, ${firstName}` : ''} <span aria-hidden>👋</span></div>
+      <div className="hero-date">{formatDateLong(today)}</div>
+
+      {todays.length > 0 ? (
+        <div className="hero-today-box working">
+          <div className="hero-today-label">Oggi lavori</div>
+          {todays.map((sh) => {
+            const site = siteFor(state.sites, sh.siteId);
+            return (
+              <div key={sh.id} className="hero-today-row">
+                <span className="site-dot" style={{ background: site.color }} />
+                <span className="hero-today-site">{site.name}</span>
+                <span className="hero-today-time">{sh.start}–{sh.end}</span>
+                {sh.note && <span className="hero-today-note">{sh.note}</span>}
+              </div>
+            );
+          })}
+        </div>
+      ) : upcoming ? (
+        <div className="hero-today-box off">
+          <div className="hero-today-label">Oggi non lavori 🎉</div>
+          <div className="hero-today-row">
+            <span className="site-dot" style={{ background: siteFor(state.sites, upcoming.siteId).color }} />
+            <span className="hero-today-site">Prossimo turno: {formatDateLong(upcoming.date)} — {siteFor(state.sites, upcoming.siteId).name}</span>
+            <span className="hero-today-time">{upcoming.start}–{upcoming.end}</span>
+          </div>
+        </div>
+      ) : (
+        <div className="hero-today-box off">
+          <div className="hero-today-label">Nessun turno in programma</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function DashboardTab({ state, userEmail }) {
   const today = todayISO();
   const y = Number(today.slice(0, 4));
   const m = Number(today.slice(5, 7));
+  const rawName = (state.settings.displayName || '').trim().split(/\s+/)[0]
+    || (userEmail || '').split('@')[0].replace(/[^a-zA-Z]+/g, ' ').trim().split(' ')[0]
+    || '';
+  const firstName = rawName ? rawName[0].toUpperCase() + rawName.slice(1) : '';
 
   const week = useMemo(() => compareWeeks(state.shifts, state.sites, state.settings, today),
     [state.shifts, state.sites, state.settings, today]);
@@ -36,6 +101,8 @@ export default function DashboardTab({ state }) {
 
   return (
     <>
+      <TodayCard state={state} today={today} firstName={firstName} />
+
       <div className="panel hero-week">
         <div className="hero-week-label">Questa settimana</div>
         {!hasAnyData ? (

@@ -3,6 +3,7 @@
 export const DEFAULT_SETTINGS = {
   taxPercent: 25,      // % accantonata sul fatturato totale (imposte + contributi, in un unico numero)
   rivalsaPercent: 4,   // maggiorazione di default in fattura (es. rivalsa INPS/ENPAPI); modificabile per sede
+  displayName: '',     // nome mostrato nel saluto della Home
 };
 
 // Palette di colori pronti per le sedi (coordinata col tema dell'app)
@@ -16,3 +17,7 @@ export const MONTHS_IT = [
 ];
 
 export const WEEKDAYS_IT = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'];
+
+export const WEEKDAYS_IT_LONG = [
+  'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica',
+];

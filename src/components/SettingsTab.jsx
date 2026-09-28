@@ -17,6 +17,7 @@ export default function SettingsTab({ state, setState, onLogout }) {
 
   const setTax = (v) => setState((s) => updateSettings(s, { taxPercent: v }));
   const setRivalsa = (v) => setState((s) => updateSettings(s, { rivalsaPercent: v }));
+  const setDisplayName = (v) => setState((s) => updateSettings(s, { displayName: v }));
 
   const doImport = async (e) => {
     const file = e.target.files?.[0];
@@ -68,6 +69,12 @@ export default function SettingsTab({ state, setState, onLogout }) {
       <div className="panel">
         <h2 className="panel-title">Account</h2>
         <p className="panel-desc">Accesso effettuato come <b>{user?.email}</b>. I tuoi dati sono privati e sincronizzati con il cloud.</p>
+
+        <div className="field" style={{ marginBottom: 14 }}>
+          <label className="field-label">Il tuo nome (mostrato nel saluto della Home)</label>
+          <input type="text" value={state.settings.displayName} placeholder="es. Alin"
+            onChange={(e) => setDisplayName(e.target.value)} style={{ width: '100%', minWidth: 0 }} />
+        </div>
 
         <form onSubmit={changePassword} className="form-row" style={{ alignItems: 'flex-end' }}>
           <div className="field">

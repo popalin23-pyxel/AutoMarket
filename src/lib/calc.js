@@ -49,6 +49,22 @@ export function shiftsInRange(shifts, startISO, endISO) {
   return shifts.filter((s) => s.date >= startISO && s.date <= endISO);
 }
 
+function byDateThenStart(a, b) {
+  return a.date === b.date ? (a.start || '').localeCompare(b.start || '') : a.date.localeCompare(b.date);
+}
+
+/** Turni di oggi, ordinati per orario di inizio. */
+export function shiftsToday(shifts, todayDateISO = todayISO()) {
+  return shiftsOnDay(shifts, todayDateISO).slice().sort(byDateThenStart);
+}
+
+/** Il primo turno futuro (data successiva a quella data), utile per "prossimo turno". */
+export function nextShiftAfter(shifts, dateISO) {
+  const future = shifts.filter((s) => s.date > dateISO);
+  if (!future.length) return null;
+  return future.slice().sort(byDateThenStart)[0];
+}
+
 // ── Settimane (lunedì–domenica) ─────────────────────────────────────────
 export function startOfWeek(dateISO) {
   const d = new Date(dateISO + 'T00:00:00');
