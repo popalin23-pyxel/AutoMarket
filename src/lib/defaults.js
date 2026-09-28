@@ -4,6 +4,7 @@ export const DEFAULT_SETTINGS = {
   taxPercent: 25,      // % accantonata sul fatturato totale (imposte + contributi, in un unico numero)
   rivalsaPercent: 4,   // maggiorazione di default in fattura (es. rivalsa INPS/ENPAPI); modificabile per sede
   displayName: '',     // nome mostrato nel saluto della Home
+  monthlyGoal: 0,      // obiettivo di netto mensile (€); 0 = nessun obiettivo impostato
 };
 
 // Palette di colori pronti per le sedi (coordinata col tema dell'app)

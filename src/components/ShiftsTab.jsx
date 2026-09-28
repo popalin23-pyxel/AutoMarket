@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { monthDays, weekdayOf, shiftsOnDay, hoursOfShift, todayISO, holidaysOfYear, isHoliday } from '../lib/calc.js';
 import { MONTHS_IT, WEEKDAYS_IT, hexToRgba } from '../lib/defaults.js';
-import { addShift, updateShift, removeShift } from '../lib/store.js';
+import { addShift, updateShift, removeShift, addFavorite, removeFavorite } from '../lib/store.js';
 import ShiftEditor from './ShiftEditor.jsx';
 import CalendarGridView from './charts/CalendarGridView.jsx';
 
@@ -40,6 +40,9 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
     flashSaved();
   };
   const del = (id) => { setState((s) => removeShift(s, id)); setEditing(null); };
+
+  const saveFavorite = (fav) => setState((s) => addFavorite(s, fav));
+  const deleteFavorite = (id) => setState((s) => removeFavorite(s, id));
 
   const { monthTotalHours, monthAccent } = useMemo(() => {
     let h = 0;
@@ -124,7 +127,7 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
             const isToday = dateISO === today;
             return (
               <div key={d} className={`day-row ${isWeekend ? 'weekend' : ''} ${holiday ? 'holiday' : ''}`}
-                style={{ padding: '10px 14px', ...(isToday ? { background: 'rgba(45,212,191,0.07)' } : {}) }}>
+                style={{ padding: '10px 14px', ...(isToday ? { background: 'rgba(56,189,248,0.10)' } : {}) }}>
                 <div className="day-num">
                   <b style={isToday ? { color: 'var(--accent)' } : undefined}>{d}</b>
                   <span style={holiday ? { color: 'var(--red)' } : undefined}>{holiday ? '★' : WEEKDAYS_IT[wd]}</span>
@@ -153,7 +156,9 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
 
       {editing && (
         <ShiftEditor date={editing.date} shift={editing.shift} sites={state.sites}
-          onSave={save} onDelete={del} onClose={() => setEditing(null)} />
+          favorites={state.favorites} lastSiteId={state.lastSiteId}
+          onSave={save} onDelete={del} onClose={() => setEditing(null)}
+          onSaveFavorite={saveFavorite} onDeleteFavorite={deleteFavorite} />
       )}
 
       {toast && <div className="save-toast">✓ Turno salvato</div>}

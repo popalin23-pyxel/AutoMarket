@@ -8,8 +8,10 @@ function freshState() {
   return {
     sites: [],   // [{ id, name, color, rate, rivalsaPercent: null|number }]
     shifts: [],  // [{ id, date: 'YYYY-MM-DD', siteId, start: 'HH:MM', end: 'HH:MM', note }]
+    favorites: [], // [{ id, siteId, start: 'HH:MM', end: 'HH:MM', label }] — scorciatoie turno
+    lastSiteId: null, // ultima sede usata, per pre-selezionarla nel prossimo turno
     settings: { ...DEFAULT_SETTINGS },
-    seq: { site: 1, shift: 1 },
+    seq: { site: 1, shift: 1, favorite: 1 },
   };
 }
 
@@ -20,8 +22,10 @@ function sanitizeState(parsed) {
     ...parsed,
     sites: Array.isArray(parsed.sites) ? parsed.sites : [],
     shifts: Array.isArray(parsed.shifts) ? parsed.shifts : [],
+    favorites: Array.isArray(parsed.favorites) ? parsed.favorites : [],
+    lastSiteId: parsed.lastSiteId ?? null,
     settings: { ...DEFAULT_SETTINGS, ...(parsed.settings ?? {}) },
-    seq: { site: 1, shift: 1, ...(parsed.seq ?? {}) },
+    seq: { site: 1, shift: 1, favorite: 1, ...(parsed.seq ?? {}) },
   };
 }
 
@@ -74,16 +78,35 @@ export function addShift(state, shift) {
   return {
     ...state,
     shifts: [...state.shifts, { id, ...shift }],
+    lastSiteId: shift.siteId ?? state.lastSiteId,
     seq: { ...state.seq, shift: id + 1 },
   };
 }
 
 export function updateShift(state, id, patch) {
-  return { ...state, shifts: state.shifts.map((s) => (s.id === id ? { ...s, ...patch } : s)) };
+  return {
+    ...state,
+    shifts: state.shifts.map((s) => (s.id === id ? { ...s, ...patch } : s)),
+    lastSiteId: patch.siteId ?? state.lastSiteId,
+  };
 }
 
 export function removeShift(state, id) {
   return { ...state, shifts: state.shifts.filter((s) => s.id !== id) };
+}
+
+// ── Scorciatoie turno (preferiti) ──────────────────────────────────────
+export function addFavorite(state, fav) {
+  const id = state.seq.favorite;
+  return {
+    ...state,
+    favorites: [...state.favorites, { id, ...fav }],
+    seq: { ...state.seq, favorite: id + 1 },
+  };
+}
+
+export function removeFavorite(state, id) {
+  return { ...state, favorites: state.favorites.filter((f) => f.id !== id) };
 }
 
 // ── Impostazioni ─────────────────────────────────────────────────────

@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
 import { hoursOfShift } from '../lib/calc.js';
 
-export default function ShiftEditor({ date, shift, sites, onSave, onDelete, onClose }) {
-  const [siteId, setSiteId] = useState(shift?.siteId ?? sites[0]?.id ?? null);
+export default function ShiftEditor({
+  date, shift, sites, favorites = [], lastSiteId,
+  onSave, onDelete, onClose, onSaveFavorite, onDeleteFavorite,
+}) {
+  const [siteId, setSiteId] = useState(shift?.siteId ?? lastSiteId ?? sites[0]?.id ?? null);
   const [start, setStart] = useState(shift?.start ?? '07:00');
   const [end, setEnd] = useState(shift?.end ?? '14:00');
   const [note, setNote] = useState(shift?.note ?? '');
@@ -13,6 +16,14 @@ export default function ShiftEditor({ date, shift, sites, onSave, onDelete, onCl
   const save = () => {
     if (!canSave) return;
     onSave({ date, siteId, start, end, note: note.trim() });
+  };
+
+  const applyFavorite = (fav) => { setSiteId(fav.siteId); setStart(fav.start); setEnd(fav.end); };
+
+  const saveAsFavorite = () => {
+    if (!canSave) return;
+    const site = sites.find((s) => s.id === siteId);
+    onSaveFavorite?.({ siteId, start, end, label: `${site?.name ?? 'Sede'} ${start}–${end}` });
   };
 
   return (
@@ -27,6 +38,25 @@ export default function ShiftEditor({ date, shift, sites, onSave, onDelete, onCl
           <p className="hint hint-warn">Aggiungi prima una sede nella scheda "Sedi".</p>
         ) : (
           <>
+            {favorites.length > 0 && (
+              <>
+                <div className="editor-label">Scorciatoie</div>
+                <div className="fav-chip-row">
+                  {favorites.map((f) => {
+                    const site = sites.find((s) => s.id === f.siteId);
+                    return (
+                      <span key={f.id} className="fav-chip" onClick={() => applyFavorite(f)}>
+                        {site && <span className="site-dot" style={{ background: site.color }} />}
+                        {f.label || `${site?.name ?? 'Sede'} ${f.start}–${f.end}`}
+                        <button type="button" className="fav-chip-x"
+                          onClick={(e) => { e.stopPropagation(); onDeleteFavorite?.(f.id); }}>✕</button>
+                      </span>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+
             <div className="editor-label">Sede</div>
             <div className="site-picker">
               {sites.map((s) => (
@@ -47,9 +77,14 @@ export default function ShiftEditor({ date, shift, sites, onSave, onDelete, onCl
                 <input type="time" value={end} onChange={(e) => setEnd(e.target.value)} />
               </div>
             </div>
-            <div className="editor-hours-preview">
-              {hours > 0 ? `${hours}h di turno` : 'orario non valido'}
-              {end < start && hours > 0 ? ' · a cavallo di mezzanotte' : ''}
+            <div className="editor-hours-preview-row">
+              <span className="editor-hours-preview">
+                {hours > 0 ? `${hours}h di turno` : 'orario non valido'}
+                {end < start && hours > 0 ? ' · a cavallo di mezzanotte' : ''}
+              </span>
+              <button type="button" className="fav-save-btn" onClick={saveAsFavorite} disabled={!canSave}>
+                ☆ Salva come scorciatoia
+              </button>
             </div>
 
             <div className="editor-label">Nota (opzionale)</div>

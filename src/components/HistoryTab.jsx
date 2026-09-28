@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { computeYearSummary, monthsWithData } from '../lib/calc.js';
 import { MONTHS_IT } from '../lib/defaults.js';
 import BarChart from './charts/BarChart.jsx';
+import YearHeatmap from './charts/YearHeatmap.jsx';
 import EmptyState from './EmptyState.jsx';
 
 const fmt = (n) => n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -40,6 +41,14 @@ export default function HistoryTab({ state, onOpenMonth }) {
           </div>
         )}
       </div>
+
+      {y.months.length > 0 && (
+        <div className="panel">
+          <h2 className="panel-title">Mappa dell'anno</h2>
+          <p className="panel-desc">Ogni quadratino è un giorno: più scuro = più ore lavorate</p>
+          <YearHeatmap year={year} shifts={state.shifts} color="#38bdf8" />
+        </div>
+      )}
 
       {y.months.length > 0 && (
         <div className="panel">

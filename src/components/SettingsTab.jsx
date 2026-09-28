@@ -18,6 +18,7 @@ export default function SettingsTab({ state, setState, onLogout }) {
   const setTax = (v) => setState((s) => updateSettings(s, { taxPercent: v }));
   const setRivalsa = (v) => setState((s) => updateSettings(s, { rivalsaPercent: v }));
   const setDisplayName = (v) => setState((s) => updateSettings(s, { displayName: v }));
+  const setMonthlyGoal = (v) => setState((s) => updateSettings(s, { monthlyGoal: v === '' ? 0 : v }));
 
   const doImport = async (e) => {
     const file = e.target.files?.[0];
@@ -110,6 +111,18 @@ export default function SettingsTab({ state, setState, onLogout }) {
         </div>
         <div className="hint hint-info" style={{ marginBottom: 0 }}>
           Ogni sede può avere una rivalsa diversa da questa (impostabile nella scheda "Sedi").
+        </div>
+      </div>
+
+      <div className="panel">
+        <h2 className="panel-title">Obiettivo mensile</h2>
+        <p className="panel-desc">
+          Quanto vorresti guadagnare (netto) questo mese. Lo vedrai come barra di avanzamento nella Home.
+          Lascia 0 per nascondere l'obiettivo.
+        </p>
+        <div className="field">
+          <label className="field-label">Obiettivo netto (€)</label>
+          <NumberInput value={state.settings.monthlyGoal} onChange={setMonthlyGoal} min={0} max={99999} allowEmpty />
         </div>
       </div>
 

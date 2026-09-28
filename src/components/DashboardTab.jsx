@@ -79,6 +79,28 @@ function TodayCard({ state, today, firstName }) {
   );
 }
 
+function GoalCard({ goal, net }) {
+  if (!goal) return null;
+  const pct = Math.min(100, Math.round((net / goal) * 100));
+  const reached = net >= goal;
+  return (
+    <div className="panel">
+      <div className="goal-head">
+        <h2 className="panel-title" style={{ marginBottom: 0 }}>Obiettivo del mese</h2>
+        <span className="goal-pct">{pct}%</span>
+      </div>
+      <div className="goal-bar-track">
+        <div className={`goal-bar-fill ${reached ? 'reached' : ''}`} style={{ width: `${pct}%` }} />
+      </div>
+      <div className="goal-sub">
+        {reached
+          ? `Obiettivo raggiunto — €${fmt(net)} su €${fmt(goal)} 🎉`
+          : `€${fmt(net)} su €${fmt(goal)} — mancano €${fmt(Math.max(0, goal - net))}`}
+      </div>
+    </div>
+  );
+}
+
 function NavGrid({ state, y, m, onNavigate, isAdmin }) {
   const shiftsThisMonth = shiftsInMonth(state.shifts, y, m).length;
   const monthsCount = monthsWithData(state.shifts).length;
@@ -130,6 +152,8 @@ export default function DashboardTab({ state, userEmail, isAdmin, onNavigate }) 
       <TodayCard state={state} today={today} firstName={firstName} />
 
       <NavGrid state={state} y={y} m={m} onNavigate={onNavigate} isAdmin={isAdmin} />
+
+      <GoalCard goal={Number(state.settings.monthlyGoal) || 0} net={month.current.net} />
 
       <div className="panel hero-week">
         <div className="hero-week-label">Questa settimana</div>
