@@ -19,9 +19,11 @@ export default function AreaChart({ data, valueKey = 'value', labelKey = 'label'
     ? `${linePath} L${points[points.length - 1][0].toFixed(2)},100 L${points[0][0].toFixed(2)},100 Z`
     : '';
 
+  const svgHeight = Math.max(40, height - 22); // spazio riservato alle etichette sotto
+
   return (
-    <div className="areachart" style={{ height, color }}>
-      <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="areachart-svg">
+    <div className="areachart" style={{ color }}>
+      <svg viewBox="0 0 100 100" preserveAspectRatio="none" width="100%" height={svgHeight} className="areachart-svg">
         <defs>
           <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="currentColor" stopOpacity="0.32" />
