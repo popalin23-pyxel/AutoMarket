@@ -45,14 +45,22 @@ function Shell() {
   const [syncError, setSyncError] = useState(false);
   const saveTimer = useRef(null);
   const cloudReady = useRef(false);
+  const loadedUserId = useRef(null);
 
   // cache locale sempre aggiornata (funziona anche offline)
   useEffect(() => { saveState(state); }, [state]);
 
   // al login: carica lo stato cloud, oppure — se è il primo accesso di questo
-  // utente e su questo dispositivo ci sono già dati locali — li adotta come suoi
+  // utente e su questo dispositivo ci sono già dati locali — li adotta come suoi.
+  // Va eseguito una sola volta per utente: Supabase genera un nuovo oggetto
+  // `session`/`user` a ogni refresh del token (es. quando il telefono torna in
+  // foreground dopo aver aperto il selettore file), e senza questa guardia
+  // l'effetto ripartiva ogni volta sovrascrivendo con i vecchi dati cloud
+  // qualunque modifica locale (incluso un backup appena importato).
   useEffect(() => {
-    if (!user || !isApproved) { cloudReady.current = false; return; }
+    if (!user || !isApproved) { cloudReady.current = false; loadedUserId.current = null; return; }
+    if (loadedUserId.current === user.id) return;
+    loadedUserId.current = user.id;
     let alive = true;
     (async () => {
       try {
