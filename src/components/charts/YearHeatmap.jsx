@@ -1,12 +1,12 @@
 import React, { useMemo } from 'react';
 import { hoursOfShift } from '../../lib/calc.js';
-import { hexToRgba, WEEKDAYS_IT } from '../../lib/defaults.js';
+import { WEEKDAYS_IT } from '../../lib/defaults.js';
 
 function isoLocal(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-export default function YearHeatmap({ year, shifts, color = '#38bdf8' }) {
+export default function YearHeatmap({ year, shifts }) {
   const hoursByDate = useMemo(() => {
     const map = new Map();
     for (const sh of shifts) {
@@ -49,7 +49,7 @@ export default function YearHeatmap({ year, shifts, color = '#38bdf8' }) {
     return 1;
   };
 
-  const bg = (level) => (level === 0 ? undefined : hexToRgba(color, 0.18 + level * 0.18));
+  const bg = (level) => (level === 0 ? undefined : `rgba(var(--accent-rgb), ${(0.18 + level * 0.18).toFixed(2)})`);
 
   return (
     <div>

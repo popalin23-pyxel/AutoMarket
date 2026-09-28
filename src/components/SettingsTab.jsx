@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { updateSettings, exportBackup, importBackup, importBackupFromText, resetState } from '../lib/store.js';
 import { loadTheme, applyTheme } from '../lib/theme.js';
+import { loadAccent, applyAccent, ACCENT_COLORS } from '../lib/accentColor.js';
 import { useAuth } from '../lib/AuthContext.jsx';
 import { useConfirm } from '../lib/ConfirmContext.jsx';
 import NumberInput from './NumberInput.jsx';
@@ -13,6 +14,7 @@ export default function SettingsTab({ state, setState, onLogout }) {
   const [pasteOpen, setPasteOpen] = useState(false);
   const [pasteText, setPasteText] = useState('');
   const [theme, setTheme] = useState(loadTheme);
+  const [accent, setAccent] = useState(loadAccent);
 
   const [pw, setPw] = useState('');
   const [pw2, setPw2] = useState('');
@@ -83,6 +85,15 @@ export default function SettingsTab({ state, setState, onLogout }) {
           <button className={`theme-opt ${theme === 'dark' ? 'active' : ''}`} onClick={() => { applyTheme('dark'); setTheme('dark'); }}>
             🌙 Scuro
           </button>
+        </div>
+
+        <div className="field-label" style={{ marginTop: 16, marginBottom: 8 }}>Colore principale</div>
+        <div className="accent-row">
+          {ACCENT_COLORS.map((c) => (
+            <button key={c.id} className={`accent-swatch ${accent === c.id ? 'active' : ''}`}
+              style={{ background: c.swatch }} title={c.label}
+              onClick={() => { applyAccent(c.id); setAccent(c.id); }} />
+          ))}
         </div>
       </div>
 

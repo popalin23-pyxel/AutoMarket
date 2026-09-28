@@ -32,6 +32,10 @@ export function AuthProvider({ children }) {
       setSession(data.session);
       setLoading(false);
       if (data.session?.user) loadProfile(data.session.user.id);
+    }).catch((e) => {
+      // Es. rete irraggiungibile: non restare bloccati sulla schermata di caricamento.
+      console.warn('Turnio: impossibile recuperare la sessione', e);
+      setLoading(false);
     });
 
     const { data: sub } = supabase.auth.onAuthStateChange((event, sess) => {

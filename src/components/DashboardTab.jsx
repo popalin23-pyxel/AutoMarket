@@ -5,7 +5,7 @@ import {
   shiftsToday, nextShiftAfter, weekdayOf, shiftsInMonth, monthsWithData,
 } from '../lib/calc.js';
 import { MONTHS_IT, WEEKDAYS_IT_LONG } from '../lib/defaults.js';
-import BarChart from './charts/BarChart.jsx';
+import AreaChart from './charts/AreaChart.jsx';
 import Icon from './icons/Icon.jsx';
 import EmptyState from './EmptyState.jsx';
 import SiteAvatar from './SiteAvatar.jsx';
@@ -211,8 +211,7 @@ export default function DashboardTab({ state, userEmail, isAdmin, onNavigate }) 
           <div className="panel">
             <h2 className="panel-title">Ultime 8 settimane</h2>
             <p className="panel-desc">Netto per settimana</p>
-            <BarChart data={weeksTrend} valueKey="net" labelKey="label" color="var(--gold)"
-              formatValue={(v) => `${Math.round(v)}`} height={140} />
+            <AreaChart data={weeksTrend} valueKey="net" labelKey="label" color="var(--gold)" height={140} />
           </div>
 
           <div className="panel">
@@ -234,8 +233,7 @@ export default function DashboardTab({ state, userEmail, isAdmin, onNavigate }) 
           <div className="panel">
             <h2 className="panel-title">Ultimi 6 mesi</h2>
             <p className="panel-desc">Ore lavorate per mese</p>
-            <BarChart data={monthsTrend} valueKey="totalHours" labelKey="label" color="var(--accent)"
-              formatValue={(v) => `${Math.round(v)}`} height={140} />
+            <AreaChart data={monthsTrend} valueKey="totalHours" labelKey="label" color="var(--accent)" height={140} />
           </div>
         </>
       )}

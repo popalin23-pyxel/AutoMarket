@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { loadState, saveState, resetState } from './lib/store.js';
 import { computeMonthSummary } from './lib/calc.js';
 import { loadTheme, applyTheme } from './lib/theme.js';
+import { loadAccent, applyAccent } from './lib/accentColor.js';
 import { AuthProvider, useAuth } from './lib/AuthContext.jsx';
 import { ConfirmProvider } from './lib/ConfirmContext.jsx';
 import { fetchCloudState, saveCloudState } from './lib/cloudState.js';
@@ -20,6 +21,7 @@ import Splash from './components/Splash.jsx';
 import OnboardingTour, { needsOnboarding } from './components/OnboardingTour.jsx';
 
 applyTheme(loadTheme()); // applicato subito al caricamento del modulo, prima del primo render
+applyAccent(loadAccent());
 
 const now = new Date();
 const AVATAR_PALETTE = ['#2dd4bf', '#f59e0b', '#818cf8', '#fb7185', '#a3e635', '#22d3ee', '#c084fc', '#fbbf24'];

@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { computeYearSummary, monthsWithData } from '../lib/calc.js';
 import { MONTHS_IT } from '../lib/defaults.js';
-import BarChart from './charts/BarChart.jsx';
+import AreaChart from './charts/AreaChart.jsx';
 import YearHeatmap from './charts/YearHeatmap.jsx';
 import EmptyState from './EmptyState.jsx';
 
@@ -46,7 +46,7 @@ export default function HistoryTab({ state, onOpenMonth }) {
         <div className="panel">
           <h2 className="panel-title">Mappa dell'anno</h2>
           <p className="panel-desc">Ogni quadratino è un giorno: più scuro = più ore lavorate</p>
-          <YearHeatmap year={year} shifts={state.shifts} color="#38bdf8" />
+          <YearHeatmap year={year} shifts={state.shifts} />
         </div>
       )}
 
@@ -54,9 +54,9 @@ export default function HistoryTab({ state, onOpenMonth }) {
         <div className="panel">
           <h2 className="panel-title">Andamento {year}</h2>
           <p className="panel-desc">Netto per mese</p>
-          <BarChart
+          <AreaChart
             data={y.months.map((m) => ({ label: MONTHS_IT[m.month - 1].slice(0, 3), net: m.net }))}
-            valueKey="net" labelKey="label" color="var(--gold)" formatValue={(v) => `${Math.round(v)}`} height={130} />
+            valueKey="net" labelKey="label" color="var(--gold)" height={130} />
         </div>
       )}
 

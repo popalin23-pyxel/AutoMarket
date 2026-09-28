@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../lib/AuthContext.jsx';
+import Icon from './icons/Icon.jsx';
 
 export default function AuthScreen() {
   const { signIn, signUp, sendPasswordReset } = useAuth();
@@ -58,6 +59,7 @@ export default function AuthScreen() {
   return (
     <div className="auth-wrap">
       <div className="auth-card">
+        <div className="auth-hero-icon"><Icon name="calendar" size={26} /></div>
         <div className="auth-brand">
           <span className="brand-logo">Turn<span className="accent">io</span></span>
           <span className="auth-tagline">Turni e compensi — Partita IVA</span>
