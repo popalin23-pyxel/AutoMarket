@@ -132,10 +132,9 @@ function NavGrid({ state, y, m, onNavigate, isAdmin }) {
   const shiftsThisMonth = shiftsInMonth(state.shifts, y, m).length;
   const monthsCount = monthsWithData(state.shifts).length;
   const items = [
-    { id: 'shifts', icon: 'calendar', tile: 'teal', label: 'Turni', hint: `${shiftsThisMonth} questo mese` },
-    { id: 'summary', icon: 'euro', tile: 'gold', label: 'Riepilogo', hint: 'Ore, fatturato, tasse' },
-    { id: 'sites', icon: 'mapPin', tile: 'indigo', label: 'Sedi', hint: `${state.sites.length} configurate` },
-    { id: 'history', icon: 'history', tile: 'rose', label: 'Storico', hint: `${monthsCount} mesi registrati` },
+    { id: 'calendar', icon: 'calendar', tile: 'teal', label: 'Calendario', hint: `${shiftsThisMonth} turni questo mese` },
+    { id: 'earnings', icon: 'euro', tile: 'gold', label: 'Guadagni', hint: `${state.sites.length} sedi · riepilogo` },
+    { id: 'stats', icon: 'history', tile: 'rose', label: 'Statistiche', hint: `${monthsCount} mesi registrati` },
     { id: 'settings', icon: 'settings', tile: 'lime', label: 'Profilo', hint: 'Account e backup' },
     ...(isAdmin ? [{ id: 'admin', icon: 'zap', tile: 'violet', label: 'Admin', hint: 'Utenti e approvazioni' }] : []),
   ];

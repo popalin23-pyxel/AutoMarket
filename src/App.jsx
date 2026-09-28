@@ -13,8 +13,7 @@ import PendingApproval from './components/PendingApproval.jsx';
 import AdminTab from './components/AdminTab.jsx';
 import DashboardTab from './components/DashboardTab.jsx';
 import ShiftsTab from './components/ShiftsTab.jsx';
-import SitesTab from './components/SitesTab.jsx';
-import SummaryTab from './components/SummaryTab.jsx';
+import GuadagniTab from './components/GuadagniTab.jsx';
 import HistoryTab from './components/HistoryTab.jsx';
 import SettingsTab from './components/SettingsTab.jsx';
 import Icon from './components/icons/Icon.jsx';
@@ -113,7 +112,7 @@ function Shell() {
     return () => clearTimeout(saveTimer.current);
   }, [state, user, isApproved]);
 
-  const goToMonth = (y, m) => { setYear(y); setMonth(m); setActive('shifts'); };
+  const goToMonth = (y, m) => { setYear(y); setMonth(m); setActive('calendar'); };
 
   const doLogout = async () => {
     await signOut();
@@ -127,12 +126,10 @@ function Shell() {
 
   const TABS = [
     { id: 'dashboard', label: 'Home', icon: 'home' },
-    { id: 'shifts', label: 'Turni', icon: 'calendar' },
-    { id: 'summary', label: 'Riepilogo', icon: 'euro' },
-    { id: 'sites', label: 'Sedi', icon: 'mapPin' },
-    { id: 'history', label: 'Storico', icon: 'history' },
+    { id: 'calendar', label: 'Calendario', icon: 'calendar' },
+    { id: 'earnings', label: 'Guadagni', icon: 'euro' },
+    { id: 'stats', label: 'Statistiche', icon: 'history' },
     { id: 'settings', label: 'Profilo', icon: 'settings' },
-    ...(isAdmin ? [{ id: 'admin', label: 'Admin', icon: 'zap' }] : []),
   ];
 
   const initial = (user?.email || '?').trim()[0]?.toUpperCase() || '?';
@@ -166,16 +163,17 @@ function Shell() {
           {active === 'dashboard' && (
             <DashboardTab state={state} userEmail={user?.email} isAdmin={isAdmin} onNavigate={setActive} />
           )}
-          {active === 'shifts' && (
+          {active === 'calendar' && (
             <ShiftsTab state={state} setState={setState} year={year} month={month} setYear={setYear} setMonth={setMonth} />
           )}
-          {active === 'summary' && (
-            <SummaryTab state={state} year={year} month={month} setYear={setYear} setMonth={setMonth} />
+          {active === 'earnings' && (
+            <GuadagniTab state={state} setState={setState} year={year} month={month} setYear={setYear} setMonth={setMonth} />
           )}
-          {active === 'sites' && <SitesTab state={state} setState={setState} />}
-          {active === 'history' && <HistoryTab state={state} onOpenMonth={goToMonth} />}
-          {active === 'settings' && <SettingsTab state={state} setState={setState} onLogout={doLogout} />}
-          {active === 'admin' && isAdmin && <AdminTab />}
+          {active === 'stats' && <HistoryTab state={state} onOpenMonth={goToMonth} />}
+          {active === 'settings' && (
+            <SettingsTab state={state} setState={setState} onLogout={doLogout} isAdmin={isAdmin} onOpenAdmin={() => setActive('admin')} />
+          )}
+          {active === 'admin' && isAdmin && <AdminTab onBack={() => setActive('settings')} />}
         </div>
       </div>
 

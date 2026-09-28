@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { fetchAllProfiles, updateProfile } from '../lib/adminStore.js';
 import { useAuth } from '../lib/AuthContext.jsx';
 
-export default function AdminTab() {
+export default function AdminTab({ onBack }) {
   const { user } = useAuth();
   const [rows, setRows] = useState(null);
   const [error, setError] = useState(null);
@@ -33,6 +33,7 @@ export default function AdminTab() {
 
   return (
     <div className="panel">
+      {onBack && <button className="btn btn-sm" style={{ marginBottom: 12 }} onClick={onBack}>‹ Profilo</button>}
       <h2 className="panel-title">⚡ Super Admin</h2>
       <p className="panel-desc">Approva i nuovi account e assegna i ruoli. Finché un utente non è "Approvato" non può usare Turnio.</p>
 

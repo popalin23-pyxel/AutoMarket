@@ -7,7 +7,7 @@ import { useAuth } from '../lib/AuthContext.jsx';
 import { useConfirm } from '../lib/ConfirmContext.jsx';
 import NumberInput from './NumberInput.jsx';
 
-export default function SettingsTab({ state, setState, onLogout }) {
+export default function SettingsTab({ state, setState, onLogout, isAdmin, onOpenAdmin }) {
   const { user, updatePassword } = useAuth();
   const confirmAction = useConfirm();
   const fileRef = useRef(null);
@@ -134,6 +134,9 @@ export default function SettingsTab({ state, setState, onLogout }) {
         </form>
         {pwMsg && <div className={`hint hint-${pwMsg.type}`} style={{ marginTop: 10, marginBottom: 0 }}>{pwMsg.text}</div>}
 
+        {isAdmin && (
+          <button className="btn btn-block" style={{ marginTop: 14 }} onClick={onOpenAdmin}>⚡ Pannello Amministrazione</button>
+        )}
         <button className="btn btn-danger" style={{ marginTop: 14 }} onClick={onLogout}>Esci</button>
       </div>
 
