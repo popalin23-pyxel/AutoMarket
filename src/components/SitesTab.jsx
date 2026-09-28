@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { addSite, updateSite, removeSite } from '../lib/store.js';
 import { SITE_COLORS } from '../lib/defaults.js';
 import NumberInput from './NumberInput.jsx';
+import EmptyState from './EmptyState.jsx';
 
 export default function SitesTab({ state, setState }) {
   const [name, setName] = useState('');
@@ -58,6 +59,11 @@ export default function SitesTab({ state, setState }) {
         <button className="btn btn-primary" onClick={add}>Aggiungi</button>
       </div>
 
+      {state.sites.length === 0 && (
+        <EmptyState icon="mapPin" title="Nessuna sede configurata" hint="Aggiungine una qui sopra per iniziare a registrare i turni." />
+      )}
+
+      {state.sites.length > 0 && (
       <div className="table-wrap">
         <table>
           <thead>
@@ -67,9 +73,7 @@ export default function SitesTab({ state, setState }) {
             </tr>
           </thead>
           <tbody>
-            {state.sites.length === 0 ? (
-              <tr className="empty-row"><td colSpan={5}>Nessuna sede. Aggiungine una sopra.</td></tr>
-            ) : state.sites.map((s) => (
+            {state.sites.map((s) => (
               <tr key={s.id}>
                 <td>
                   <div className="site-picker">
@@ -102,6 +106,7 @@ export default function SitesTab({ state, setState }) {
           </tbody>
         </table>
       </div>
+      )}
     </div>
   );
 }

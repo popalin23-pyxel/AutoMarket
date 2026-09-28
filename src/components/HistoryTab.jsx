@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { computeYearSummary, monthsWithData } from '../lib/calc.js';
 import { MONTHS_IT } from '../lib/defaults.js';
 import BarChart from './charts/BarChart.jsx';
+import EmptyState from './EmptyState.jsx';
 
 const fmt = (n) => n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -29,7 +30,7 @@ export default function HistoryTab({ state, onOpenMonth }) {
         </div>
 
         {y.months.length === 0 ? (
-          <p className="hint hint-info">Nessun turno registrato in questo anno.</p>
+          <EmptyState icon="history" title="Nessun turno in questo anno" hint="Cambia anno oppure registra il tuo primo turno." />
         ) : (
           <div className="stats-row">
             <div className="stat"><div className="stat-label">Ore anno</div><div className="stat-value">{fmt(y.totalHours)}</div></div>

@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { loadState, saveState, resetState } from './lib/store.js';
+import { computeMonthSummary } from './lib/calc.js';
 import { AuthProvider, useAuth } from './lib/AuthContext.jsx';
 import { fetchCloudState, saveCloudState } from './lib/cloudState.js';
 import AuthScreen from './components/AuthScreen.jsx';
@@ -12,6 +13,7 @@ import SitesTab from './components/SitesTab.jsx';
 import SummaryTab from './components/SummaryTab.jsx';
 import HistoryTab from './components/HistoryTab.jsx';
 import SettingsTab from './components/SettingsTab.jsx';
+import Icon from './components/icons/Icon.jsx';
 
 const now = new Date();
 const AVATAR_PALETTE = ['#2dd4bf', '#f59e0b', '#818cf8', '#fb7185', '#a3e635', '#22d3ee', '#c084fc', '#fbbf24'];
@@ -98,14 +100,19 @@ function Shell() {
     setState(resetState()); // non lasciare i dati dell'account sul dispositivo condiviso
   };
 
+  const monthSummary = useMemo(
+    () => computeMonthSummary(state.shifts, state.sites, state.settings, now.getFullYear(), now.getMonth() + 1),
+    [state.shifts, state.sites, state.settings],
+  );
+
   const TABS = [
-    { id: 'dashboard', label: 'Home', icon: '📊' },
-    { id: 'shifts', label: 'Turni', icon: '📅' },
-    { id: 'summary', label: 'Riepilogo', icon: '💶' },
-    { id: 'sites', label: 'Sedi', icon: '📍' },
-    { id: 'history', label: 'Storico', icon: '🕑' },
-    { id: 'settings', label: 'Profilo', icon: '⚙️' },
-    ...(isAdmin ? [{ id: 'admin', label: 'Admin', icon: '⚡' }] : []),
+    { id: 'dashboard', label: 'Home', icon: 'home' },
+    { id: 'shifts', label: 'Turni', icon: 'calendar' },
+    { id: 'summary', label: 'Riepilogo', icon: 'euro' },
+    { id: 'sites', label: 'Sedi', icon: 'mapPin' },
+    { id: 'history', label: 'Storico', icon: 'history' },
+    { id: 'settings', label: 'Profilo', icon: 'settings' },
+    ...(isAdmin ? [{ id: 'admin', label: 'Admin', icon: 'zap' }] : []),
   ];
 
   const initial = (user?.email || '?').trim()[0]?.toUpperCase() || '?';
@@ -115,6 +122,11 @@ function Shell() {
       <header className="app-header">
         <div className="brand">
           <span className="brand-logo">Turn<span className="accent">io</span></span>
+          {monthSummary.shiftCount > 0 && (
+            <span className="brand-sub">
+              Questo mese: €{monthSummary.net.toLocaleString('it-IT', { maximumFractionDigits: 0 })} netto
+            </span>
+          )}
         </div>
         <div className="header-right">
           {syncError && <span className="sync-flag" title="Sincronizzazione non riuscita, riprovo automaticamente">⚠ offline</span>}
@@ -126,25 +138,27 @@ function Shell() {
       </header>
 
       <div className="app-body">
-        {active === 'dashboard' && (
-          <DashboardTab state={state} userEmail={user?.email} isAdmin={isAdmin} onNavigate={setActive} />
-        )}
-        {active === 'shifts' && (
-          <ShiftsTab state={state} setState={setState} year={year} month={month} setYear={setYear} setMonth={setMonth} />
-        )}
-        {active === 'summary' && (
-          <SummaryTab state={state} year={year} month={month} setYear={setYear} setMonth={setMonth} />
-        )}
-        {active === 'sites' && <SitesTab state={state} setState={setState} />}
-        {active === 'history' && <HistoryTab state={state} onOpenMonth={goToMonth} />}
-        {active === 'settings' && <SettingsTab state={state} setState={setState} onLogout={doLogout} />}
-        {active === 'admin' && isAdmin && <AdminTab />}
+        <div key={active} className="tab-fade">
+          {active === 'dashboard' && (
+            <DashboardTab state={state} userEmail={user?.email} isAdmin={isAdmin} onNavigate={setActive} />
+          )}
+          {active === 'shifts' && (
+            <ShiftsTab state={state} setState={setState} year={year} month={month} setYear={setYear} setMonth={setMonth} />
+          )}
+          {active === 'summary' && (
+            <SummaryTab state={state} year={year} month={month} setYear={setYear} setMonth={setMonth} />
+          )}
+          {active === 'sites' && <SitesTab state={state} setState={setState} />}
+          {active === 'history' && <HistoryTab state={state} onOpenMonth={goToMonth} />}
+          {active === 'settings' && <SettingsTab state={state} setState={setState} onLogout={doLogout} />}
+          {active === 'admin' && isAdmin && <AdminTab />}
+        </div>
       </div>
 
       <nav className="bottom-nav">
         {TABS.map((t) => (
           <button key={t.id} className={`bnav-btn ${active === t.id ? 'active' : ''}`} onClick={() => setActive(t.id)}>
-            <span className="bnav-icon">{t.icon}</span>
+            <span className="bnav-icon"><Icon name={t.icon} size={20} /></span>
             <span className="bnav-label">{t.label}</span>
           </button>
         ))}

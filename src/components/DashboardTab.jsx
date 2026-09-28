@@ -6,6 +6,8 @@ import {
 } from '../lib/calc.js';
 import { MONTHS_IT, WEEKDAYS_IT_LONG } from '../lib/defaults.js';
 import BarChart from './charts/BarChart.jsx';
+import Icon from './icons/Icon.jsx';
+import EmptyState from './EmptyState.jsx';
 
 const fmt = (n) => n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const fmt0 = (n) => n.toLocaleString('it-IT', { maximumFractionDigits: 1 });
@@ -81,18 +83,18 @@ function NavGrid({ state, y, m, onNavigate, isAdmin }) {
   const shiftsThisMonth = shiftsInMonth(state.shifts, y, m).length;
   const monthsCount = monthsWithData(state.shifts).length;
   const items = [
-    { id: 'shifts', icon: '📅', label: 'Turni', hint: `${shiftsThisMonth} questo mese` },
-    { id: 'summary', icon: '💶', label: 'Riepilogo', hint: 'Ore, fatturato, tasse' },
-    { id: 'sites', icon: '📍', label: 'Sedi', hint: `${state.sites.length} configurate` },
-    { id: 'history', icon: '🕑', label: 'Storico', hint: `${monthsCount} mesi registrati` },
-    { id: 'settings', icon: '⚙️', label: 'Profilo', hint: 'Account e backup' },
-    ...(isAdmin ? [{ id: 'admin', icon: '⚡', label: 'Admin', hint: 'Utenti e approvazioni' }] : []),
+    { id: 'shifts', icon: 'calendar', tile: 'teal', label: 'Turni', hint: `${shiftsThisMonth} questo mese` },
+    { id: 'summary', icon: 'euro', tile: 'gold', label: 'Riepilogo', hint: 'Ore, fatturato, tasse' },
+    { id: 'sites', icon: 'mapPin', tile: 'indigo', label: 'Sedi', hint: `${state.sites.length} configurate` },
+    { id: 'history', icon: 'history', tile: 'rose', label: 'Storico', hint: `${monthsCount} mesi registrati` },
+    { id: 'settings', icon: 'settings', tile: 'lime', label: 'Profilo', hint: 'Account e backup' },
+    ...(isAdmin ? [{ id: 'admin', icon: 'zap', tile: 'violet', label: 'Admin', hint: 'Utenti e approvazioni' }] : []),
   ];
   return (
     <div className="nav-grid">
       {items.map((it) => (
         <button key={it.id} className="nav-card" onClick={() => onNavigate(it.id)}>
-          <span className="nav-card-icon">{it.icon}</span>
+          <span className={`nav-icon-tile tile-${it.tile}`}><Icon name={it.icon} size={19} /></span>
           <span className="nav-card-label">{it.label}</span>
           <span className="nav-card-hint">{it.hint}</span>
         </button>
@@ -132,7 +134,8 @@ export default function DashboardTab({ state, userEmail, isAdmin, onNavigate }) 
       <div className="panel hero-week">
         <div className="hero-week-label">Questa settimana</div>
         {!hasAnyData ? (
-          <p className="hint hint-info" style={{ marginBottom: 0 }}>Registra qualche turno per iniziare a vedere le statistiche.</p>
+          <EmptyState icon="calendar" title="Ancora nessun turno"
+            hint="Registra qualche turno per iniziare a vedere le statistiche." />
         ) : (
           <>
             <div className="hero-week-row">

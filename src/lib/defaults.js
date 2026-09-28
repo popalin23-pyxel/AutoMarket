@@ -21,3 +21,13 @@ export const WEEKDAYS_IT = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'];
 export const WEEKDAYS_IT_LONG = [
   'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica',
 ];
+
+// '#2dd4bf' -> 'rgba(45, 212, 191, 0.14)'
+export function hexToRgba(hex, alpha = 1) {
+  const clean = (hex || '').replace('#', '');
+  const full = clean.length === 3 ? clean.split('').map((c) => c + c).join('') : clean;
+  const n = parseInt(full, 16);
+  if (Number.isNaN(n) || full.length !== 6) return `rgba(107, 114, 128, ${alpha})`;
+  const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}

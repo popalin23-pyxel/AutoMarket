@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { monthDays, weekdayOf, shiftsOnDay, hoursOfShift, todayISO, holidaysOfYear, isHoliday } from '../lib/calc.js';
-import { MONTHS_IT, WEEKDAYS_IT } from '../lib/defaults.js';
+import { MONTHS_IT, WEEKDAYS_IT, hexToRgba } from '../lib/defaults.js';
 import { addShift, updateShift, removeShift } from '../lib/store.js';
 import ShiftEditor from './ShiftEditor.jsx';
 import CalendarGridView from './charts/CalendarGridView.jsx';
@@ -41,14 +41,24 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
   };
   const del = (id) => { setState((s) => removeShift(s, id)); setEditing(null); };
 
-  const monthTotalHours = useMemo(() => {
+  const { monthTotalHours, monthAccent } = useMemo(() => {
     let h = 0;
+    const bySite = new Map();
     for (let d = 1; d <= days; d++) {
       const dateISO = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-      for (const sh of shiftsOnDay(state.shifts, dateISO)) h += hoursOfShift(sh);
+      for (const sh of shiftsOnDay(state.shifts, dateISO)) {
+        const sh2 = hoursOfShift(sh);
+        h += sh2;
+        if (sh.siteId != null) bySite.set(sh.siteId, (bySite.get(sh.siteId) || 0) + sh2);
+      }
     }
-    return Math.round(h * 100) / 100;
-  }, [state.shifts, year, month, days]);
+    let bestId = null, bestH = 0;
+    for (const [id, hh] of bySite) if (hh > bestH) { bestH = hh; bestId = id; }
+    return {
+      monthTotalHours: Math.round(h * 100) / 100,
+      monthAccent: bestId != null ? siteById.get(bestId)?.color : null,
+    };
+  }, [state.shifts, year, month, days, siteById]);
 
   const DayShiftsBlock = ({ dateISO }) => {
     const dayShifts = shiftsOnDay(state.shifts, dateISO);
@@ -76,7 +86,10 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
 
   return (
     <>
-      <div className="panel">
+      <div className="panel" style={monthAccent ? {
+        borderTopColor: monthAccent, borderTopWidth: 3,
+        background: `linear-gradient(160deg, ${hexToRgba(monthAccent, 0.10)}, var(--glass))`,
+      } : undefined}>
         <div className="month-nav">
           <button className="btn" onClick={prevMonth}>‹</button>
           <div key={`${year}-${month}`} className="month-slide">

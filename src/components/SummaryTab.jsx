@@ -1,8 +1,9 @@
 import React, { useMemo } from 'react';
 import { computeMonthSummary } from '../lib/calc.js';
-import { MONTHS_IT } from '../lib/defaults.js';
+import { MONTHS_IT, hexToRgba } from '../lib/defaults.js';
 import { exportMonthExcel } from '../lib/excel.js';
 import RingChart from './charts/RingChart.jsx';
+import EmptyState from './EmptyState.jsx';
 
 const fmt = (n) => n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -14,10 +15,14 @@ export default function SummaryTab({ state, year, month, setYear, setMonth }) {
 
   const prevMonth = () => { if (month === 1) { setYear(year - 1); setMonth(12); } else setMonth(month - 1); };
   const nextMonth = () => { if (month === 12) { setYear(year + 1); setMonth(1); } else setMonth(month + 1); };
+  const monthAccent = sum.perSite[0]?.color;
 
   return (
     <>
-      <div className="panel">
+      <div className="panel" style={monthAccent ? {
+        borderTopColor: monthAccent, borderTopWidth: 3,
+        background: `linear-gradient(160deg, ${hexToRgba(monthAccent, 0.10)}, var(--glass))`,
+      } : undefined}>
         <div className="month-nav">
           <button className="btn" onClick={prevMonth}>‹</button>
           <span key={`${year}-${month}`} className="month-label month-slide">{MONTHS_IT[month - 1]} {year}</span>
@@ -25,7 +30,7 @@ export default function SummaryTab({ state, year, month, setYear, setMonth }) {
         </div>
 
         {sum.shiftCount === 0 ? (
-          <p className="hint hint-info">Nessun turno registrato questo mese.</p>
+          <EmptyState icon="euro" title="Nessun turno questo mese" hint="Il riepilogo comparirà qui appena registri un turno." />
         ) : (
           <button className="btn" onClick={() => exportMonthExcel(sum)}>⬇ Esporta Excel</button>
         )}
