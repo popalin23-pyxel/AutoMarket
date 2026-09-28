@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { updateSettings, exportBackup, importBackup, resetState } from '../lib/store.js';
+import { updateSettings, exportBackup, importBackup, importBackupFromText, resetState } from '../lib/store.js';
 import { useAuth } from '../lib/AuthContext.jsx';
 import NumberInput from './NumberInput.jsx';
 
@@ -7,6 +7,8 @@ export default function SettingsTab({ state, setState, onLogout }) {
   const { user, updatePassword } = useAuth();
   const fileRef = useRef(null);
   const [msg, setMsg] = useState(null);
+  const [pasteOpen, setPasteOpen] = useState(false);
+  const [pasteText, setPasteText] = useState('');
 
   const [pw, setPw] = useState('');
   const [pw2, setPw2] = useState('');
@@ -26,6 +28,18 @@ export default function SettingsTab({ state, setState, onLogout }) {
     } catch (err) {
       setMsg({ type: 'warn', text: err.message });
     } finally { e.target.value = ''; }
+  };
+
+  const doImportText = () => {
+    try {
+      const imported = importBackupFromText(pasteText);
+      setState(imported);
+      setMsg({ type: 'info', text: `Backup importato: ${imported.sites.length} sedi, ${imported.shifts.length} turni.` });
+      setPasteText('');
+      setPasteOpen(false);
+    } catch (err) {
+      setMsg({ type: 'warn', text: err.message });
+    }
   };
 
   const doReset = () => {
@@ -101,10 +115,30 @@ export default function SettingsTab({ state, setState, onLogout }) {
         {msg && <div className={`hint hint-${msg.type}`}>{msg.text}</div>}
         <div className="form-row">
           <button className="btn btn-primary" onClick={() => exportBackup(state)}>⬇ Esporta backup (.json)</button>
-          <button className="btn" onClick={() => fileRef.current?.click()}>⬆ Importa backup</button>
+          <button className="btn" onClick={() => fileRef.current?.click()}>⬆ Importa backup (file)</button>
+          <button className="btn" onClick={() => setPasteOpen((v) => !v)}>📋 Importa da testo incollato</button>
           <button className="btn btn-danger" onClick={doReset}>Azzera tutti i dati</button>
           <input ref={fileRef} type="file" accept="application/json,.json" onChange={doImport} style={{ display: 'none' }} />
         </div>
+
+        {pasteOpen && (
+          <div style={{ marginTop: 12 }}>
+            <p className="panel-desc" style={{ marginTop: 0 }}>
+              Se il selettore file non funziona, incolla qui sotto tutto il contenuto del file di backup (.json)
+              e tocca "Importa testo incollato".
+            </p>
+            <textarea
+              value={pasteText}
+              onChange={(e) => setPasteText(e.target.value)}
+              placeholder='{"app":"turnio", ...}'
+              rows={6}
+              style={{ width: '100%', minWidth: 0, fontFamily: 'monospace', fontSize: 12 }}
+            />
+            <button className="btn btn-primary" style={{ marginTop: 10 }} onClick={doImportText} disabled={!pasteText.trim()}>
+              Importa testo incollato
+            </button>
+          </div>
+        )}
       </div>
     </>
   );

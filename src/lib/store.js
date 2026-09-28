@@ -105,17 +105,26 @@ export function exportBackup(state) {
   URL.revokeObjectURL(url);
 }
 
+export function importBackupFromText(text) {
+  let parsed;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    throw new Error('Testo non valido: non è un JSON corretto.');
+  }
+  const raw = parsed && parsed.state ? parsed.state : parsed;
+  if (parsed?.app && parsed.app !== 'turnio') throw new Error('Il testo non è un backup di Turnio.');
+  return sanitizeState(raw);
+}
+
 export function importBackup(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => {
       try {
-        const parsed = JSON.parse(String(reader.result));
-        const raw = parsed && parsed.state ? parsed.state : parsed;
-        if (parsed?.app && parsed.app !== 'turnio') return reject(new Error('Il file non è un backup di Turnio.'));
-        resolve(sanitizeState(raw));
-      } catch {
-        reject(new Error('File non valido o danneggiato.'));
+        resolve(importBackupFromText(String(reader.result)));
+      } catch (err) {
+        reject(err instanceof Error ? err : new Error('File non valido o danneggiato.'));
       }
     };
     reader.onerror = () => reject(new Error('Impossibile leggere il file.'));
