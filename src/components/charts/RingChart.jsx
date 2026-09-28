@@ -9,7 +9,7 @@ export default function RingChart({ segments, size = 132, thickness = 16, center
 
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth={thickness} />
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(15,40,61,0.09)" strokeWidth={thickness} />
       {segments.map((s, i) => {
         const frac = Math.max(0, s.value) / total;
         const dash = frac * c;
