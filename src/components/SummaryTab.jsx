@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { computeMonthSummary } from '../lib/calc.js';
 import { MONTHS_IT, hexToRgba } from '../lib/defaults.js';
 import { exportMonthExcel } from '../lib/excel.js';
+import { exportMonthPdf } from '../lib/pdf.js';
 import RingChart from './charts/RingChart.jsx';
 import EmptyState from './EmptyState.jsx';
 import SiteAvatar from './SiteAvatar.jsx';
@@ -38,7 +39,10 @@ export default function SummaryTab({ state, year, month, setYear, setMonth }) {
         {sum.shiftCount === 0 ? (
           <EmptyState icon="euro" title="Nessun turno questo mese" hint="Il riepilogo comparirà qui appena registri un turno." />
         ) : (
-          <button className="btn" onClick={() => exportMonthExcel(sum)}>⬇ Esporta Excel</button>
+          <div className="form-row" style={{ marginBottom: 0 }}>
+            <button className="btn" onClick={() => exportMonthExcel(sum)}>⬇ Esporta Excel</button>
+            <button className="btn" onClick={() => exportMonthPdf(sum)}>⬇ Esporta PDF</button>
+          </div>
         )}
       </div>
 

@@ -28,6 +28,7 @@ export default defineConfig(() => ({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+        globIgnores: ['**/jspdf-unused-optional-*.js'],
         cleanupOutdatedCaches: true,
         runtimeCaching: [
           {
@@ -57,6 +58,12 @@ export default defineConfig(() => ({
         manualChunks: (id) => {
           if (id.includes('node_modules/react') || id.includes('node_modules/react-dom')) return 'react';
           if (id.includes('node_modules/xlsx')) return 'xlsx';
+          if (id.includes('node_modules/jspdf')) return 'jspdf';
+          // dipendenze opzionali di jsPDF (usate solo dal metodo .html(), che non usiamo):
+          // isolate in chunk a parte così non finiscono nella cache offline della PWA
+          if (id.includes('node_modules/html2canvas') || id.includes('node_modules/dompurify') || id.includes('node_modules/canvg')) {
+            return 'jspdf-unused-optional';
+          }
           if (id.includes('@supabase')) return 'supabase';
         },
       },
