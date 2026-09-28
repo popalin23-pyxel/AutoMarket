@@ -528,6 +528,13 @@ tbody tr:hover td { background: rgba(var(--accent-rgb), 0.07); }
 }
 .danger-link:hover:not(:disabled) { opacity: 1; }
 .danger-link:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ── Promemoria di backup ──────────────────────────────────── */
+.backup-reminder { display: flex; gap: 12px; align-items: flex-start; }
+.backup-reminder-icon { color: var(--hint-warn-fg); flex-shrink: 0; margin-top: 2px; }
+.backup-reminder-title { font-weight: 700; font-size: 14px; margin-bottom: 3px; }
+.backup-reminder-text { font-size: 12.5px; color: var(--text-dim); margin-bottom: 10px; }
+.backup-reminder-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .pw-field { position: relative; }
 .pw-toggle { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 15px; padding: 4px; }
 code { background: rgba(var(--ink), 0.08); padding: 1px 5px; border-radius: 4px; font-family: var(--mono); font-size: 12px; }

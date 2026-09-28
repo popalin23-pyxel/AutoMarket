@@ -1,6 +1,7 @@
 // Store persistente su localStorage per Turnio.
 
 import { DEFAULT_SETTINGS, SITE_COLORS } from './defaults.js';
+import { markFirstUse, markBackupDone } from './backupReminder.js';
 
 const KEY = 'turnio_state_v1';
 
@@ -42,6 +43,7 @@ function sanitizeState(parsed) {
 }
 
 export function loadState() {
+  markFirstUse();
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw) return freshState();
@@ -151,6 +153,7 @@ export function exportBackup(state) {
   a.download = `turnio-backup-${new Date().toISOString().slice(0, 10)}.json`;
   document.body.appendChild(a); a.click(); a.remove();
   URL.revokeObjectURL(url);
+  markBackupDone();
 }
 
 export function importBackupFromText(text) {

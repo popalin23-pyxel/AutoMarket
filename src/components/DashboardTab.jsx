@@ -10,6 +10,7 @@ import Icon from './icons/Icon.jsx';
 import EmptyState from './EmptyState.jsx';
 import SiteAvatar from './SiteAvatar.jsx';
 import CountUpText from './CountUpText.jsx';
+import BackupReminder from './BackupReminder.jsx';
 
 const fmt = (n) => n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const fmt0 = (n) => n.toLocaleString('it-IT', { maximumFractionDigits: 1 });
@@ -175,6 +176,8 @@ export default function DashboardTab({ state, userEmail, isAdmin, onNavigate }) 
 
   return (
     <>
+      <BackupReminder state={state} />
+
       <TodayCard state={state} today={today} firstName={firstName} />
 
       <NavGrid state={state} y={y} m={m} onNavigate={onNavigate} isAdmin={isAdmin} />
