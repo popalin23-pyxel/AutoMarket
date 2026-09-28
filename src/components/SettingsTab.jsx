@@ -7,7 +7,7 @@ import { useAuth } from '../lib/AuthContext.jsx';
 import { useConfirm } from '../lib/ConfirmContext.jsx';
 import NumberInput from './NumberInput.jsx';
 
-export default function SettingsTab({ state, setState, onLogout, isAdmin, onOpenAdmin }) {
+export default function SettingsTab({ state, setState, onLogout, isAdmin, onOpenAdmin, onOpenFiscal }) {
   const { user, updatePassword } = useAuth();
   const confirmAction = useConfirm();
   const fileRef = useRef(null);
@@ -23,8 +23,6 @@ export default function SettingsTab({ state, setState, onLogout, isAdmin, onOpen
   const [pwMsg, setPwMsg] = useState(null);
   const [pwBusy, setPwBusy] = useState(false);
 
-  const setTax = (v) => setState((s) => updateSettings(s, { taxPercent: v }));
-  const setRivalsa = (v) => setState((s) => updateSettings(s, { rivalsaPercent: v }));
   const setDisplayName = (v) => setState((s) => updateSettings(s, { displayName: v }));
   const setMonthlyGoal = (v) => setState((s) => updateSettings(s, { monthlyGoal: v === '' ? 0 : v }));
 
@@ -143,22 +141,10 @@ export default function SettingsTab({ state, setState, onLogout, isAdmin, onOpen
       <div className="panel">
         <h2 className="panel-title">Tasse e rivalsa</h2>
         <p className="panel-desc">
-          Percentuale che l'app accantona sul fatturato totale (imposte + contributi in un unico numero,
-          da adattare al tuo regime fiscale) e maggiorazione di default applicata in fattura.
+          Aliquota, contributi e rivalsa che l'app usa per stimare il netto — con la spiegazione di come
+          si arriva al risultato.
         </p>
-        <div className="form-row">
-          <div className="field">
-            <label className="field-label">Tasse (%)</label>
-            <NumberInput value={state.settings.taxPercent} onChange={setTax} min={0} max={100} />
-          </div>
-          <div className="field">
-            <label className="field-label">Rivalsa default (%)</label>
-            <NumberInput value={state.settings.rivalsaPercent} onChange={setRivalsa} min={0} max={100} />
-          </div>
-        </div>
-        <div className="hint hint-info" style={{ marginBottom: 0 }}>
-          Ogni sede può avere una rivalsa diversa da questa (impostabile nella scheda "Sedi").
-        </div>
+        <button className="btn btn-block" onClick={onOpenFiscal}>📐 Impostazioni fiscali →</button>
       </div>
 
       <div className="panel">

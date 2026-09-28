@@ -1,7 +1,10 @@
 // Valori di default per Turnio
 
 export const DEFAULT_SETTINGS = {
-  taxPercent: 25,      // % accantonata sul fatturato totale (imposte + contributi, in un unico numero)
+  taxPercent: 25,          // % totale accantonata sul fatturato = taxRatePercent + contributionsPercent (calcolato)
+  taxRatePercent: 25,      // aliquota imposta (es. forfettario)
+  contributionsPercent: 0, // contributi previdenziali (es. ENPAPI)
+  fiscalRegime: 'forfettario', // solo informativo, non influisce sul calcolo
   rivalsaPercent: 4,   // maggiorazione di default in fattura (es. rivalsa INPS/ENPAPI); modificabile per sede
   displayName: '',     // nome mostrato nel saluto della Home
   monthlyGoal: 0,      // obiettivo di netto mensile (€); 0 = nessun obiettivo impostato

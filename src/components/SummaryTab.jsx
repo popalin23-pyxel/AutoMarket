@@ -92,6 +92,7 @@ export default function SummaryTab({ state, year, month, setYear, setMonth }) {
           <div className="flow-row taxes"><span className="flow-label">Tasse da accantonare ({sum.taxPercent}%)</span><span className="flow-value red">−€{fmt(sum.taxes)}</span></div>
           <div className="flow-row net"><span className="flow-label">Ti resta (netto)</span><span className="flow-value green">€{fmt(sum.net)}</span></div>
         </div>
+        <p className="fiscal-footnote">Stima, non sostituisce il calcolo del commercialista.</p>
       </div>
     </>
   );

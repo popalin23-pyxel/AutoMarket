@@ -15,6 +15,18 @@ function freshState() {
   };
 }
 
+function sanitizeSettings(rawSettings) {
+  const settings = { ...DEFAULT_SETTINGS, ...(rawSettings ?? {}) };
+  // Compatibilità: chi aveva già un "Tasse (%)" unico mantiene lo stesso risultato,
+  // diventa l'aliquota imposta con contributi a 0 finché non li imposta esplicitamente.
+  if (rawSettings?.taxRatePercent == null) {
+    settings.taxRatePercent = Number(settings.taxPercent) || 0;
+    settings.contributionsPercent = 0;
+  }
+  settings.taxPercent = (Number(settings.taxRatePercent) || 0) + (Number(settings.contributionsPercent) || 0);
+  return settings;
+}
+
 function sanitizeState(parsed) {
   if (!parsed || typeof parsed !== 'object') return freshState();
   return {
@@ -24,7 +36,7 @@ function sanitizeState(parsed) {
     shifts: Array.isArray(parsed.shifts) ? parsed.shifts : [],
     favorites: Array.isArray(parsed.favorites) ? parsed.favorites : [],
     lastSiteId: parsed.lastSiteId ?? null,
-    settings: { ...DEFAULT_SETTINGS, ...(parsed.settings ?? {}) },
+    settings: sanitizeSettings(parsed.settings),
     seq: { site: 1, shift: 1, favorite: 1, ...(parsed.seq ?? {}) },
   };
 }
@@ -118,6 +130,13 @@ export function removeFavorite(state, id) {
 // ── Impostazioni ─────────────────────────────────────────────────────
 export function updateSettings(state, patch) {
   return { ...state, settings: { ...state.settings, ...patch } };
+}
+
+// Aggiorna aliquota/contributi/regime e ricalcola il taxPercent totale usato dal motore di calcolo.
+export function updateFiscalSettings(state, patch) {
+  const settings = { ...state.settings, ...patch };
+  settings.taxPercent = (Number(settings.taxRatePercent) || 0) + (Number(settings.contributionsPercent) || 0);
+  return { ...state, settings };
 }
 
 // ── Backup / Ripristino ─────────────────────────────────────────────

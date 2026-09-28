@@ -16,6 +16,7 @@ import ShiftsTab from './components/ShiftsTab.jsx';
 import GuadagniTab from './components/GuadagniTab.jsx';
 import HistoryTab from './components/HistoryTab.jsx';
 import SettingsTab from './components/SettingsTab.jsx';
+import FiscalSettingsTab from './components/FiscalSettingsTab.jsx';
 import Icon from './components/icons/Icon.jsx';
 import Splash from './components/Splash.jsx';
 import OnboardingTour, { needsOnboarding } from './components/OnboardingTour.jsx';
@@ -171,7 +172,11 @@ function Shell() {
           )}
           {active === 'stats' && <HistoryTab state={state} onOpenMonth={goToMonth} />}
           {active === 'settings' && (
-            <SettingsTab state={state} setState={setState} onLogout={doLogout} isAdmin={isAdmin} onOpenAdmin={() => setActive('admin')} />
+            <SettingsTab state={state} setState={setState} onLogout={doLogout} isAdmin={isAdmin}
+              onOpenAdmin={() => setActive('admin')} onOpenFiscal={() => setActive('fiscal')} />
+          )}
+          {active === 'fiscal' && (
+            <FiscalSettingsTab state={state} setState={setState} onBack={() => setActive('settings')} />
           )}
           {active === 'admin' && isAdmin && <AdminTab onBack={() => setActive('settings')} />}
         </div>
