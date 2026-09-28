@@ -2,10 +2,12 @@ import React, { useRef, useState } from 'react';
 import { updateSettings, exportBackup, importBackup, importBackupFromText, resetState } from '../lib/store.js';
 import { loadTheme, applyTheme } from '../lib/theme.js';
 import { useAuth } from '../lib/AuthContext.jsx';
+import { useConfirm } from '../lib/ConfirmContext.jsx';
 import NumberInput from './NumberInput.jsx';
 
 export default function SettingsTab({ state, setState, onLogout }) {
   const { user, updatePassword } = useAuth();
+  const confirmAction = useConfirm();
   const fileRef = useRef(null);
   const [msg, setMsg] = useState(null);
   const [pasteOpen, setPasteOpen] = useState(false);
@@ -46,8 +48,10 @@ export default function SettingsTab({ state, setState, onLogout }) {
     }
   };
 
-  const doReset = () => {
-    if (!confirm('Sicuro di voler cancellare TUTTI i dati (sedi, turni, impostazioni)? Operazione irreversibile.')) return;
+  const doReset = async () => {
+    const ok = await confirmAction('Sicuro di voler cancellare TUTTI i dati (sedi, turni, impostazioni)? Operazione irreversibile.',
+      { title: 'Azzerare tutti i dati', danger: true, confirmLabel: 'Azzera tutto' });
+    if (!ok) return;
     setState(resetState());
     setMsg({ type: 'info', text: 'Tutti i dati sono stati azzerati.' });
   };

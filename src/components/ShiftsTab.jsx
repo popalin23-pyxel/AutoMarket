@@ -1,7 +1,7 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { monthDays, weekdayOf, shiftsOnDay, hoursOfShift, todayISO, holidaysOfYear, isHoliday } from '../lib/calc.js';
 import { MONTHS_IT, WEEKDAYS_IT, hexToRgba } from '../lib/defaults.js';
-import { addShift, updateShift, removeShift, addFavorite, removeFavorite } from '../lib/store.js';
+import { addShift, updateShift, removeShift, restoreShift, addFavorite, removeFavorite } from '../lib/store.js';
 import { useSwipe } from '../lib/useSwipe.js';
 import ShiftEditor from './ShiftEditor.jsx';
 import CalendarGridView from './charts/CalendarGridView.jsx';
@@ -14,6 +14,9 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
   const [dayPopover, setDayPopover] = useState(null); // dateISO (solo vista calendario)
   const [view, setView] = useState(() => { try { return localStorage.getItem(VIEW_KEY) || 'list'; } catch { return 'list'; } });
   const [toast, setToast] = useState(false);
+  const [undoShift, setUndoShift] = useState(null);
+  const [filterSite, setFilterSite] = useState(null);
+  const undoTimer = useRef(null);
 
   useEffect(() => { try { localStorage.setItem(VIEW_KEY, view); } catch {} }, [view]);
 
@@ -42,7 +45,23 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
     setEditing(null);
     flashSaved();
   };
-  const del = (id) => { setState((s) => removeShift(s, id)); setEditing(null); };
+  const del = (id) => {
+    const shift = state.shifts.find((s) => s.id === id);
+    setState((s) => removeShift(s, id));
+    setEditing(null);
+    if (shift) {
+      setUndoShift(shift);
+      clearTimeout(undoTimer.current);
+      undoTimer.current = setTimeout(() => setUndoShift(null), 5000);
+    }
+  };
+
+  const undoDelete = () => {
+    if (!undoShift) return;
+    setState((s) => restoreShift(s, undoShift));
+    setUndoShift(null);
+    clearTimeout(undoTimer.current);
+  };
 
   const saveFavorite = (fav) => setState((s) => addFavorite(s, fav));
   const deleteFavorite = (id) => setState((s) => removeFavorite(s, id));
@@ -67,7 +86,7 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
   }, [state.shifts, year, month, days, siteById]);
 
   const DayShiftsBlock = ({ dateISO }) => {
-    const dayShifts = shiftsOnDay(state.shifts, dateISO);
+    const dayShifts = shiftsOnDay(state.shifts, dateISO).filter((sh) => !filterSite || sh.siteId === filterSite);
     return (
       <div className="day-shifts">
         {dayShifts.map((sh) => {
@@ -113,6 +132,20 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
           </div>
         </div>
 
+        {state.sites.length > 1 && (
+          <div className="filter-row">
+            <button className={`filter-chip ${filterSite == null ? 'active' : ''}`} onClick={() => setFilterSite(null)}>
+              Tutte le sedi
+            </button>
+            {state.sites.map((s) => (
+              <button key={s.id} className={`filter-chip ${filterSite === s.id ? 'active' : ''}`}
+                onClick={() => setFilterSite(filterSite === s.id ? null : s.id)}>
+                <span className="site-dot" style={{ background: s.color }} />{s.name}
+              </button>
+            ))}
+          </div>
+        )}
+
         {state.sites.length === 0 && (
           <div className="hint hint-warn" style={{ marginTop: 12 }}>
             Prima di registrare i turni, aggiungi almeno una sede nella scheda "Sedi".
@@ -141,8 +174,9 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
           })}
         </div>
       ) : (
-        <CalendarGridView year={year} month={month} shifts={state.shifts} siteById={siteById}
-          holidaySet={holidaySet} today={today} onDayClick={(dateISO) => setDayPopover(dateISO)} />
+        <CalendarGridView year={year} month={month}
+          shifts={filterSite ? state.shifts.filter((sh) => sh.siteId === filterSite) : state.shifts}
+          siteById={siteById} holidaySet={holidaySet} today={today} onDayClick={(dateISO) => setDayPopover(dateISO)} />
       )}
 
       {dayPopover && (
@@ -165,6 +199,13 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
       )}
 
       {toast && <div className="save-toast">✓ Turno salvato</div>}
+
+      {undoShift && (
+        <div className="undo-toast">
+          <span>Turno eliminato</span>
+          <button className="undo-btn" onClick={undoDelete}>Annulla</button>
+        </div>
+      )}
     </>
   );
 }

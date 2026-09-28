@@ -95,6 +95,12 @@ export function removeShift(state, id) {
   return { ...state, shifts: state.shifts.filter((s) => s.id !== id) };
 }
 
+// Ripristina un turno eliminato di recente (stesso id, per l'azione "Annulla").
+export function restoreShift(state, shift) {
+  if (state.shifts.some((s) => s.id === shift.id)) return state;
+  return { ...state, shifts: [...state.shifts, shift] };
+}
+
 // ── Scorciatoie turno (preferiti) ──────────────────────────────────────
 export function addFavorite(state, fav) {
   const id = state.seq.favorite;

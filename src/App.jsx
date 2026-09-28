@@ -3,6 +3,7 @@ import { loadState, saveState, resetState } from './lib/store.js';
 import { computeMonthSummary } from './lib/calc.js';
 import { loadTheme, applyTheme } from './lib/theme.js';
 import { AuthProvider, useAuth } from './lib/AuthContext.jsx';
+import { ConfirmProvider } from './lib/ConfirmContext.jsx';
 import { fetchCloudState, saveCloudState } from './lib/cloudState.js';
 import AuthScreen from './components/AuthScreen.jsx';
 import ResetPasswordForm from './components/ResetPasswordForm.jsx';
@@ -16,6 +17,7 @@ import HistoryTab from './components/HistoryTab.jsx';
 import SettingsTab from './components/SettingsTab.jsx';
 import Icon from './components/icons/Icon.jsx';
 import Splash from './components/Splash.jsx';
+import OnboardingTour, { needsOnboarding } from './components/OnboardingTour.jsx';
 
 applyTheme(loadTheme()); // applicato subito al caricamento del modulo, prima del primo render
 
@@ -49,6 +51,7 @@ function Shell() {
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [syncError, setSyncError] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(needsOnboarding);
   const saveTimer = useRef(null);
   const cloudReady = useRef(false);
   const loadedUserId = useRef(null);
@@ -167,6 +170,8 @@ function Shell() {
           </button>
         ))}
       </nav>
+
+      {showOnboarding && <OnboardingTour onDone={() => setShowOnboarding(false)} />}
     </div>
   );
 }
@@ -186,7 +191,9 @@ function Gate() {
 export default function App() {
   return (
     <AuthProvider>
-      <Gate />
+      <ConfirmProvider>
+        <Gate />
+      </ConfirmProvider>
     </AuthProvider>
   );
 }

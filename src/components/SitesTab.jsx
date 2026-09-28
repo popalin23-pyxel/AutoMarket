@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { addSite, updateSite, removeSite } from '../lib/store.js';
 import { SITE_COLORS } from '../lib/defaults.js';
+import { useConfirm } from '../lib/ConfirmContext.jsx';
 import NumberInput from './NumberInput.jsx';
 import EmptyState from './EmptyState.jsx';
 
@@ -8,6 +9,7 @@ export default function SitesTab({ state, setState }) {
   const [name, setName] = useState('');
   const [rate, setRate] = useState('');
   const [color, setColor] = useState(SITE_COLORS[state.sites.length % SITE_COLORS.length]);
+  const confirmAction = useConfirm();
 
   const add = () => {
     const n = name.trim();
@@ -18,12 +20,13 @@ export default function SitesTab({ state, setState }) {
 
   const patch = (id, p) => setState((s) => updateSite(s, id, p));
 
-  const del = (site) => {
+  const del = async (site) => {
     const nShifts = state.shifts.filter((sh) => sh.siteId === site.id).length;
     const msg = nShifts > 0
       ? `"${site.name}" ha ${nShifts} turni registrati. Eliminandola, quei turni resteranno nel calendario ma senza sede (0€ nel calcolo). Continuare?`
       : `Eliminare "${site.name}"?`;
-    if (!confirm(msg)) return;
+    const ok = await confirmAction(msg, { title: 'Eliminare sede', danger: true, confirmLabel: 'Elimina' });
+    if (!ok) return;
     setState((s) => removeSite(s, site.id));
   };
 

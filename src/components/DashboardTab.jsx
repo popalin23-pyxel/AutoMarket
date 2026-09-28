@@ -49,7 +49,9 @@ function TodayCard({ state, today, firstName }) {
 
   return (
     <div className="panel hero-today">
-      <div className="hero-greeting">{greetingWord()}{firstName ? `, ${firstName}` : ''} <span aria-hidden>👋</span></div>
+      <div className="hero-greeting">
+        {greetingWord()}{firstName ? `, ${firstName}` : ''} <Icon name="wave" size={20} className="wave-icon" />
+      </div>
       <div className="hero-date">{formatDateLong(today)}</div>
 
       {todays.length > 0 ? (
@@ -69,7 +71,7 @@ function TodayCard({ state, today, firstName }) {
         </div>
       ) : upcoming ? (
         <div className="hero-today-box off">
-          <div className="hero-today-label">Oggi non lavori 🎉</div>
+          <div className="hero-today-label"><Icon name="checkCircle" size={14} className="inline-icon" /> Oggi non lavori</div>
           <div className="hero-today-row">
             <SiteAvatar site={siteFor(state.sites, upcoming.siteId)} size={20} />
             <span className="hero-today-site">Prossimo turno: {formatDateLong(upcoming.date)} — {siteFor(state.sites, upcoming.siteId).name}</span>
@@ -84,7 +86,7 @@ function TodayCard({ state, today, firstName }) {
 
       {tomorrowShifts.length > 0 && (
         <div className="tomorrow-banner">
-          <span className="tomorrow-banner-icon">🔔</span>
+          <Icon name="bell" size={17} className="tomorrow-banner-icon" />
           <div>
             <div className="tomorrow-banner-title">Promemoria: domani lavori</div>
             {tomorrowShifts.map((sh) => {

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../lib/AuthContext.jsx';
+import Icon from './icons/Icon.jsx';
 
 export default function PendingApproval() {
   const { user, refreshProfile, signOut } = useAuth();
@@ -13,9 +14,12 @@ export default function PendingApproval() {
         <div className="auth-brand">
           <span className="brand-logo">Turn<span className="accent">io</span></span>
         </div>
-        <div className="hint hint-info" style={{ marginTop: 8 }}>
-          ⏳ Il tuo account (<b>{user?.email}</b>) è in attesa di approvazione.
-          Chi ti ha invitato deve attivarlo dal pannello di amministrazione.
+        <div className="hint hint-info" style={{ marginTop: 8, display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+          <Icon name="hourglass" size={16} className="inline-icon" style={{ flexShrink: 0, marginTop: 2 }} />
+          <span>
+            Il tuo account (<b>{user?.email}</b>) è in attesa di approvazione.
+            Chi ti ha invitato deve attivarlo dal pannello di amministrazione.
+          </span>
         </div>
         <button className="btn btn-primary btn-block" onClick={recheck} disabled={checking}>
           {checking ? '…' : 'Ricontrolla'}

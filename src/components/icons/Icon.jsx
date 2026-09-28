@@ -49,16 +49,34 @@ const PATHS = {
       <path d="M8.5 11h7M8.5 15h5" />
     </>
   ),
+  bell: (
+    <>
+      <path d="M12 3a5 5 0 0 0-5 5v3.3c0 .78-.32 1.53-.88 2.08L4.8 15.7h14.4l-1.32-1.32a2.9 2.9 0 0 1-.88-2.08V8a5 5 0 0 0-5-5Z" />
+      <path d="M9.5 18.7a2.5 2.5 0 0 0 5 0" />
+    </>
+  ),
+  checkCircle: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="m8.3 12.3 2.4 2.4 5-5.4" />
+    </>
+  ),
+  hourglass: (
+    <>
+      <path d="M6.5 3.5h11M6.5 20.5h11" />
+      <path d="M7.5 3.5v3.2c0 2 1.6 3.4 3.2 4.3.5.3.5 1 0 1.3-1.6.9-3.2 2.3-3.2 4.3v3.4M16.5 3.5v3.2c0 2-1.6 3.4-3.2 4.3-.5.3-.5 1 0 1.3 1.6.9 3.2 2.3 3.2 4.3v3.4" />
+    </>
+  ),
 };
 
-export default function Icon({ name, size = 20, strokeWidth = 1.8, className }) {
+export default function Icon({ name, size = 20, strokeWidth = 1.8, className, style }) {
   const path = PATHS[name];
   if (!path) return null;
   return (
     <svg
       width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
       strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round"
-      className={className} aria-hidden="true"
+      className={className} style={style} aria-hidden="true"
     >
       {path}
     </svg>
