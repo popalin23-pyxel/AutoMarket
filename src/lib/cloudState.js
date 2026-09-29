@@ -1,6 +1,7 @@
 // Stato dell'app salvato su Supabase, una riga per utente (protetta da RLS).
 
 import { supabase } from './supabaseClient.js';
+import { mergeStates } from './mergeState.js';
 
 const TABLE = 'turnio_states';
 
@@ -11,13 +12,35 @@ export async function fetchCloudState(userId) {
   return data ? { state: data.data, updatedAt: data.updated_at } : null;
 }
 
-// Salva (crea o aggiorna) lo stato dell'utente.
+// Salva (crea o aggiorna) lo stato dell'utente. Ritorna il nuovo updated_at.
 export async function saveCloudState(userId, state) {
+  const updatedAt = new Date().toISOString();
   const { error } = await supabase.from(TABLE).upsert(
-    { user_id: userId, data: state, updated_at: new Date().toISOString() },
+    { user_id: userId, data: state, updated_at: updatedAt },
     { onConflict: 'user_id' },
   );
   if (error) throw error;
+  return updatedAt;
+}
+
+// Salva controllando prima se un altro dispositivo ha scritto nel frattempo
+// (confrontando updated_at con l'ultimo valore conosciuto su questo
+// dispositivo). In quel caso unisce i dati invece di sovrascriverli alla
+// cieca — vedi mergeState.js per i dettagli e i limiti dell'unione.
+// Ritorna { state, merged, updatedAt }: se merged è true, il chiamante deve
+// aggiornare lo stato locale con `state` (contiene elementi arrivati da un
+// altro dispositivo).
+export async function saveCloudStateSafely(userId, localState, lastKnownUpdatedAt) {
+  if (lastKnownUpdatedAt) {
+    const remote = await fetchCloudState(userId);
+    if (remote && remote.updatedAt !== lastKnownUpdatedAt) {
+      const merged = mergeStates(localState, remote.state);
+      const updatedAt = await saveCloudState(userId, merged);
+      return { state: merged, merged: true, updatedAt };
+    }
+  }
+  const updatedAt = await saveCloudState(userId, localState);
+  return { state: localState, merged: false, updatedAt };
 }
 
 // Script SQL da eseguire una volta sola nel progetto Supabase (SQL Editor).

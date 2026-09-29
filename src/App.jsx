@@ -6,7 +6,7 @@ import { loadAccent, applyAccent } from './lib/accentColor.js';
 import { loadDensity, applyDensity } from './lib/density.js';
 import { AuthProvider, useAuth } from './lib/AuthContext.jsx';
 import { ConfirmProvider } from './lib/ConfirmContext.jsx';
-import { fetchCloudState, saveCloudState } from './lib/cloudState.js';
+import { fetchCloudState, saveCloudState, saveCloudStateSafely } from './lib/cloudState.js';
 import AuthScreen from './components/AuthScreen.jsx';
 import ResetPasswordForm from './components/ResetPasswordForm.jsx';
 import PendingApproval from './components/PendingApproval.jsx';
@@ -57,10 +57,12 @@ function Shell() {
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [syncStatus, setSyncStatus] = useState('idle'); // idle | syncing | ok | error
   const [showOnboarding, setShowOnboarding] = useState(needsOnboarding);
+  const [mergeNotice, setMergeNotice] = useState(false);
   const saveTimer = useRef(null);
   const syncOkTimer = useRef(null);
   const cloudReady = useRef(false);
   const loadedUserId = useRef(null);
+  const lastKnownUpdatedAt = useRef(null);
 
   // cache locale sempre aggiornata (funziona anche offline)
   useEffect(() => { saveState(state); }, [state]);
@@ -83,8 +85,9 @@ function Shell() {
         if (!alive) return;
         if (cloud) {
           setState(cloud.state);
+          lastKnownUpdatedAt.current = cloud.updatedAt;
         } else {
-          await saveCloudState(user.id, state); // prima volta: pubblica lo stato locale attuale
+          lastKnownUpdatedAt.current = await saveCloudState(user.id, state); // prima volta: pubblica lo stato locale attuale
         }
         cloudReady.current = true;
       } catch (e) {
@@ -102,7 +105,13 @@ function Shell() {
     saveTimer.current = setTimeout(async () => {
       setSyncStatus('syncing');
       try {
-        await saveCloudState(user.id, state);
+        const result = await saveCloudStateSafely(user.id, state, lastKnownUpdatedAt.current);
+        lastKnownUpdatedAt.current = result.updatedAt;
+        if (result.merged) {
+          setState(result.state); // un altro dispositivo aveva scritto nel frattempo: uniti i dati
+          setMergeNotice(true);
+          setTimeout(() => setMergeNotice(false), 4000);
+        }
         setSyncStatus('ok');
         clearTimeout(syncOkTimer.current);
         syncOkTimer.current = setTimeout(() => setSyncStatus('idle'), 1800);
@@ -199,6 +208,10 @@ function Shell() {
       </nav>
 
       {showOnboarding && <OnboardingTour onDone={() => setShowOnboarding(false)} />}
+
+      {mergeNotice && (
+        <div className="save-toast">🔗 Dati uniti da un altro dispositivo</div>
+      )}
     </div>
   );
 }
