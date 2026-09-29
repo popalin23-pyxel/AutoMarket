@@ -1,10 +1,25 @@
 import { describe, it, expect } from 'vitest';
 import {
-  hoursOfShift, monthDays, weekdayOf, startOfWeek, endOfWeek,
+  hoursOfShift, monthDays, weekdayOf, startOfWeek, endOfWeek, addDaysISO,
   holidaysOfYear, isHoliday, dayKind,
   shiftsInMonth, shiftsOnDay, shiftsInRange, shiftsToday, nextShiftAfter,
   computeMonthSummary, computeYearSummary, compareMonths, compareWeeks,
 } from './calc.js';
+
+describe('addDaysISO', () => {
+  it('somma giorni restando nello stesso mese', () => {
+    expect(addDaysISO('2026-09-01', 7)).toBe('2026-09-08');
+  });
+
+  it('gestisce il cambio di mese e di anno', () => {
+    expect(addDaysISO('2026-09-28', 7)).toBe('2026-10-05');
+    expect(addDaysISO('2026-12-28', 7)).toBe('2027-01-04');
+  });
+
+  it('sottrae giorni con delta negativo', () => {
+    expect(addDaysISO('2026-09-05', -7)).toBe('2026-08-29');
+  });
+});
 
 describe('hoursOfShift', () => {
   it('calcola un turno diurno normale', () => {

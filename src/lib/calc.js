@@ -85,7 +85,7 @@ export function endOfWeek(dateISO) {
   return toISO(d);
 }
 
-function addDaysISO(dateISO, days) {
+export function addDaysISO(dateISO, days) {
   const d = new Date(dateISO + 'T00:00:00');
   d.setDate(d.getDate() + days);
   return toISO(d);

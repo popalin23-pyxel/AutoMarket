@@ -1,11 +1,17 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { monthDays, weekdayOf, shiftsOnDay, hoursOfShift, todayISO, holidaysOfYear, isHoliday } from '../lib/calc.js';
+import {
+  monthDays, weekdayOf, shiftsOnDay, hoursOfShift, todayISO, holidaysOfYear, isHoliday,
+  startOfWeek, endOfWeek, shiftsInRange, addDaysISO, computeWeekSummary,
+} from '../lib/calc.js';
 import { MONTHS_IT, WEEKDAYS_IT, hexToRgba } from '../lib/defaults.js';
 import { addShift, updateShift, removeShift, restoreShift, addFavorite, removeFavorite } from '../lib/store.js';
 import { useSwipe } from '../lib/useSwipe.js';
+import { useConfirm } from '../lib/ConfirmContext.jsx';
 import ShiftEditor from './ShiftEditor.jsx';
 import CalendarGridView from './charts/CalendarGridView.jsx';
 import SiteAvatar from './SiteAvatar.jsx';
+
+const fmt = (n) => n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 const VIEW_KEY = 'turnio_view_pref';
 
@@ -17,6 +23,7 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
   const [undoShift, setUndoShift] = useState(null);
   const [filterSite, setFilterSite] = useState(null);
   const undoTimer = useRef(null);
+  const confirmAction = useConfirm();
 
   useEffect(() => { try { localStorage.setItem(VIEW_KEY, view); } catch {} }, [view]);
 
@@ -39,10 +46,24 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
     setTimeout(() => setToast(false), 1400);
   };
 
-  const save = (data) => {
-    if (editing?.shift) setState((s) => updateShift(s, editing.shift.id, data));
-    else setState((s) => addShift(s, data));
+  const save = (data, repeatWeeks = 0) => {
+    if (editing?.shift) {
+      setState((s) => updateShift(s, editing.shift.id, data));
+    } else {
+      setState((s) => {
+        let next = addShift(s, data);
+        for (let i = 1; i <= repeatWeeks; i++) {
+          next = addShift(next, { ...data, date: addDaysISO(data.date, i * 7) });
+        }
+        return next;
+      });
+    }
     setEditing(null);
+    flashSaved();
+  };
+
+  const copyShiftTo = (data) => {
+    setState((s) => addShift(s, data));
     flashSaved();
   };
   const del = (id) => {
@@ -65,6 +86,41 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
 
   const saveFavorite = (fav) => setState((s) => addFavorite(s, fav));
   const deleteFavorite = (id) => setState((s) => removeFavorite(s, id));
+
+  const weekStart = startOfWeek(today);
+  const weekEnd = endOfWeek(today);
+  const weekSummary = useMemo(
+    () => computeWeekSummary(state.shifts, state.sites, state.settings, today),
+    [state.shifts, state.sites, state.settings, today],
+  );
+  const thisWeekShifts = useMemo(() => shiftsInRange(state.shifts, weekStart, weekEnd), [state.shifts, weekStart, weekEnd]);
+  const weekLabel = useMemo(() => {
+    const wsD = Number(weekStart.slice(8)), wsM = Number(weekStart.slice(5, 7));
+    const weD = Number(weekEnd.slice(8)), weM = Number(weekEnd.slice(5, 7));
+    return wsM === weM
+      ? `${wsD}–${weD} ${MONTHS_IT[weM - 1].slice(0, 3)}`
+      : `${wsD} ${MONTHS_IT[wsM - 1].slice(0, 3)} – ${weD} ${MONTHS_IT[weM - 1].slice(0, 3)}`;
+  }, [weekStart, weekEnd]);
+
+  const duplicateWeek = async () => {
+    if (thisWeekShifts.length === 0) return;
+    const ok = await confirmAction(
+      `Copieremo ${thisWeekShifts.length} turni di questa settimana nella settimana prossima (stessi giorni, sede e orario). I turni già presenti non vengono duplicati.`,
+      { title: 'Duplicare questa settimana', confirmLabel: 'Duplica' },
+    );
+    if (!ok) return;
+    setState((s) => {
+      let next = s;
+      for (const sh of thisWeekShifts) {
+        const newDate = addDaysISO(sh.date, 7);
+        const exists = next.shifts.some((x) => x.date === newDate && x.siteId === sh.siteId && x.start === sh.start && x.end === sh.end);
+        if (exists) continue;
+        next = addShift(next, { date: newDate, siteId: sh.siteId, start: sh.start, end: sh.end, note: sh.note || '' });
+      }
+      return next;
+    });
+    flashSaved();
+  };
 
   const { monthTotalHours, monthAccent } = useMemo(() => {
     let h = 0;
@@ -132,6 +188,12 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
           </div>
         </div>
 
+        {thisWeekShifts.length > 0 && (
+          <button className="btn btn-sm" style={{ marginTop: 10 }} onClick={duplicateWeek}>
+            📋 Duplica questa settimana → prossima
+          </button>
+        )}
+
         {state.sites.length > 1 && (
           <div className="filter-row">
             <button className={`filter-chip ${filterSite == null ? 'active' : ''}`} onClick={() => setFilterSite(null)}>
@@ -179,6 +241,16 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
           siteById={siteById} holidaySet={holidaySet} today={today} onDayClick={(dateISO) => setDayPopover(dateISO)} />
       )}
 
+      {thisWeekShifts.length > 0 && (
+        <div className="panel week-total-card">
+          <span className="week-total-label">Questa settimana ({weekLabel})</span>
+          <div className="week-total-row">
+            <span><b>{fmt(weekSummary.totalHours)}h</b> lavorate</span>
+            <span>€<b>{fmt(weekSummary.net)}</b> netto stimato</span>
+          </div>
+        </div>
+      )}
+
       {dayPopover && (
         <div className="editor-overlay" onClick={() => setDayPopover(null)}>
           <div className="editor-card" onClick={(e) => e.stopPropagation()}>
@@ -192,9 +264,9 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
       )}
 
       {editing && (
-        <ShiftEditor date={editing.date} shift={editing.shift} sites={state.sites}
+        <ShiftEditor date={editing.date} shift={editing.shift} sites={state.sites} settings={state.settings}
           favorites={state.favorites} lastSiteId={state.lastSiteId}
-          onSave={save} onDelete={del} onClose={() => setEditing(null)}
+          onSave={save} onDelete={del} onClose={() => setEditing(null)} onCopy={copyShiftTo}
           onSaveFavorite={saveFavorite} onDeleteFavorite={deleteFavorite} />
       )}
 
