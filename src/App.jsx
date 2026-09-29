@@ -17,6 +17,7 @@ import GuadagniTab from './components/GuadagniTab.jsx';
 import HistoryTab from './components/HistoryTab.jsx';
 import SettingsTab from './components/SettingsTab.jsx';
 import FiscalSettingsTab from './components/FiscalSettingsTab.jsx';
+import NotificheTab from './components/NotificheTab.jsx';
 import Icon from './components/icons/Icon.jsx';
 import Splash from './components/Splash.jsx';
 import OnboardingTour, { needsOnboarding } from './components/OnboardingTour.jsx';
@@ -152,6 +153,9 @@ function Shell() {
               title={syncStatus === 'error' ? 'Sincronizzazione non riuscita, riprovo automaticamente'
                 : syncStatus === 'syncing' ? 'Sincronizzazione in corso…' : 'Sincronizzato'} />
           )}
+          <button className="notif-bell-btn" onClick={() => setActive('notifications')} title="Notifiche">
+            <Icon name="bell" size={16} />
+          </button>
           <button className="avatar" style={{ background: avatarColor(user?.email) }}
             onClick={() => setActive('settings')} title={user?.email}>
             {initial}
@@ -179,6 +183,9 @@ function Shell() {
             <FiscalSettingsTab state={state} setState={setState} onBack={() => setActive('settings')} />
           )}
           {active === 'admin' && isAdmin && <AdminTab onBack={() => setActive('settings')} />}
+          {active === 'notifications' && (
+            <NotificheTab state={state} onBack={() => setActive('dashboard')} />
+          )}
         </div>
       </div>
 
