@@ -462,6 +462,16 @@ tbody tr:hover td { background: rgba(var(--accent-rgb), 0.07); }
 }
 .notif-bell-dot { position: absolute; top: 4px; right: 5px; width: 7px; height: 7px; border-radius: 50%; background: var(--red); }
 
+/* ── Privacy Policy ────────────────────────────────────────── */
+.privacy-page { max-width: 520px; width: 100%; margin: 0 auto; max-height: 88vh; overflow-y: auto; }
+.privacy-body { font-size: 13.5px; line-height: 1.6; color: var(--text-dim); }
+.privacy-body h3 { font-size: 14px; color: var(--text); margin: 18px 0 6px; }
+.privacy-body h3:first-child { margin-top: 0; }
+.privacy-body p { margin-bottom: 8px; }
+.privacy-body ul { margin: 0 0 8px 18px; }
+.privacy-body li { margin-bottom: 4px; }
+.privacy-body em { color: var(--hint-warn-fg); font-style: italic; }
+
 /* ── Riepilogo mensile ─────────────────────────────────── */
 .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; margin-bottom: 18px; }
 .stat {
@@ -577,6 +587,7 @@ tbody tr:hover td { background: rgba(var(--accent-rgb), 0.07); }
 .auth-tagline { display: block; font-size: 12px; color: var(--text-dim); margin-top: 4px; }
 .auth-desc { font-size: 13px; color: var(--text-dim); margin-bottom: 14px; }
 .auth-switch { text-align: center; margin-top: 16px; font-size: 13px; color: var(--text-dim); }
+.auth-legal { text-align: center; margin-top: 12px; font-size: 11px; color: var(--text-mut); }
 .auth-link { background: none; border: none; color: var(--accent); cursor: pointer; font-size: 13px; font-weight: 600; padding: 0; text-decoration: underline; }
 .danger-link {
   display: block; width: 100%; background: none; border: none; color: var(--red); cursor: pointer;

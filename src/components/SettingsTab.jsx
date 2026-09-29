@@ -7,7 +7,7 @@ import { useAuth } from '../lib/AuthContext.jsx';
 import { useConfirm } from '../lib/ConfirmContext.jsx';
 import NumberInput from './NumberInput.jsx';
 
-export default function SettingsTab({ state, setState, onLogout, isAdmin, onOpenAdmin, onOpenFiscal }) {
+export default function SettingsTab({ state, setState, onLogout, isAdmin, onOpenAdmin, onOpenFiscal, onOpenPrivacy }) {
   const { user, updatePassword, deleteAccount } = useAuth();
   const confirmAction = useConfirm();
   const [deleting, setDeleting] = useState(false);
@@ -144,8 +144,10 @@ export default function SettingsTab({ state, setState, onLogout, isAdmin, onOpen
         </form>
         {pwMsg && <div className={`hint hint-${pwMsg.type}`} style={{ marginTop: 10, marginBottom: 0 }}>{pwMsg.text}</div>}
 
+        <button className="btn btn-block" style={{ marginTop: 14 }} onClick={onOpenPrivacy}>📄 Privacy Policy</button>
+
         {isAdmin && (
-          <button className="btn btn-block" style={{ marginTop: 14 }} onClick={onOpenAdmin}>⚡ Pannello Amministrazione</button>
+          <button className="btn btn-block" style={{ marginTop: 10 }} onClick={onOpenAdmin}>⚡ Pannello Amministrazione</button>
         )}
         <button className="btn btn-danger" style={{ marginTop: 14 }} onClick={onLogout}>Esci</button>
 

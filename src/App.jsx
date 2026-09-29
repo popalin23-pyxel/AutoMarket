@@ -18,6 +18,7 @@ import HistoryTab from './components/HistoryTab.jsx';
 import SettingsTab from './components/SettingsTab.jsx';
 import FiscalSettingsTab from './components/FiscalSettingsTab.jsx';
 import NotificheTab from './components/NotificheTab.jsx';
+import PrivacyPolicyTab from './components/PrivacyPolicyTab.jsx';
 import Icon from './components/icons/Icon.jsx';
 import Splash from './components/Splash.jsx';
 import OnboardingTour, { needsOnboarding } from './components/OnboardingTour.jsx';
@@ -186,12 +187,14 @@ function Shell() {
           {active === 'stats' && <HistoryTab state={state} onOpenMonth={goToMonth} />}
           {active === 'settings' && (
             <SettingsTab state={state} setState={setState} onLogout={doLogout} isAdmin={isAdmin}
-              onOpenAdmin={() => setActive('admin')} onOpenFiscal={() => setActive('fiscal')} />
+              onOpenAdmin={() => setActive('admin')} onOpenFiscal={() => setActive('fiscal')}
+              onOpenPrivacy={() => setActive('privacy')} />
           )}
           {active === 'fiscal' && (
             <FiscalSettingsTab state={state} setState={setState} onBack={() => setActive('settings')} />
           )}
           {active === 'admin' && isAdmin && <AdminTab onBack={() => setActive('settings')} />}
+          {active === 'privacy' && <PrivacyPolicyTab onBack={() => setActive('settings')} />}
           {active === 'notifications' && (
             <NotificheTab state={state} onBack={() => setActive('dashboard')} />
           )}
@@ -216,23 +219,33 @@ function Shell() {
   );
 }
 
-function Gate() {
+function Gate({ onShowPrivacy }) {
   const { configured, loading, session, recovery, isApproved, profileLoading } = useAuth();
 
   if (!configured) return <NotConfigured />;
   if (loading) return <Splash />;
   if (recovery) return <ResetPasswordForm />;
-  if (!session) return <AuthScreen />;
+  if (!session) return <AuthScreen onShowPrivacy={onShowPrivacy} />;
   if (profileLoading) return <Splash />;
   if (!isApproved) return <PendingApproval />;
   return <Shell />;
 }
 
 export default function App() {
+  const [showPrivacyPublic, setShowPrivacyPublic] = useState(false);
+
+  if (showPrivacyPublic) {
+    return (
+      <div className="auth-wrap">
+        <PrivacyPolicyTab onBack={() => setShowPrivacyPublic(false)} />
+      </div>
+    );
+  }
+
   return (
     <AuthProvider>
       <ConfirmProvider>
-        <Gate />
+        <Gate onShowPrivacy={() => setShowPrivacyPublic(true)} />
       </ConfirmProvider>
     </AuthProvider>
   );

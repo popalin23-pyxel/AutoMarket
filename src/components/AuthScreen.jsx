@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../lib/AuthContext.jsx';
 import Icon from './icons/Icon.jsx';
 
-export default function AuthScreen() {
+export default function AuthScreen({ onShowPrivacy }) {
   const { signIn, signUp, sendPasswordReset } = useAuth();
   const [mode, setMode] = useState('login'); // login | signup | forgot | sent
   const [email, setEmail] = useState('');
@@ -133,6 +133,12 @@ export default function AuthScreen() {
 
         {mode === 'sent' && (
           <button className="btn btn-block" style={{ marginTop: 14 }} onClick={() => switchTo('login')}>Torna al login</button>
+        )}
+
+        {mode === 'signup' && (
+          <p className="auth-legal">
+            Registrandoti accetti la <button type="button" className="auth-link" onClick={onShowPrivacy}>Privacy Policy</button>.
+          </p>
         )}
       </div>
     </div>
