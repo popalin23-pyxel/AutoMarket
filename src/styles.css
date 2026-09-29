@@ -414,6 +414,14 @@ tbody tr:hover td { background: rgba(var(--accent-rgb), 0.07); }
 .editor-breakdown-row.muted { color: var(--red); opacity: 0.85; }
 .editor-breakdown-row.total { font-weight: 700; color: var(--green-text); font-size: 13px; padding-top: 4px; border-top: 1px dashed var(--border); margin-top: 2px; }
 
+/* ── Spese professionali ───────────────────────────────────── */
+.expense-list { display: flex; flex-direction: column; gap: 6px; }
+.expense-row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: rgba(var(--ink), 0.02); }
+.expense-info { flex: 1; min-width: 0; }
+.expense-cat { font-weight: 700; font-size: 13px; }
+.expense-date { font-size: 11px; color: var(--text-mut); }
+.expense-amount { font-family: var(--mono); font-weight: 700; font-size: 13px; }
+
 /* ── Riepilogo mensile ─────────────────────────────────── */
 .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; margin-bottom: 18px; }
 .stat {

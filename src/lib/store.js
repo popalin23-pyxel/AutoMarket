@@ -10,9 +10,10 @@ function freshState() {
     sites: [],   // [{ id, name, color, rate, rivalsaPercent: null|number }]
     shifts: [],  // [{ id, date: 'YYYY-MM-DD', siteId, start: 'HH:MM', end: 'HH:MM', note }]
     favorites: [], // [{ id, siteId, start: 'HH:MM', end: 'HH:MM', label }] — scorciatoie turno
+    expenses: [], // [{ id, date: 'YYYY-MM-DD', category, amount, note }]
     lastSiteId: null, // ultima sede usata, per pre-selezionarla nel prossimo turno
     settings: { ...DEFAULT_SETTINGS },
-    seq: { site: 1, shift: 1, favorite: 1 },
+    seq: { site: 1, shift: 1, favorite: 1, expense: 1 },
   };
 }
 
@@ -36,9 +37,10 @@ function sanitizeState(parsed) {
     sites: Array.isArray(parsed.sites) ? parsed.sites : [],
     shifts: Array.isArray(parsed.shifts) ? parsed.shifts : [],
     favorites: Array.isArray(parsed.favorites) ? parsed.favorites : [],
+    expenses: Array.isArray(parsed.expenses) ? parsed.expenses : [],
     lastSiteId: parsed.lastSiteId ?? null,
     settings: sanitizeSettings(parsed.settings),
-    seq: { site: 1, shift: 1, favorite: 1, ...(parsed.seq ?? {}) },
+    seq: { site: 1, shift: 1, favorite: 1, expense: 1, ...(parsed.seq ?? {}) },
   };
 }
 
@@ -127,6 +129,20 @@ export function addFavorite(state, fav) {
 
 export function removeFavorite(state, id) {
   return { ...state, favorites: state.favorites.filter((f) => f.id !== id) };
+}
+
+// ── Spese professionali ──────────────────────────────────────────────
+export function addExpense(state, expense) {
+  const id = state.seq.expense;
+  return {
+    ...state,
+    expenses: [...state.expenses, { id, ...expense }],
+    seq: { ...state.seq, expense: id + 1 },
+  };
+}
+
+export function removeExpense(state, id) {
+  return { ...state, expenses: state.expenses.filter((e) => e.id !== id) };
 }
 
 // ── Impostazioni ─────────────────────────────────────────────────────

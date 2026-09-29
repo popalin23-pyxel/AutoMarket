@@ -10,6 +10,20 @@ export const DEFAULT_SETTINGS = {
   monthlyGoal: 0,      // obiettivo di netto mensile (€); 0 = nessun obiettivo impostato
 };
 
+// Categorie di spesa professionale
+export const EXPENSE_CATEGORIES = [
+  { id: 'carburante', label: 'Carburante', tile: 'gold' },
+  { id: 'autostrada', label: 'Autostrada', tile: 'indigo' },
+  { id: 'parcheggio', label: 'Parcheggio', tile: 'indigo' },
+  { id: 'assicurazione', label: 'Assicurazione', tile: 'rose' },
+  { id: 'enpapi', label: 'ENPAPI', tile: 'teal' },
+  { id: 'commercialista', label: 'Commercialista', tile: 'violet' },
+  { id: 'ecm', label: 'Corsi ECM', tile: 'lime' },
+  { id: 'dispositivi', label: 'Dispositivi', tile: 'teal' },
+  { id: 'telefono', label: 'Telefono', tile: 'violet' },
+  { id: 'altro', label: 'Altro', tile: 'rose' },
+];
+
 // Palette di colori pronti per le sedi (coordinata col tema dell'app)
 export const SITE_COLORS = [
   '#2dd4bf', '#f59e0b', '#818cf8', '#fb7185', '#a3e635', '#22d3ee', '#c084fc', '#fbbf24',

@@ -3,11 +3,13 @@ import SummaryTab from './SummaryTab.jsx';
 import SitesTab from './SitesTab.jsx';
 import EarningsSimulator from './EarningsSimulator.jsx';
 import GoalTimeCalculator from './GoalTimeCalculator.jsx';
+import ExpensesTab from './ExpensesTab.jsx';
 
 const SUB_TABS = [
   { id: 'summary', label: 'Riepilogo' },
   { id: 'sim', label: 'Simulatore' },
   { id: 'goal', label: 'Obiettivo' },
+  { id: 'expenses', label: 'Spese' },
   { id: 'sites', label: 'Sedi' },
 ];
 
@@ -29,6 +31,7 @@ export default function GuadagniTab({ state, setState, year, month, setYear, set
       )}
       {sub === 'sim' && <EarningsSimulator state={state} />}
       {sub === 'goal' && <GoalTimeCalculator state={state} />}
+      {sub === 'expenses' && <ExpensesTab state={state} setState={setState} />}
       {sub === 'sites' && <SitesTab state={state} setState={setState} />}
     </>
   );
