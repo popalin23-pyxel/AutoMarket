@@ -2,6 +2,24 @@
    Turnio — tema "sky" (vetro chiaro, azzurro luminoso)
    ============================================================ */
 
+/* Font ospitati localmente (non più da Google Fonts): niente terze parti
+   coinvolte solo per caricare la pagina, un fornitore in meno da dichiarare
+   nella privacy policy. File variabili: un solo woff2 copre tutti i pesi. */
+@font-face {
+  font-family: 'Space Grotesk';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('/fonts/space-grotesk-var.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('/fonts/jetbrains-mono-var.woff2') format('woff2');
+}
+
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
