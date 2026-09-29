@@ -107,6 +107,43 @@ function TodayCard({ state, today, firstName }) {
   );
 }
 
+function MonthHeroCard({ month, monthLabel, goal }) {
+  const net = month.current.net;
+  const invoice = month.current.totalInvoice;
+  const hours = month.current.totalHours;
+  const hourlyNet = hours > 0 ? net / hours : 0;
+  const goalPct = goal > 0 ? Math.round((net / goal) * 100) : null;
+
+  if (month.current.shiftCount === 0) return null;
+
+  return (
+    <div className="panel month-hero">
+      <div className="month-hero-label">{monthLabel}</div>
+      <div className="month-hero-net">€<CountUpText value={net} format={fmt} /></div>
+      <div className="month-hero-net-caption">netto stimato</div>
+
+      <div className="month-hero-grid">
+        <div className="mh-stat">
+          <span className="mh-val">€<CountUpText value={invoice} format={fmt0} /></span>
+          <span className="mh-lbl">fatturato</span>
+        </div>
+        <div className="mh-stat">
+          <span className="mh-val"><CountUpText value={hours} format={fmt0} />h</span>
+          <span className="mh-lbl">lavorate</span>
+        </div>
+        <div className="mh-stat">
+          <span className="mh-val">€<CountUpText value={hourlyNet} format={fmt} />/h</span>
+          <span className="mh-lbl">netto medio</span>
+        </div>
+      </div>
+
+      {goalPct != null && (
+        <div className="month-hero-goal">🎯 <b>{goalPct}%</b> dell'obiettivo di €{fmt(goal)}</div>
+      )}
+    </div>
+  );
+}
+
 function GoalCard({ goal, net }) {
   if (!goal) return null;
   const pct = Math.min(100, Math.round((net / goal) * 100));
@@ -177,6 +214,8 @@ export default function DashboardTab({ state, userEmail, isAdmin, onNavigate }) 
   return (
     <>
       <BackupReminder state={state} />
+
+      <MonthHeroCard month={month} monthLabel={`${MONTHS_IT[m - 1].toUpperCase()} ${y}`} goal={Number(state.settings.monthlyGoal) || 0} />
 
       <TodayCard state={state} today={today} firstName={firstName} />
 
