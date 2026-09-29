@@ -1,10 +1,11 @@
 import React, { useMemo, useState } from 'react';
-import { computeYearSummary, monthsWithData } from '../lib/calc.js';
+import { computeYearSummary, computeRangeSummary, monthsWithData } from '../lib/calc.js';
 import { MONTHS_IT } from '../lib/defaults.js';
 import AreaChart from './charts/AreaChart.jsx';
 import YearHeatmap from './charts/YearHeatmap.jsx';
 import EmptyState from './EmptyState.jsx';
 import CountUpText from './CountUpText.jsx';
+import SiteAvatar from './SiteAvatar.jsx';
 
 const fmt = (n) => n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -20,6 +21,11 @@ export default function HistoryTab({ state, onOpenMonth }) {
     () => computeYearSummary(state.shifts, state.sites, state.settings, year),
     [state.shifts, state.sites, state.settings, year],
   );
+  const yearRange = useMemo(
+    () => computeRangeSummary(state.shifts, state.sites, state.settings, `${year}-01-01`, `${year}-12-31`),
+    [state.shifts, state.sites, state.settings, year],
+  );
+  const avgHourly = yearRange.totalHours > 0 ? yearRange.totalInvoice / yearRange.totalHours : 0;
 
   return (
     <>
@@ -61,8 +67,31 @@ export default function HistoryTab({ state, onOpenMonth }) {
         </div>
       )}
 
+      {yearRange.perSite.length > 0 && (
+        <div className="panel">
+          <h2 className="panel-title">Confronto sedi — {year}</h2>
+          <p className="panel-desc">Dove guadagni di più, in un colpo d'occhio.</p>
+          <div className="site-compare-list">
+            {yearRange.perSite.map((p) => (
+              <div key={p.siteId ?? 'unknown'} className="site-compare-row">
+                <SiteAvatar site={{ name: p.name, color: p.color }} size={26} />
+                <div className="site-compare-info">
+                  <div className="site-compare-name">{p.name}</div>
+                  <div className="site-compare-sub">{fmt(p.hours)}h · €{p.rate}/h</div>
+                </div>
+                <span className="site-compare-total">€{fmt(p.total)}</span>
+              </div>
+            ))}
+          </div>
+          <div className="fiscal-footnote" style={{ marginTop: 12 }}>
+            Guadagno medio per ora (tutte le sedi): <b>€{fmt(avgHourly)}</b>
+          </div>
+        </div>
+      )}
+
       {y.months.length > 0 && (
         <div className="panel">
+          <h2 className="panel-title">Dettaglio mensile</h2>
           {[...y.months].reverse().map((m) => (
             <div key={m.month} className="hist-month-row" onClick={() => onOpenMonth(m.year, m.month)}>
               <span className="hist-month-name">{MONTHS_IT[m.month - 1]}</span>
