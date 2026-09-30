@@ -1,11 +1,13 @@
 import React, { createContext, useCallback, useContext, useRef, useState } from 'react';
 import { useLockBodyScroll } from './useLockBodyScroll.js';
+import Portal from './Portal.jsx';
 
 const ConfirmContext = createContext(null);
 
 function ConfirmDialog({ dialog, onClose }) {
   useLockBodyScroll();
   return (
+    <Portal>
     <div className="editor-overlay" onClick={() => onClose(false)}>
       <div className="editor-card confirm-card" onClick={(e) => e.stopPropagation()}>
         <div className="editor-head"><span>{dialog.title}</span></div>
@@ -18,6 +20,7 @@ function ConfirmDialog({ dialog, onClose }) {
         </div>
       </div>
     </div>
+    </Portal>
   );
 }
 

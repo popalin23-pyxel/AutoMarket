@@ -8,6 +8,7 @@ import { addShift, updateShift, removeShift, restoreShift, addFavorite, removeFa
 import { useSwipe } from '../lib/useSwipe.js';
 import { useConfirm } from '../lib/ConfirmContext.jsx';
 import { useLockBodyScroll } from '../lib/useLockBodyScroll.js';
+import Portal from '../lib/Portal.jsx';
 import ShiftEditor from './ShiftEditor.jsx';
 import CalendarGridView from './charts/CalendarGridView.jsx';
 import SiteAvatar from './SiteAvatar.jsx';
@@ -19,6 +20,7 @@ const VIEW_KEY = 'turnio_view_pref';
 function DayPopoverOverlay({ dateISO, onClose, children }) {
   useLockBodyScroll();
   return (
+    <Portal>
     <div className="editor-overlay" onClick={onClose}>
       <div className="editor-card" onClick={(e) => e.stopPropagation()}>
         <div className="editor-head">
@@ -28,6 +30,7 @@ function DayPopoverOverlay({ dateISO, onClose, children }) {
         {children}
       </div>
     </div>
+    </Portal>
   );
 }
 
@@ -280,13 +283,15 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
           onSaveFavorite={saveFavorite} onDeleteFavorite={deleteFavorite} />
       )}
 
-      {toast && <div className="save-toast">✓ Turno salvato</div>}
+      {toast && <Portal><div className="save-toast">✓ Turno salvato</div></Portal>}
 
       {undoShift && (
+        <Portal>
         <div className="undo-toast">
           <span>Turno eliminato</span>
           <button className="undo-btn" onClick={undoDelete}>Annulla</button>
         </div>
+        </Portal>
       )}
     </>
   );

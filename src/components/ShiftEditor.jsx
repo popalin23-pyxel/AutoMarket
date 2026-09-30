@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { hoursOfShift } from '../lib/calc.js';
 import { useLockBodyScroll } from '../lib/useLockBodyScroll.js';
+import Portal from '../lib/Portal.jsx';
 import SiteAvatar from './SiteAvatar.jsx';
 
 const fmt = (n) => n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -55,6 +56,7 @@ export default function ShiftEditor({
   }
 
   return (
+    <Portal>
     <div className="editor-overlay" onClick={onClose}>
       <div className="editor-card" onClick={(e) => e.stopPropagation()}>
         <div className="editor-head">
@@ -166,5 +168,6 @@ export default function ShiftEditor({
         )}
       </div>
     </div>
+    </Portal>
   );
 }

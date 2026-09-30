@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useLockBodyScroll } from '../lib/useLockBodyScroll.js';
+import Portal from '../lib/Portal.jsx';
 import Icon from './icons/Icon.jsx';
 
 const KEY = 'turnio_onboarding_seen';
@@ -27,6 +28,7 @@ export default function OnboardingTour({ onDone }) {
   };
 
   return (
+    <Portal>
     <div className="editor-overlay">
       <div className="editor-card onboarding-card">
         <div className="onboarding-icon"><Icon name={s.icon} size={26} /></div>
@@ -43,5 +45,6 @@ export default function OnboardingTour({ onDone }) {
         </div>
       </div>
     </div>
+    </Portal>
   );
 }
