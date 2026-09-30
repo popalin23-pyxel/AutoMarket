@@ -2,7 +2,9 @@ import { describe, it, expect } from 'vitest';
 import { mergeStates } from './mergeState.js';
 
 const base = (over = {}) => ({
-  sites: [], shifts: [], favorites: [], expenses: [], seq: { site: 1, shift: 1, favorite: 1, expense: 1 }, ...over,
+  sites: [], shifts: [], favorites: [], expenses: [], seq: { site: 1, shift: 1, favorite: 1, expense: 1 },
+  tombstones: { sites: {}, shifts: {}, favorites: {}, expenses: {} },
+  ...over,
 });
 
 describe('mergeStates', () => {
@@ -43,6 +45,33 @@ describe('mergeStates', () => {
     const remote = base({ seq: { site: 2, shift: 15, favorite: 4, expense: 1 } });
     const merged = mergeStates(local, remote);
     expect(merged.seq).toEqual({ site: 3, shift: 15, favorite: 4, expense: 1 });
+  });
+
+  it('un turno eliminato su un dispositivo non ricompare se l\'altro lo aveva ancora (bug reale corretto)', () => {
+    const local = base({
+      shifts: [{ id: 1, date: '2026-09-01' }],
+      tombstones: { sites: {}, shifts: { 2: Date.now() }, favorites: {}, expenses: {} },
+    });
+    const remote = base({ shifts: [{ id: 1, date: '2026-09-01' }, { id: 2, date: '2026-09-02' }] });
+    const merged = mergeStates(local, remote);
+    expect(merged.shifts.map((s) => s.id).sort()).toEqual([1]);
+  });
+
+  it('un turno eliminato sul dispositivo remoto non ricompare se il locale lo aveva ancora', () => {
+    const local = base({ shifts: [{ id: 1 }, { id: 2 }] });
+    const remote = base({
+      shifts: [{ id: 1 }],
+      tombstones: { sites: {}, shifts: { 2: Date.now() }, favorites: {}, expenses: {} },
+    });
+    const merged = mergeStates(local, remote);
+    expect(merged.shifts.map((s) => s.id).sort()).toEqual([1]);
+  });
+
+  it('i tombstone di entrambi i dispositivi si uniscono, senza perderne nessuno', () => {
+    const local = base({ tombstones: { sites: {}, shifts: { 1: 100 }, favorites: {}, expenses: {} } });
+    const remote = base({ tombstones: { sites: {}, shifts: { 2: 200 }, favorites: {}, expenses: {} } });
+    const merged = mergeStates(local, remote);
+    expect(Object.keys(merged.tombstones.shifts).sort()).toEqual(['1', '2']);
   });
 
   it('ritorna lo stato locale se il remoto è nullo, e viceversa', () => {

@@ -14,6 +14,19 @@ function freshState() {
     lastSiteId: null, // ultima sede usata, per pre-selezionarla nel prossimo turno
     settings: { ...DEFAULT_SETTINGS },
     seq: { site: 1, shift: 1, favorite: 1, expense: 1 },
+    // id eliminati (con timestamp): evita che riappaiano dopo un'unione multi-dispositivo (vedi mergeState.js)
+    tombstones: { sites: {}, shifts: {}, favorites: {}, expenses: {} },
+  };
+}
+
+function removeWithTombstone(state, collection, id) {
+  return {
+    ...state,
+    [collection]: state[collection].filter((item) => item.id !== id),
+    tombstones: {
+      ...state.tombstones,
+      [collection]: { ...state.tombstones[collection], [id]: Date.now() },
+    },
   };
 }
 
@@ -41,6 +54,10 @@ function sanitizeState(parsed) {
     lastSiteId: parsed.lastSiteId ?? null,
     settings: sanitizeSettings(parsed.settings),
     seq: { site: 1, shift: 1, favorite: 1, expense: 1, ...(parsed.seq ?? {}) },
+    tombstones: {
+      sites: {}, shifts: {}, favorites: {}, expenses: {},
+      ...(parsed.tombstones ?? {}),
+    },
   };
 }
 
@@ -85,7 +102,7 @@ export function updateSite(state, id, patch) {
 }
 
 export function removeSite(state, id) {
-  return { ...state, sites: state.sites.filter((s) => s.id !== id) };
+  return removeWithTombstone(state, 'sites', id);
 }
 
 // ── Turni ─────────────────────────────────────────────────────────────
@@ -108,13 +125,19 @@ export function updateShift(state, id, patch) {
 }
 
 export function removeShift(state, id) {
-  return { ...state, shifts: state.shifts.filter((s) => s.id !== id) };
+  return removeWithTombstone(state, 'shifts', id);
 }
 
 // Ripristina un turno eliminato di recente (stesso id, per l'azione "Annulla").
 export function restoreShift(state, shift) {
   if (state.shifts.some((s) => s.id === shift.id)) return state;
-  return { ...state, shifts: [...state.shifts, shift] };
+  const shiftTombstones = { ...state.tombstones.shifts };
+  delete shiftTombstones[shift.id];
+  return {
+    ...state,
+    shifts: [...state.shifts, shift],
+    tombstones: { ...state.tombstones, shifts: shiftTombstones },
+  };
 }
 
 // ── Scorciatoie turno (preferiti) ──────────────────────────────────────
@@ -128,7 +151,7 @@ export function addFavorite(state, fav) {
 }
 
 export function removeFavorite(state, id) {
-  return { ...state, favorites: state.favorites.filter((f) => f.id !== id) };
+  return removeWithTombstone(state, 'favorites', id);
 }
 
 // ── Spese professionali ──────────────────────────────────────────────
@@ -142,7 +165,7 @@ export function addExpense(state, expense) {
 }
 
 export function removeExpense(state, id) {
-  return { ...state, expenses: state.expenses.filter((e) => e.id !== id) };
+  return removeWithTombstone(state, 'expenses', id);
 }
 
 // ── Impostazioni ─────────────────────────────────────────────────────
