@@ -66,8 +66,10 @@ export default function SettingsTab({ state, setState, onLogout, isAdmin, onOpen
     );
     if (!ok) return;
     setDeleting(true);
-    try { await deleteAccount(); }
-    catch (err) { setMsg({ type: 'warn', text: err.message }); setDeleting(false); }
+    try {
+      await deleteAccount();
+      setState(resetState()); // non lasciare sul dispositivo i dati dell'account appena cancellato
+    } catch (err) { setMsg({ type: 'warn', text: err.message }); setDeleting(false); }
   };
 
   const changePassword = async (e) => {

@@ -53,6 +53,7 @@
   --green:       #22c55e;
   --green-text:  #16a34a;
   --red:         #f43f5e;
+  --red-rgb:     244, 63, 94;
   --orange:      #fb923c;
   --hint-info-fg: #0369a1;
   --hint-warn-fg: #92400e;
@@ -97,6 +98,7 @@
   --green:       #34d399;
   --green-text:  #34d399;
   --red:         #fb7185;
+  --red-rgb:     251, 113, 133;
   --orange:      #fbbf24;
   --hint-info-fg: #5eead4;
   --hint-warn-fg: #fcd34d;
@@ -248,7 +250,8 @@ input[type=checkbox] { width: 17px; height: 17px; accent-color: var(--accent); c
 }
 .btn-primary { background: linear-gradient(120deg, var(--accent), var(--accent-dk)); border-color: transparent; color: var(--on-accent); box-shadow: var(--glow-soft); }
 .btn-primary:hover { color: var(--on-accent); box-shadow: var(--glow); filter: brightness(1.06); }
-.btn-danger:hover { border-color: var(--red); color: var(--red); }
+.btn-danger { background: rgba(var(--red-rgb), 0.12); border-color: rgba(var(--red-rgb), 0.4); color: var(--red); }
+.btn-danger:hover { background: rgba(var(--red-rgb), 0.18); border-color: var(--red); }
 .btn:disabled { opacity: 0.4; cursor: not-allowed; }
 .btn-sm { padding: 5px 11px; font-size: 12px; }
 .btn-block { width: 100%; }
