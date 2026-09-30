@@ -65,6 +65,7 @@ function Shell() {
   const cloudReady = useRef(false);
   const loadedUserId = useRef(null);
   const lastKnownUpdatedAt = useRef(null);
+  const skipNextSave = useRef(false);
 
   // cache locale sempre aggiornata (funziona anche offline)
   useEffect(() => { saveState(state); }, [state]);
@@ -107,6 +108,12 @@ function Shell() {
   // a ogni modifica, sincronizza sul cloud (con un piccolo debounce)
   useEffect(() => {
     if (!user || !isApproved || !cloudReady.current) return;
+    // questo cambio di stato arriva da un'unione appena ricevuta (vedi sotto),
+    // non da una modifica dell'utente: i dati sono già salvati sul cloud, non
+    // serve rifare subito un altro giro di salvataggio. Senza questo controllo,
+    // con due dispositivi aperti insieme ognuno rimanda indietro all'altro il
+    // "cambiamento" appena unito, in un ping-pong che non si ferma mai.
+    if (skipNextSave.current) { skipNextSave.current = false; return; }
     clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(async () => {
       setSyncStatus('syncing');
@@ -114,6 +121,7 @@ function Shell() {
         const result = await saveCloudStateSafely(user.id, state, lastKnownUpdatedAt.current);
         lastKnownUpdatedAt.current = result.updatedAt;
         if (result.merged) {
+          skipNextSave.current = true;
           setState(result.state); // un altro dispositivo aveva scritto nel frattempo: uniti i dati
           setMergeNotice(true);
           setTimeout(() => setMergeNotice(false), 4000);
