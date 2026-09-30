@@ -106,23 +106,26 @@
 }
 
 /* ── Palette colore principale (scelta dall'utente in Profilo) ────────── */
-:root[data-accent="sky"]     { --accent: #0ea5e9; --accent-dk: #0284c7; --accent-rgb: 14, 165, 233;  --accent-text: #0284c7; }
-:root[data-theme="dark"][data-accent="sky"]     { --accent: #38bdf8; --accent-dk: #0ea5e9; --accent-rgb: 56, 189, 248;  --accent-text: #38bdf8; }
+/* --on-accent: testo sopra i bottoni pieni color accento. Va scelto in base
+   alla luminosità della tonalità in tema chiaro (in scuro l'accento è sempre
+   abbastanza chiaro da poter usare testo scuro, quindi il default va bene). */
+:root[data-accent="sky"]     { --accent: #0ea5e9; --accent-dk: #0284c7; --accent-rgb: 14, 165, 233;  --accent-text: #0284c7; --on-accent: #072639; }
+:root[data-theme="dark"][data-accent="sky"]     { --accent: #38bdf8; --accent-dk: #0ea5e9; --accent-rgb: 56, 189, 248;  --accent-text: #38bdf8; --on-accent: #04120e; }
 
-:root[data-accent="teal"]    { --accent: #0d9488; --accent-dk: #0f766e; --accent-rgb: 13, 148, 136;  --accent-text: #0f766e; }
-:root[data-theme="dark"][data-accent="teal"]    { --accent: #2dd4bf; --accent-dk: #0d9488; --accent-rgb: 45, 212, 191;  --accent-text: #2dd4bf; }
+:root[data-accent="teal"]    { --accent: #0d9488; --accent-dk: #0f766e; --accent-rgb: 13, 148, 136;  --accent-text: #0f766e; --on-accent: #ffffff; }
+:root[data-theme="dark"][data-accent="teal"]    { --accent: #2dd4bf; --accent-dk: #0d9488; --accent-rgb: 45, 212, 191;  --accent-text: #2dd4bf; --on-accent: #04120e; }
 
-:root[data-accent="violet"]  { --accent: #7c3aed; --accent-dk: #6d28d9; --accent-rgb: 124, 58, 237;  --accent-text: #6d28d9; }
-:root[data-theme="dark"][data-accent="violet"]  { --accent: #a78bfa; --accent-dk: #7c3aed; --accent-rgb: 167, 139, 250; --accent-text: #a78bfa; }
+:root[data-accent="violet"]  { --accent: #7c3aed; --accent-dk: #6d28d9; --accent-rgb: 124, 58, 237;  --accent-text: #6d28d9; --on-accent: #ffffff; }
+:root[data-theme="dark"][data-accent="violet"]  { --accent: #a78bfa; --accent-dk: #7c3aed; --accent-rgb: 167, 139, 250; --accent-text: #a78bfa; --on-accent: #04120e; }
 
-:root[data-accent="rose"]    { --accent: #e11d48; --accent-dk: #be123c; --accent-rgb: 225, 29, 72;   --accent-text: #be123c; }
-:root[data-theme="dark"][data-accent="rose"]    { --accent: #fb7185; --accent-dk: #e11d48; --accent-rgb: 251, 113, 133; --accent-text: #fb7185; }
+:root[data-accent="rose"]    { --accent: #e11d48; --accent-dk: #be123c; --accent-rgb: 225, 29, 72;   --accent-text: #be123c; --on-accent: #ffffff; }
+:root[data-theme="dark"][data-accent="rose"]    { --accent: #fb7185; --accent-dk: #e11d48; --accent-rgb: 251, 113, 133; --accent-text: #fb7185; --on-accent: #04120e; }
 
-:root[data-accent="amber"]   { --accent: #d97706; --accent-dk: #b45309; --accent-rgb: 217, 119, 6;   --accent-text: #b45309; }
-:root[data-theme="dark"][data-accent="amber"]   { --accent: #fbbf24; --accent-dk: #d97706; --accent-rgb: 251, 191, 36;  --accent-text: #fbbf24; }
+:root[data-accent="amber"]   { --accent: #d97706; --accent-dk: #b45309; --accent-rgb: 217, 119, 6;   --accent-text: #b45309; --on-accent: #2a1602; }
+:root[data-theme="dark"][data-accent="amber"]   { --accent: #fbbf24; --accent-dk: #d97706; --accent-rgb: 251, 191, 36;  --accent-text: #fbbf24; --on-accent: #04120e; }
 
-:root[data-accent="emerald"] { --accent: #059669; --accent-dk: #047857; --accent-rgb: 5, 150, 105;   --accent-text: #047857; }
-:root[data-theme="dark"][data-accent="emerald"] { --accent: #34d399; --accent-dk: #059669; --accent-rgb: 52, 211, 153;  --accent-text: #34d399; }
+:root[data-accent="emerald"] { --accent: #059669; --accent-dk: #047857; --accent-rgb: 5, 150, 105;   --accent-text: #047857; --on-accent: #ffffff; }
+:root[data-theme="dark"][data-accent="emerald"] { --accent: #34d399; --accent-dk: #059669; --accent-rgb: 52, 211, 153;  --accent-text: #34d399; --on-accent: #04120e; }
 
 html, body {
   background: var(--bg); color: var(--text); font-family: var(--sans);
