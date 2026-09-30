@@ -37,6 +37,14 @@ describe('eliminazioni: tracciano un tombstone (per la sync multi-dispositivo)',
     expect(removeExpense(baseState(), 1).tombstones.expenses[1]).toBeTypeOf('number');
   });
 
+  it('eliminare un turno non va in errore anche se lo stato arriva senza tombstones (es. dati cloud salvati da una versione più vecchia dell\'app)', () => {
+    const { tombstones, ...withoutTombstones } = baseState();
+    expect(() => removeShift(withoutTombstones, 1)).not.toThrow();
+    const next = removeShift(withoutTombstones, 1);
+    expect(next.shifts).toHaveLength(0);
+    expect(next.tombstones.shifts[1]).toBeTypeOf('number');
+  });
+
   it('aggiungere un nuovo turno con lo stesso id "resuscitato" da un vecchio tombstone funziona normalmente', () => {
     // scenario limite: un id riciclato (es. dopo import di un vecchio backup) non deve restare bloccato
     const deleted = removeShift(baseState(), 1);

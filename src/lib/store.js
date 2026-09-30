@@ -22,10 +22,10 @@ function freshState() {
 function removeWithTombstone(state, collection, id) {
   return {
     ...state,
-    [collection]: state[collection].filter((item) => item.id !== id),
+    [collection]: (state[collection] ?? []).filter((item) => item.id !== id),
     tombstones: {
-      ...state.tombstones,
-      [collection]: { ...state.tombstones[collection], [id]: Date.now() },
+      ...(state.tombstones ?? {}),
+      [collection]: { ...(state.tombstones?.[collection] ?? {}), [id]: Date.now() },
     },
   };
 }
@@ -42,7 +42,7 @@ function sanitizeSettings(rawSettings) {
   return settings;
 }
 
-function sanitizeState(parsed) {
+export function sanitizeState(parsed) {
   if (!parsed || typeof parsed !== 'object') return freshState();
   return {
     ...freshState(),

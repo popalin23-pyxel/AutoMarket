@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { loadState, saveState, resetState } from './lib/store.js';
+import { loadState, saveState, resetState, sanitizeState } from './lib/store.js';
 import { computeMonthSummary } from './lib/calc.js';
 import { loadTheme, applyTheme } from './lib/theme.js';
 import { loadAccent, applyAccent } from './lib/accentColor.js';
@@ -86,7 +86,11 @@ function Shell() {
         const cloud = await fetchCloudState(user.id);
         if (!alive) return;
         if (cloud) {
-          setState(cloud.state);
+          // i dati nel cloud possono essere stati salvati da una versione più
+          // vecchia dell'app (es. prima dei campi "spese" o "tombstones"):
+          // sanitizeState riempie quello che manca, altrimenti un'azione che
+          // si aspetta quei campi (es. eliminare un turno) va in errore.
+          setState(sanitizeState(cloud.state));
           lastKnownUpdatedAt.current = cloud.updatedAt;
         } else {
           lastKnownUpdatedAt.current = await saveCloudState(user.id, state); // prima volta: pubblica lo stato locale attuale
