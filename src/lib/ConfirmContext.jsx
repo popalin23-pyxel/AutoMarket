@@ -1,6 +1,25 @@
 import React, { createContext, useCallback, useContext, useRef, useState } from 'react';
+import { useLockBodyScroll } from './useLockBodyScroll.js';
 
 const ConfirmContext = createContext(null);
+
+function ConfirmDialog({ dialog, onClose }) {
+  useLockBodyScroll();
+  return (
+    <div className="editor-overlay" onClick={() => onClose(false)}>
+      <div className="editor-card confirm-card" onClick={(e) => e.stopPropagation()}>
+        <div className="editor-head"><span>{dialog.title}</span></div>
+        <p className="confirm-msg">{dialog.message}</p>
+        <div className="editor-actions">
+          <button className="btn btn-block" onClick={() => onClose(false)}>{dialog.cancelLabel}</button>
+          <button className={`btn btn-block ${dialog.danger ? 'btn-danger' : 'btn-primary'}`} onClick={() => onClose(true)}>
+            {dialog.confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function ConfirmProvider({ children }) {
   const [dialog, setDialog] = useState(null);
@@ -28,20 +47,7 @@ export function ConfirmProvider({ children }) {
   return (
     <ConfirmContext.Provider value={confirmAction}>
       {children}
-      {dialog && (
-        <div className="editor-overlay" onClick={() => close(false)}>
-          <div className="editor-card confirm-card" onClick={(e) => e.stopPropagation()}>
-            <div className="editor-head"><span>{dialog.title}</span></div>
-            <p className="confirm-msg">{dialog.message}</p>
-            <div className="editor-actions">
-              <button className="btn btn-block" onClick={() => close(false)}>{dialog.cancelLabel}</button>
-              <button className={`btn btn-block ${dialog.danger ? 'btn-danger' : 'btn-primary'}`} onClick={() => close(true)}>
-                {dialog.confirmLabel}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {dialog && <ConfirmDialog dialog={dialog} onClose={close} />}
     </ConfirmContext.Provider>
   );
 }

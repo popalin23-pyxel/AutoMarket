@@ -479,7 +479,7 @@ tbody tr:hover td { background: rgba(var(--accent-rgb), 0.07); }
 /* ── Riepilogo mensile ─────────────────────────────────── */
 .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; margin-bottom: 18px; }
 .stat {
-  position: relative; overflow: hidden;
+  position: relative; overflow: hidden; min-width: 0;
   background: linear-gradient(160deg, var(--glass-hi), var(--glass));
   border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px;
 }
@@ -535,12 +535,13 @@ tbody tr:hover td { background: rgba(var(--accent-rgb), 0.07); }
 /* ── Riepilogo per sede (card, mobile-friendly) ───────────── */
 .site-summary-list { display: flex; flex-direction: column; gap: 10px; }
 .site-summary-card { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px 14px; background: rgba(var(--ink), 0.02); }
-.ssc-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-.ssc-total { font-size: 16px; font-weight: 700; }
-.ssc-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
-.ssc-grid > div { display: flex; flex-direction: column; gap: 2px; }
+.ssc-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+.ssc-head .site-badge { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ssc-total { font-size: 16px; font-weight: 700; flex-shrink: 0; }
+.ssc-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(78px, 1fr)); gap: 8px; }
+.ssc-grid > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ssc-grid > div span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ssc-lbl { font-size: 9.5px; color: var(--text-mut); text-transform: uppercase; letter-spacing: 0.4px; }
-@media (max-width: 420px) { .ssc-grid { grid-template-columns: repeat(2, 1fr); } }
 
 /* ── Storico ───────────────────────────────────────────── */
 .hist-year-nav { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
@@ -731,8 +732,8 @@ code { background: rgba(var(--ink), 0.08); padding: 1px 5px; border-radius: 4px;
 }
 .month-hero-net-caption { font-size: 11px; color: var(--text-mut); margin-bottom: 18px; }
 .month-hero-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-.mh-stat { display: flex; flex-direction: column; gap: 2px; padding: 10px 4px; border-radius: var(--radius-sm); background: rgba(var(--ink), 0.03); }
-.mh-val { font-size: 15px; font-weight: 700; font-family: var(--mono); }
+.mh-stat { display: flex; flex-direction: column; gap: 2px; padding: 10px 4px; border-radius: var(--radius-sm); background: rgba(var(--ink), 0.03); min-width: 0; overflow: hidden; }
+.mh-val { font-size: 15px; font-weight: 700; font-family: var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mh-lbl { font-size: 10px; color: var(--text-mut); }
 .month-hero-goal {
   margin-top: 16px; padding: 8px 12px; border-radius: 20px; display: inline-block; font-size: 12.5px;
@@ -783,12 +784,14 @@ code { background: rgba(var(--ink), 0.08); padding: 1px 5px; border-radius: 4px;
 .nav-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 18px; }
 .nav-card {
   display: flex; flex-direction: column; align-items: flex-start; gap: 4px; text-align: left;
+  min-width: 0; width: 100%;
   background: linear-gradient(160deg, var(--glass-hi), var(--glass));
   border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px;
   cursor: pointer; transition: border-color 0.2s, transform 0.15s, box-shadow 0.2s;
   font-family: inherit; color: inherit;
   animation: panelIn 0.32s ease both;
 }
+.nav-card-label, .nav-card-hint { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
 .nav-card:nth-child(1) { animation-delay: 0ms; }
 .nav-card:nth-child(2) { animation-delay: 40ms; }
 .nav-card:nth-child(3) { animation-delay: 80ms; }
@@ -819,7 +822,8 @@ code { background: rgba(var(--ink), 0.08); padding: 1px 5px; border-radius: 4px;
 .delta-badge.neutral { background: rgba(var(--ink), 0.06); color: var(--text-mut); }
 
 .compare-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
-.compare-card { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px; background: rgba(var(--ink), 0.02); text-align: center; }
+.compare-card { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px; background: rgba(var(--ink), 0.02); text-align: center; min-width: 0; }
+.compare-nums { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .compare-title { font-size: 11px; color: var(--text-mut); margin-bottom: 8px; }
 .compare-nums { font-family: var(--mono); font-size: 13px; margin-bottom: 8px; }
 .compare-nums .vs { color: var(--text-mut); font-size: 11px; margin: 0 4px; }

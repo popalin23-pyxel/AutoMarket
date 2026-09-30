@@ -7,6 +7,7 @@ import { MONTHS_IT, WEEKDAYS_IT, hexToRgba } from '../lib/defaults.js';
 import { addShift, updateShift, removeShift, restoreShift, addFavorite, removeFavorite } from '../lib/store.js';
 import { useSwipe } from '../lib/useSwipe.js';
 import { useConfirm } from '../lib/ConfirmContext.jsx';
+import { useLockBodyScroll } from '../lib/useLockBodyScroll.js';
 import ShiftEditor from './ShiftEditor.jsx';
 import CalendarGridView from './charts/CalendarGridView.jsx';
 import SiteAvatar from './SiteAvatar.jsx';
@@ -14,6 +15,21 @@ import SiteAvatar from './SiteAvatar.jsx';
 const fmt = (n) => n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 const VIEW_KEY = 'turnio_view_pref';
+
+function DayPopoverOverlay({ dateISO, onClose, children }) {
+  useLockBodyScroll();
+  return (
+    <div className="editor-overlay" onClick={onClose}>
+      <div className="editor-card" onClick={(e) => e.stopPropagation()}>
+        <div className="editor-head">
+          <span>{dateISO}</span>
+          <button className="btn btn-sm" onClick={onClose}>✕</button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
 
 export default function ShiftsTab({ state, setState, year, month, setYear, setMonth }) {
   const [editing, setEditing] = useState(null); // { date, shift: null|obj }
@@ -252,15 +268,9 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
       )}
 
       {dayPopover && (
-        <div className="editor-overlay" onClick={() => setDayPopover(null)}>
-          <div className="editor-card" onClick={(e) => e.stopPropagation()}>
-            <div className="editor-head">
-              <span>{dayPopover}</span>
-              <button className="btn btn-sm" onClick={() => setDayPopover(null)}>✕</button>
-            </div>
-            <DayShiftsBlock dateISO={dayPopover} />
-          </div>
-        </div>
+        <DayPopoverOverlay dateISO={dayPopover} onClose={() => setDayPopover(null)}>
+          <DayShiftsBlock dateISO={dayPopover} />
+        </DayPopoverOverlay>
       )}
 
       {editing && (

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { hoursOfShift } from '../lib/calc.js';
+import { useLockBodyScroll } from '../lib/useLockBodyScroll.js';
 import SiteAvatar from './SiteAvatar.jsx';
 
 const fmt = (n) => n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -15,6 +16,7 @@ export default function ShiftEditor({
   const [note, setNote] = useState(shift?.note ?? '');
   const [repeatWeeks, setRepeatWeeks] = useState(0);
   const [copyOpen, setCopyOpen] = useState(false);
+  useLockBodyScroll();
   const [copyDate, setCopyDate] = useState('');
 
   const hours = hoursOfShift({ start, end });

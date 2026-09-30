@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useLockBodyScroll } from '../lib/useLockBodyScroll.js';
 import Icon from './icons/Icon.jsx';
 
 const KEY = 'turnio_onboarding_seen';
@@ -16,6 +17,7 @@ export function needsOnboarding() {
 
 export default function OnboardingTour({ onDone }) {
   const [step, setStep] = useState(0);
+  useLockBodyScroll();
   const s = STEPS[step];
   const last = step === STEPS.length - 1;
 
