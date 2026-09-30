@@ -59,6 +59,7 @@ function Shell() {
   const [syncStatus, setSyncStatus] = useState('idle'); // idle | syncing | ok | error
   const [showOnboarding, setShowOnboarding] = useState(needsOnboarding);
   const [mergeNotice, setMergeNotice] = useState(false);
+  const [syncNotice, setSyncNotice] = useState(false);
   const saveTimer = useRef(null);
   const syncOkTimer = useRef(null);
   const cloudReady = useRef(false);
@@ -159,7 +160,8 @@ function Shell() {
         </div>
         <div className="header-right">
           {syncStatus !== 'idle' && (
-            <span className={`sync-dot sync-${syncStatus}`}
+            <button type="button" className={`sync-dot sync-${syncStatus}`}
+              onClick={() => { setSyncNotice(true); setTimeout(() => setSyncNotice(false), 2500); }}
               title={syncStatus === 'error' ? 'Sincronizzazione non riuscita, riprovo automaticamente'
                 : syncStatus === 'syncing' ? 'Sincronizzazione in corso…' : 'Sincronizzato'} />
           )}
@@ -214,6 +216,13 @@ function Shell() {
 
       {mergeNotice && (
         <div className="save-toast">🔗 Dati uniti da un altro dispositivo</div>
+      )}
+
+      {syncNotice && (
+        <div className="save-toast">
+          {syncStatus === 'error' ? '⚠️ Sincronizzazione non riuscita, riprovo automaticamente'
+            : syncStatus === 'syncing' ? '⏳ Sincronizzazione in corso…' : '✓ Sincronizzato'}
+        </div>
       )}
     </div>
   );
