@@ -29,6 +29,7 @@ export default function HistoryTab({ state, onOpenMonth }) {
   // media sui soli mesi con almeno un turno registrato: corretta anche ad
   // anno in corso, senza dividere per 12 se non hai ancora lavorato tutto l'anno
   const avgGrossPerMonth = y.months.length > 0 ? y.totalInvoice / y.months.length : 0;
+  const avgNetPerMonth = y.months.length > 0 ? y.totalNet / y.months.length : 0;
 
   return (
     <>
@@ -49,12 +50,13 @@ export default function HistoryTab({ state, onOpenMonth }) {
             <div className="stat"><div className="stat-label">Media lordo/mese</div><div className="stat-value">€<CountUpText value={avgGrossPerMonth} format={fmt} /></div></div>
             <div className="stat"><div className="stat-label">Tasse accantonate</div><div className="stat-value">€<CountUpText value={y.totalTaxes} format={fmt} /></div></div>
             <div className="stat"><div className="stat-label">Netto anno</div><div className="stat-value gold">€<CountUpText value={y.totalNet} format={fmt} /></div></div>
+            <div className="stat"><div className="stat-label">Media netto/mese</div><div className="stat-value gold">€<CountUpText value={avgNetPerMonth} format={fmt} /></div></div>
           </div>
         )}
         {y.months.length > 0 && (
           <div className="fiscal-footnote" style={{ marginTop: 12 }}>
-            Media lordo/mese calcolata sui {y.months.length} {y.months.length === 1 ? 'mese lavorato' : 'mesi lavorati'} di
-            quest'anno, non su 12 — così è corretta anche ad anno non ancora finito.
+            Le medie sono calcolate sui {y.months.length} {y.months.length === 1 ? 'mese lavorato' : 'mesi lavorati'} di
+            quest'anno, non su 12 — così sono corrette anche ad anno non ancora finito.
           </div>
         )}
       </div>
