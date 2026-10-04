@@ -7,7 +7,7 @@ import { useAuth } from '../lib/AuthContext.jsx';
 import { useConfirm } from '../lib/ConfirmContext.jsx';
 import NumberInput from './NumberInput.jsx';
 
-export default function SettingsTab({ state, setState, onLogout, isAdmin, onOpenAdmin, onOpenFiscal, onOpenPrivacy }) {
+export default function SettingsTab({ state, setState, onLogout, isAdmin, onOpenAdmin, onOpenFiscal, onOpenPrivacy, onOpenSites }) {
   const { user, updatePassword, deleteAccount } = useAuth();
   const confirmAction = useConfirm();
   const [deleting, setDeleting] = useState(false);
@@ -156,6 +156,15 @@ export default function SettingsTab({ state, setState, onLogout, isAdmin, onOpen
         <button className="danger-link" style={{ marginTop: 16 }} onClick={doDeleteAccount} disabled={deleting}>
           {deleting ? 'Eliminazione in corso…' : 'Elimina il mio account e tutti i dati'}
         </button>
+      </div>
+
+      <div className="panel">
+        <h2 className="panel-title">Sedi di lavoro</h2>
+        <p className="panel-desc">
+          Gli ospedali/strutture dove lavori, con la paga oraria di ciascuna — necessarie prima di poter
+          registrare un turno.
+        </p>
+        <button className="btn btn-block" onClick={onOpenSites}>🏢 Gestisci sedi →</button>
       </div>
 
       <div className="panel">

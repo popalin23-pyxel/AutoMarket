@@ -399,6 +399,10 @@ tbody tr:hover td { background: rgba(var(--accent-rgb), 0.07); }
 .editor-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; font-size: 15px; font-weight: 700; }
 .editor-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-mut); margin: 12px 0 6px; }
 .site-picker { display: flex; flex-wrap: wrap; gap: 6px; }
+/* nella tabella sedi, il selettore colore per riga non deve andare a capo
+   dentro la cella stretta: meglio scorrere la tabella in orizzontale
+   (che ha già lo scroll pronto) piuttosto che impilare i pallini in verticale */
+td .site-picker { flex-wrap: nowrap; }
 .site-pick-btn {
   display: flex; align-items: center; gap: 6px; padding: 6px 11px; border-radius: var(--radius-sm);
   background: rgba(var(--ink), 0.04); border: 1px solid var(--border-hi); color: var(--text); cursor: pointer; font-size: 13px;

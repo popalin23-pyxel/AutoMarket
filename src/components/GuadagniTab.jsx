@@ -13,8 +13,8 @@ const SUB_TABS = [
   { id: 'sites', label: 'Sedi' },
 ];
 
-export default function GuadagniTab({ state, setState, year, month, setYear, setMonth }) {
-  const [sub, setSub] = useState('summary');
+export default function GuadagniTab({ state, setState, year, month, setYear, setMonth, initialSub = 'summary' }) {
+  const [sub, setSub] = useState(initialSub);
 
   return (
     <>

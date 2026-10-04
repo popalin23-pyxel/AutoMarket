@@ -54,6 +54,7 @@ function Shell() {
   const { user, isAdmin, isApproved, signOut } = useAuth();
   const [state, setState] = useState(loadState);
   const [active, setActive] = useState('dashboard');
+  const [earningsSubTab, setEarningsSubTab] = useState('summary');
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [syncStatus, setSyncStatus] = useState('idle'); // idle | syncing | ok | error
@@ -196,13 +197,15 @@ function Shell() {
             <ShiftsTab state={state} setState={setState} year={year} month={month} setYear={setYear} setMonth={setMonth} />
           )}
           {active === 'earnings' && (
-            <GuadagniTab state={state} setState={setState} year={year} month={month} setYear={setYear} setMonth={setMonth} />
+            <GuadagniTab state={state} setState={setState} year={year} month={month} setYear={setYear} setMonth={setMonth}
+              initialSub={earningsSubTab} />
           )}
           {active === 'stats' && <HistoryTab state={state} onOpenMonth={goToMonth} />}
           {active === 'settings' && (
             <SettingsTab state={state} setState={setState} onLogout={doLogout} isAdmin={isAdmin}
               onOpenAdmin={() => setActive('admin')} onOpenFiscal={() => setActive('fiscal')}
-              onOpenPrivacy={() => setActive('privacy')} />
+              onOpenPrivacy={() => setActive('privacy')}
+              onOpenSites={() => { setEarningsSubTab('sites'); setActive('earnings'); }} />
           )}
           {active === 'fiscal' && (
             <FiscalSettingsTab state={state} setState={setState} onBack={() => setActive('settings')} />
@@ -217,7 +220,8 @@ function Shell() {
 
       <nav className="bottom-nav">
         {TABS.map((t) => (
-          <button key={t.id} className={`bnav-btn ${active === t.id ? 'active' : ''}`} onClick={() => setActive(t.id)}>
+          <button key={t.id} className={`bnav-btn ${active === t.id ? 'active' : ''}`}
+            onClick={() => { if (t.id === 'earnings') setEarningsSubTab('summary'); setActive(t.id); }}>
             <span className="bnav-icon"><Icon name={t.icon} size={20} /></span>
             <span className="bnav-label">{t.label}</span>
           </button>
