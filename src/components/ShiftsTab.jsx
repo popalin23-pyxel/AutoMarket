@@ -170,10 +170,13 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
           return (
             <div key={sh.id} className="shift-chip" style={{ borderLeftColor: color, background: color + '14' }}
               onClick={() => openEdit(dateISO, sh)}>
-              <SiteAvatar site={site} size={18} />
-              <span className="shift-site">{site?.name ?? 'Sede eliminata'}</span>
-              <span className="shift-time">{sh.start}–{sh.end}</span>
-              <span className="shift-hours">{hoursOfShift(sh)}h</span>
+              <div className="shift-chip-row">
+                <SiteAvatar site={site} size={18} />
+                <span className="shift-site">{site?.name ?? 'Sede eliminata'}</span>
+                <span className="shift-time">{sh.start}–{sh.end}</span>
+                <span className="shift-hours">{hoursOfShift(sh)}h</span>
+              </div>
+              {sh.note && <div className="shift-note">📝 {sh.note}</div>}
             </div>
           );
         })}

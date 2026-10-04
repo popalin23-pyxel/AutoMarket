@@ -13,7 +13,9 @@ export default function SitesTab({ state, setState }) {
 
   const add = () => {
     const n = name.trim();
-    if (!n || !rate) return;
+    // 0 è una paga oraria valida (es. una sede "Appuntamento" per promemoria,
+    // non un vero turno pagato) — niente a che fare col campo vuoto.
+    if (!n || rate === '' || rate == null) return;
     setState((s) => addSite(s, n, rate, { color }));
     setName(''); setRate(''); setColor(SITE_COLORS[(state.sites.length + 1) % SITE_COLORS.length]);
   };

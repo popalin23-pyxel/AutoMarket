@@ -302,16 +302,21 @@ tbody tr:hover td { background: rgba(var(--accent-rgb), 0.07); }
 .day-num span { display: block; font-size: 9px; color: var(--text-mut); text-transform: uppercase; }
 .day-shifts { flex: 1; display: flex; flex-direction: column; gap: 5px; min-width: 0; }
 .shift-chip {
-  display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: var(--radius-sm);
+  display: flex; flex-direction: column; gap: 3px; padding: 6px 10px; border-radius: var(--radius-sm);
   cursor: pointer; font-size: 12.5px; border: 1px solid var(--border); border-left: 3px solid var(--border-hi);
   background: rgba(var(--ink), 0.03); transition: border-color 0.15s, transform 0.1s;
 }
 .shift-chip:hover { border-color: var(--border-hi); }
 .shift-chip:active { transform: scale(0.98); }
 .shift-chip .site-dot { width: 9px; height: 9px; }
+.shift-chip-row { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .shift-time { font-family: var(--mono); color: var(--text-dim); }
-.shift-site { font-weight: 700; flex: 1; }
+.shift-site { font-weight: 700; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .shift-hours { font-family: var(--mono); color: var(--text-mut); font-size: 11px; }
+.shift-note {
+  font-size: 11.5px; color: var(--text-dim); overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap; padding-left: 2px;
+}
 .day-add-btn {
   align-self: flex-start; background: none; border: 1px dashed var(--border-hi); color: var(--text-mut);
   border-radius: var(--radius-sm); padding: 4px 10px; font-size: 11px; cursor: pointer;
