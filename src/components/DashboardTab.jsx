@@ -109,18 +109,22 @@ function TodayCard({ state, today, firstName }) {
 
 function MonthHeroCard({ month, monthLabel, goal }) {
   const net = month.current.net;
+  const netTotal = month.current.netTotal;
   const invoice = month.current.totalInvoice;
   const hours = month.current.totalHours;
   const hourlyNet = hours > 0 ? net / hours : 0;
-  const goalPct = goal > 0 ? Math.round((net / goal) * 100) : null;
+  const goalPct = goal > 0 ? Math.round((netTotal / goal) * 100) : null;
 
-  if (month.current.shiftCount === 0) return null;
+  if (month.current.shiftCount === 0 && month.current.occasionalCount === 0) return null;
 
   return (
     <div className="panel month-hero">
       <div className="month-hero-label">{monthLabel}</div>
-      <div className="month-hero-net">€<CountUpText value={net} format={fmt} /></div>
+      <div className="month-hero-net">€<CountUpText value={netTotal} format={fmt} /></div>
       <div className="month-hero-net-caption">netto stimato</div>
+      {month.current.occasionalCount > 0 && (
+        <div className="month-hero-net-caption">di cui €{fmt(month.current.occasionalNet)} da prestazioni occasionali</div>
+      )}
 
       <div className="month-hero-grid">
         <div className="mh-stat">
@@ -198,18 +202,18 @@ export default function DashboardTab({ state, userEmail, isAdmin, onNavigate }) 
     || '';
   const firstName = rawName ? rawName[0].toUpperCase() + rawName.slice(1) : '';
 
-  const week = useMemo(() => compareWeeks(state.shifts, state.sites, state.settings, today),
-    [state.shifts, state.sites, state.settings, today]);
-  const month = useMemo(() => compareMonths(state.shifts, state.sites, state.settings, y, m),
-    [state.shifts, state.sites, state.settings, y, m]);
-  const year = useMemo(() => compareYears(state.shifts, state.sites, state.settings, y),
-    [state.shifts, state.sites, state.settings, y]);
-  const weeksTrend = useMemo(() => lastNWeeksSummaries(state.shifts, state.sites, state.settings, 8, today),
-    [state.shifts, state.sites, state.settings, today]);
-  const monthsTrend = useMemo(() => lastNMonthsSummaries(state.shifts, state.sites, state.settings, 6, y, m),
-    [state.shifts, state.sites, state.settings, y, m]);
+  const week = useMemo(() => compareWeeks(state.shifts, state.sites, state.settings, today, state.occasionalWork),
+    [state.shifts, state.sites, state.settings, today, state.occasionalWork]);
+  const month = useMemo(() => compareMonths(state.shifts, state.sites, state.settings, y, m, state.occasionalWork),
+    [state.shifts, state.sites, state.settings, y, m, state.occasionalWork]);
+  const year = useMemo(() => compareYears(state.shifts, state.sites, state.settings, y, state.occasionalWork),
+    [state.shifts, state.sites, state.settings, y, state.occasionalWork]);
+  const weeksTrend = useMemo(() => lastNWeeksSummaries(state.shifts, state.sites, state.settings, 8, today, state.occasionalWork),
+    [state.shifts, state.sites, state.settings, today, state.occasionalWork]);
+  const monthsTrend = useMemo(() => lastNMonthsSummaries(state.shifts, state.sites, state.settings, 6, y, m, state.occasionalWork),
+    [state.shifts, state.sites, state.settings, y, m, state.occasionalWork]);
 
-  const hasAnyData = state.shifts.length > 0;
+  const hasAnyData = state.shifts.length > 0 || state.occasionalWork.length > 0;
 
   return (
     <>
@@ -221,7 +225,7 @@ export default function DashboardTab({ state, userEmail, isAdmin, onNavigate }) 
 
       <NavGrid state={state} y={y} m={m} onNavigate={onNavigate} isAdmin={isAdmin} />
 
-      <GoalCard goal={Number(state.settings.monthlyGoal) || 0} net={month.current.net} />
+      <GoalCard goal={Number(state.settings.monthlyGoal) || 0} net={month.current.netTotal} />
 
       <div className="panel hero-week">
         <div className="hero-week-label">Questa settimana</div>
@@ -236,7 +240,7 @@ export default function DashboardTab({ state, userEmail, isAdmin, onNavigate }) 
                 <span className="hero-caption">ore lavorate</span>
               </div>
               <div className="hero-stat">
-                <span className="hero-num gold">€<CountUpText value={week.current.net} format={fmt} /></span>
+                <span className="hero-num gold">€<CountUpText value={week.current.netTotal} format={fmt} /></span>
                 <span className="hero-caption">netto stimato</span>
               </div>
             </div>
@@ -253,7 +257,7 @@ export default function DashboardTab({ state, userEmail, isAdmin, onNavigate }) 
           <div className="panel">
             <h2 className="panel-title">Ultime 8 settimane</h2>
             <p className="panel-desc">Netto per settimana</p>
-            <AreaChart data={weeksTrend} valueKey="net" labelKey="label" color="var(--gold)" height={140} />
+            <AreaChart data={weeksTrend} valueKey="netTotal" labelKey="label" color="var(--gold)" height={140} />
           </div>
 
           <div className="panel">
@@ -261,12 +265,12 @@ export default function DashboardTab({ state, userEmail, isAdmin, onNavigate }) 
             <div className="compare-grid">
               <div className="compare-card">
                 <div className="compare-title">{MONTHS_IT[m - 1]} vs {MONTHS_IT[month.previous.month - 1]}</div>
-                <div className="compare-nums">€{fmt(month.current.net)} <span className="vs">vs</span> €{fmt(month.previous.net)}</div>
+                <div className="compare-nums">€{fmt(month.current.netTotal)} <span className="vs">vs</span> €{fmt(month.previous.netTotal)}</div>
                 <DeltaBadge pct={month.deltaNetPct} />
               </div>
               <div className="compare-card">
                 <div className="compare-title">{y} vs {y - 1}</div>
-                <div className="compare-nums">€{fmt(year.current.totalNet)} <span className="vs">vs</span> €{fmt(year.previous.totalNet)}</div>
+                <div className="compare-nums">€{fmt(year.current.totalNetAll)} <span className="vs">vs</span> €{fmt(year.previous.totalNetAll)}</div>
                 <DeltaBadge pct={year.deltaNetPct} />
               </div>
             </div>

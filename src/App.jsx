@@ -146,8 +146,8 @@ function Shell() {
   };
 
   const monthSummary = useMemo(
-    () => computeMonthSummary(state.shifts, state.sites, state.settings, now.getFullYear(), now.getMonth() + 1),
-    [state.shifts, state.sites, state.settings],
+    () => computeMonthSummary(state.shifts, state.sites, state.settings, now.getFullYear(), now.getMonth() + 1, state.occasionalWork),
+    [state.shifts, state.sites, state.settings, state.occasionalWork],
   );
 
   const TABS = [
@@ -165,9 +165,9 @@ function Shell() {
       <header className="app-header">
         <div className="brand">
           <span className="brand-logo">Turn<span className="accent">io</span></span>
-          {monthSummary.shiftCount > 0 && (
+          {(monthSummary.shiftCount > 0 || monthSummary.occasionalCount > 0) && (
             <span className="brand-sub">
-              Questo mese: €{monthSummary.net.toLocaleString('it-IT', { maximumFractionDigits: 0 })} netto
+              Questo mese: €{monthSummary.netTotal.toLocaleString('it-IT', { maximumFractionDigits: 0 })} netto
             </span>
           )}
         </div>

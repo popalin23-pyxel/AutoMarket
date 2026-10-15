@@ -22,8 +22,19 @@ export function exportMonthExcel(sum) {
     ['Ore totali', sum.totalHours],
     ['Fatturato totale', '', '', '', '', '', sum.totalInvoice],
     [`Tasse da accantonare (${sum.taxPercent}%)`, '', '', '', '', '', -sum.taxes],
-    ['Netto', '', '', '', '', '', sum.net],
+    ['Netto sedi di lavoro', '', '', '', '', '', sum.net],
   ];
+
+  if (sum.occasionalCount > 0) {
+    rows.push(
+      [],
+      ['Prestazioni occasionali (lordo)', '', '', '', '', '', sum.occasionalGross],
+      [`Tasse stimate (${sum.occasionalTaxPercent}%)`, '', '', '', '', '', -sum.occasionalTaxes],
+      ['Netto prestazioni occasionali', '', '', '', '', '', sum.occasionalNet],
+      [],
+      ['Netto totale (sedi + prestazioni)', '', '', '', '', '', sum.netTotal],
+    );
+  }
 
   const ws = XLSX.utils.aoa_to_sheet(rows);
   ws['!cols'] = [{ wch: 20 }, { wch: 9 }, { wch: 9 }, { wch: 12 }, { wch: 10 }, { wch: 11 }, { wch: 12 }];

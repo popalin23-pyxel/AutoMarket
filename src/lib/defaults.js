@@ -8,6 +8,10 @@ export const DEFAULT_SETTINGS = {
   rivalsaPercent: 4,   // maggiorazione di default in fattura (es. rivalsa INPS/ENPAPI); modificabile per sede
   displayName: '',     // nome mostrato nel saluto della Home
   monthlyGoal: 0,      // obiettivo di netto mensile (€); 0 = nessun obiettivo impostato
+  // prestazioni occasionali (redditi diversi, non regime forfettario): niente rivalsa,
+  // tassazione IRPEF a scaglioni invece dell'aliquota forfettaria — qui solo una stima
+  // accantonabile, 23% = primo scaglione IRPEF 2024, da adattare col commercialista
+  occasionalTaxRatePercent: 23,
 };
 
 // Categorie di spesa professionale

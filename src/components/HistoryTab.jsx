@@ -11,19 +11,19 @@ const fmt = (n) => n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximum
 
 export default function HistoryTab({ state, onOpenMonth }) {
   const years = useMemo(() => {
-    const set = new Set(monthsWithData(state.shifts).map((m) => m.year));
+    const set = new Set(monthsWithData(state.shifts, state.occasionalWork).map((m) => m.year));
     set.add(new Date().getFullYear());
     return [...set].sort((a, b) => b - a);
-  }, [state.shifts]);
+  }, [state.shifts, state.occasionalWork]);
 
   const [year, setYear] = useState(years[0]);
   const y = useMemo(
-    () => computeYearSummary(state.shifts, state.sites, state.settings, year),
-    [state.shifts, state.sites, state.settings, year],
+    () => computeYearSummary(state.shifts, state.sites, state.settings, year, state.occasionalWork),
+    [state.shifts, state.sites, state.settings, year, state.occasionalWork],
   );
   const yearRange = useMemo(
-    () => computeRangeSummary(state.shifts, state.sites, state.settings, `${year}-01-01`, `${year}-12-31`),
-    [state.shifts, state.sites, state.settings, year],
+    () => computeRangeSummary(state.shifts, state.sites, state.settings, `${year}-01-01`, `${year}-12-31`, state.occasionalWork),
+    [state.shifts, state.sites, state.settings, year, state.occasionalWork],
   );
   const avgHourly = yearRange.totalHours > 0 ? yearRange.totalInvoice / yearRange.totalHours : 0;
   // media sui soli mesi con almeno un turno registrato: corretta anche ad
@@ -51,6 +51,14 @@ export default function HistoryTab({ state, onOpenMonth }) {
             <div className="stat"><div className="stat-label">Tasse accantonate</div><div className="stat-value">€<CountUpText value={y.totalTaxes} format={fmt} /></div></div>
             <div className="stat"><div className="stat-label">Netto anno</div><div className="stat-value gold">€<CountUpText value={y.totalNet} format={fmt} /></div></div>
             <div className="stat"><div className="stat-label">Media netto/mese</div><div className="stat-value gold">€<CountUpText value={avgNetPerMonth} format={fmt} /></div></div>
+            {y.occasionalGross > 0 && (
+              <div className="stat"><div className="stat-label">Prestazioni occasionali</div><div className="stat-value">€<CountUpText value={y.occasionalNet} format={fmt} /></div></div>
+            )}
+          </div>
+        )}
+        {y.occasionalGross > 0 && (
+          <div className="fiscal-footnote" style={{ marginTop: 12 }}>
+            Netto totale dell'anno, sedi + prestazioni occasionali: <b>€{fmt(y.totalNetAll)}</b>.
           </div>
         )}
         {y.months.length > 0 && (
@@ -72,9 +80,9 @@ export default function HistoryTab({ state, onOpenMonth }) {
       {y.months.length > 0 && (
         <div className="panel">
           <h2 className="panel-title">Andamento {year}</h2>
-          <p className="panel-desc">Netto per mese</p>
+          <p className="panel-desc">Netto per mese{y.occasionalGross > 0 ? ' (sedi + prestazioni occasionali)' : ''}</p>
           <AreaChart
-            data={y.months.map((m) => ({ label: MONTHS_IT[m.month - 1].slice(0, 3), net: m.net }))}
+            data={y.months.map((m) => ({ label: MONTHS_IT[m.month - 1].slice(0, 3), net: m.netTotal }))}
             valueKey="net" labelKey="label" color="var(--gold)" height={130} />
         </div>
       )}
@@ -111,6 +119,7 @@ export default function HistoryTab({ state, onOpenMonth }) {
                 <span>{fmt(m.totalHours)}h</span>
                 <span>€{fmt(m.totalInvoice)}</span>
                 <span className="gold">€{fmt(m.net)} netto</span>
+                {m.occasionalGross > 0 && <span>+€{fmt(m.occasionalNet)} prestazioni</span>}
               </div>
             </div>
           ))}

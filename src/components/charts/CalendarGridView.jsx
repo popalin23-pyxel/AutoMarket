@@ -2,8 +2,9 @@ import React from 'react';
 import { weekdayOf, monthDays, shiftsOnDay } from '../../lib/calc.js';
 import { WEEKDAYS_IT } from '../../lib/defaults.js';
 
-// Vista a griglia tradizionale del mese, con puntini colorati per sede.
-export default function CalendarGridView({ year, month, shifts, siteById, holidaySet, today, onDayClick }) {
+// Vista a griglia tradizionale del mese, con puntini colorati per sede
+// (dorato per le prestazioni occasionali, che non hanno una sede).
+export default function CalendarGridView({ year, month, shifts, occasionalWork = [], siteById, holidaySet, today, onDayClick }) {
   const days = monthDays(year, month);
   const firstWd = weekdayOf(year, month, 1); // 0 = lunedì
   const cells = [];
@@ -25,15 +26,19 @@ export default function CalendarGridView({ year, month, shifts, siteById, holida
           const isWeekend = wd >= 5 || holiday;
           const isToday = dateISO === today;
           const dayShifts = shiftsOnDay(shifts, dateISO);
+          const dayOccasional = shiftsOnDay(occasionalWork, dateISO);
           return (
             <button key={i} type="button"
               className={`cal-cell ${isWeekend ? 'weekend' : ''} ${holiday ? 'holiday' : ''} ${isToday ? 'today' : ''}`}
               onClick={() => onDayClick(dateISO)}>
               <span className="cal-cell-num">{d}</span>
-              {dayShifts.length > 0 && (
+              {(dayShifts.length > 0 || dayOccasional.length > 0) && (
                 <span className="cal-cell-dots">
                   {dayShifts.slice(0, 4).map((sh, k) => (
                     <span key={k} className="cal-dot" style={{ background: siteById.get(sh.siteId)?.color ?? '#6b7280' }} />
+                  ))}
+                  {dayOccasional.slice(0, 4 - dayShifts.length).map((o, k) => (
+                    <span key={`o${k}`} className="cal-dot" style={{ background: 'var(--gold)' }} />
                   ))}
                 </span>
               )}

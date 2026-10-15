@@ -317,8 +317,11 @@ tbody tr:hover td { background: rgba(var(--accent-rgb), 0.07); }
   font-size: 11.5px; color: var(--text-dim); overflow: hidden; text-overflow: ellipsis;
   white-space: nowrap; padding-left: 2px;
 }
+.occasional-chip { border-left-color: var(--gold); background: rgba(var(--gold-rgb), 0.08); }
+.occasional-dot { font-size: 13px; line-height: 1; flex-shrink: 0; }
+.day-add-row { display: flex; gap: 6px; flex-wrap: wrap; align-self: flex-start; }
 .day-add-btn {
-  align-self: flex-start; background: none; border: 1px dashed var(--border-hi); color: var(--text-mut);
+  background: none; border: 1px dashed var(--border-hi); color: var(--text-mut);
   border-radius: var(--radius-sm); padding: 4px 10px; font-size: 11px; cursor: pointer;
 }
 .day-add-btn:hover { border-color: var(--accent); color: var(--accent); }

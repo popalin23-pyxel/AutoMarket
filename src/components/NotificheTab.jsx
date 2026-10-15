@@ -26,7 +26,7 @@ export default function NotificheTab({ state, onBack }) {
 
   const todays = shiftsToday(state.shifts, today);
   const upcoming = !todays.length ? nextShiftAfter(state.shifts, today) : null;
-  const month = computeMonthSummary(state.shifts, state.sites, state.settings, y, m);
+  const month = computeMonthSummary(state.shifts, state.sites, state.settings, y, m, state.occasionalWork);
   const goal = Number(state.settings.monthlyGoal) || 0;
 
   const items = [];
@@ -53,12 +53,12 @@ export default function NotificheTab({ state, onBack }) {
   }
 
   if (goal > 0) {
-    if (month.net >= goal) {
+    if (month.netTotal >= goal) {
       items.push({ id: 'goal-done', icon: 'checkCircle', tile: 'lime', title: 'Obiettivo raggiunto 🎯',
-        text: `Netto di ${MONTHS_IT[m - 1]}: €${fmt(month.net)} su €${fmt(goal)}` });
+        text: `Netto di ${MONTHS_IT[m - 1]}: €${fmt(month.netTotal)} su €${fmt(goal)}` });
     } else {
       items.push({ id: 'goal-todo', icon: 'euro', tile: 'gold', title: 'Obiettivo del mese',
-        text: `Mancano €${fmt(goal - month.net)} per arrivare a €${fmt(goal)}` });
+        text: `Mancano €${fmt(goal - month.netTotal)} per arrivare a €${fmt(goal)}` });
     }
   }
 
@@ -71,9 +71,9 @@ export default function NotificheTab({ state, onBack }) {
     }
   }
 
-  if (monthDays(y, m) - dayOfMonth <= 3 && month.shiftCount > 0) {
+  if (monthDays(y, m) - dayOfMonth <= 3 && (month.shiftCount > 0 || month.occasionalCount > 0)) {
     items.push({ id: 'month-end', icon: 'history', tile: 'indigo', title: 'Il mese sta per finire',
-      text: `Finora a ${MONTHS_IT[m - 1]}: €${fmt(month.net)} netti stimati.` });
+      text: `Finora a ${MONTHS_IT[m - 1]}: €${fmt(month.netTotal)} netti stimati.` });
   }
 
   return (

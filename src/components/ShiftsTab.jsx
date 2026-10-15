@@ -4,12 +4,16 @@ import {
   startOfWeek, endOfWeek, shiftsInRange, addDaysISO, computeWeekSummary,
 } from '../lib/calc.js';
 import { MONTHS_IT, WEEKDAYS_IT, hexToRgba } from '../lib/defaults.js';
-import { addShift, updateShift, removeShift, restoreShift, addFavorite, removeFavorite } from '../lib/store.js';
+import {
+  addShift, updateShift, removeShift, restoreShift, addFavorite, removeFavorite,
+  addOccasionalWork, updateOccasionalWork, removeOccasionalWork,
+} from '../lib/store.js';
 import { useSwipe } from '../lib/useSwipe.js';
 import { useConfirm } from '../lib/ConfirmContext.jsx';
 import { useLockBodyScroll } from '../lib/useLockBodyScroll.js';
 import Portal from '../lib/Portal.jsx';
 import ShiftEditor from './ShiftEditor.jsx';
+import OccasionalEditor from './OccasionalEditor.jsx';
 import CalendarGridView from './charts/CalendarGridView.jsx';
 import SiteAvatar from './SiteAvatar.jsx';
 
@@ -36,6 +40,7 @@ function DayPopoverOverlay({ dateISO, onClose, children }) {
 
 export default function ShiftsTab({ state, setState, year, month, setYear, setMonth }) {
   const [editing, setEditing] = useState(null); // { date, shift: null|obj }
+  const [editingOccasional, setEditingOccasional] = useState(null); // { date, entry: null|obj }
   const [dayPopover, setDayPopover] = useState(null); // dateISO (solo vista calendario)
   const [view, setView] = useState(() => { try { return localStorage.getItem(VIEW_KEY) || 'list'; } catch { return 'list'; } });
   const [toast, setToast] = useState(false);
@@ -58,6 +63,8 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
 
   const openNew = (dateISO) => { setDayPopover(null); setEditing({ date: dateISO, shift: null }); };
   const openEdit = (dateISO, shift) => { setDayPopover(null); setEditing({ date: dateISO, shift }); };
+  const openNewOccasional = (dateISO) => { setDayPopover(null); setEditingOccasional({ date: dateISO, entry: null }); };
+  const openEditOccasional = (dateISO, entry) => { setDayPopover(null); setEditingOccasional({ date: dateISO, entry }); };
 
   const flashSaved = () => {
     setToast(true);
@@ -105,6 +112,20 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
 
   const saveFavorite = (fav) => setState((s) => addFavorite(s, fav));
   const deleteFavorite = (id) => setState((s) => removeFavorite(s, id));
+
+  const saveOccasional = (data) => {
+    if (editingOccasional?.entry) {
+      setState((s) => updateOccasionalWork(s, editingOccasional.entry.id, data));
+    } else {
+      setState((s) => addOccasionalWork(s, data));
+    }
+    setEditingOccasional(null);
+    flashSaved();
+  };
+  const delOccasional = (id) => {
+    setState((s) => removeOccasionalWork(s, id));
+    setEditingOccasional(null);
+  };
 
   const weekStart = startOfWeek(today);
   const weekEnd = endOfWeek(today);
@@ -162,6 +183,7 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
 
   const DayShiftsBlock = ({ dateISO }) => {
     const dayShifts = shiftsOnDay(state.shifts, dateISO).filter((sh) => !filterSite || sh.siteId === filterSite);
+    const dayOccasional = shiftsOnDay(state.occasionalWork, dateISO);
     return (
       <div className="day-shifts">
         {dayShifts.map((sh) => {
@@ -180,9 +202,25 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
             </div>
           );
         })}
-        <button className="day-add-btn" onClick={() => openNew(dateISO)} disabled={state.sites.length === 0}>
-          + turno
-        </button>
+        {dayOccasional.map((o) => (
+          <div key={`occ-${o.id}`} className="shift-chip occasional-chip"
+            onClick={() => openEditOccasional(dateISO, o)}>
+            <div className="shift-chip-row">
+              <span className="occasional-dot">💼</span>
+              <span className="shift-site">{o.description}</span>
+              <span className="shift-hours">€{fmt(o.grossAmount)}</span>
+            </div>
+            {o.note && <div className="shift-note">📝 {o.note}</div>}
+          </div>
+        ))}
+        <div className="day-add-row">
+          <button className="day-add-btn" onClick={() => openNew(dateISO)} disabled={state.sites.length === 0}>
+            + turno
+          </button>
+          <button className="day-add-btn" onClick={() => openNewOccasional(dateISO)}>
+            + prestazione
+          </button>
+        </div>
       </div>
     );
   };
@@ -260,6 +298,7 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
       ) : (
         <CalendarGridView year={year} month={month}
           shifts={filterSite ? state.shifts.filter((sh) => sh.siteId === filterSite) : state.shifts}
+          occasionalWork={state.occasionalWork}
           siteById={siteById} holidaySet={holidaySet} today={today} onDayClick={(dateISO) => setDayPopover(dateISO)} />
       )}
 
@@ -284,6 +323,12 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
           favorites={state.favorites} lastSiteId={state.lastSiteId}
           onSave={save} onDelete={del} onClose={() => setEditing(null)} onCopy={copyShiftTo}
           onSaveFavorite={saveFavorite} onDeleteFavorite={deleteFavorite} />
+      )}
+
+      {editingOccasional && (
+        <OccasionalEditor date={editingOccasional.date} entry={editingOccasional.entry} settings={state.settings}
+          occasionalWork={state.occasionalWork}
+          onSave={saveOccasional} onDelete={delOccasional} onClose={() => setEditingOccasional(null)} />
       )}
 
       {toast && <Portal><div className="save-toast">✓ Turno salvato</div></Portal>}

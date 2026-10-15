@@ -6,6 +6,50 @@ import {
   computeMonthSummary, computeYearSummary, compareMonths, compareWeeks,
 } from './calc.js';
 
+describe('prestazioni occasionali — tassate separatamente dal regime forfettario', () => {
+  const sites = [{ id: 1, name: 'CDS', color: '#000', rate: 20, rivalsaPercent: 4 }];
+  const settings = { taxPercent: 25, rivalsaPercent: 4, occasionalTaxRatePercent: 23 };
+  const shifts = [{ id: 1, date: '2026-09-01', siteId: 1, start: '06:00', end: '14:00' }]; // 160€ + rivalsa
+  const occasionalWork = [
+    { id: 1, date: '2026-09-05', description: 'Consulenza', grossAmount: 200 },
+    { id: 2, date: '2026-09-20', description: 'Corso', grossAmount: 100 },
+    { id: 3, date: '2026-10-01', description: 'Fuori mese', grossAmount: 999 }, // non deve contare
+  ];
+
+  it('somma le prestazioni occasionali del mese separatamente dal fatturato delle sedi', () => {
+    const sum = computeMonthSummary(shifts, sites, settings, 2026, 9, occasionalWork);
+    expect(sum.occasionalCount).toBe(2);
+    expect(sum.occasionalGross).toBe(300); // 200 + 100, non 999 (fuori mese)
+  });
+
+  it('le tassa con l\'aliquota configurata a parte, non con quella del regime forfettario, e senza rivalsa', () => {
+    const sum = computeMonthSummary(shifts, sites, settings, 2026, 9, occasionalWork);
+    expect(sum.occasionalTaxes).toBeCloseTo(300 * 0.23, 5); // 23%, non 25% del regime forfettario
+    expect(sum.occasionalNet).toBeCloseTo(300 - 300 * 0.23, 5);
+    // il fatturato delle sedi non viene toccato dalle prestazioni occasionali
+    expect(sum.totalInvoice).toBeCloseTo(166.4, 5); // 160€ + rivalsa 4%, invariato
+  });
+
+  it('netTotal somma il netto del lavoro nelle sedi e quello delle prestazioni occasionali', () => {
+    const sum = computeMonthSummary(shifts, sites, settings, 2026, 9, occasionalWork);
+    expect(sum.netTotal).toBeCloseTo(sum.net + sum.occasionalNet, 5);
+  });
+
+  it('senza prestazioni occasionali passate, tutto resta a zero (compatibilità con le chiamate esistenti)', () => {
+    const sum = computeMonthSummary(shifts, sites, settings, 2026, 9);
+    expect(sum.occasionalGross).toBe(0);
+    expect(sum.netTotal).toBe(sum.net);
+  });
+
+  it('un mese con solo una prestazione occasionale (nessun turno) compare comunque nel riepilogo annuale', () => {
+    const y = computeYearSummary([], sites, settings, 2026, [{ id: 1, date: '2026-03-10', description: 'Consulenza', grossAmount: 500 }]);
+    expect(y.months).toHaveLength(1);
+    expect(y.months[0].month).toBe(3);
+    expect(y.occasionalGross).toBe(500);
+    expect(y.totalNetAll).toBeCloseTo(y.totalNet + y.occasionalNet, 5);
+  });
+});
+
 describe('addDaysISO', () => {
   it('somma giorni restando nello stesso mese', () => {
     expect(addDaysISO('2026-09-01', 7)).toBe('2026-09-08');
@@ -227,5 +271,14 @@ describe('confronti periodo su periodo', () => {
     expect(cmp.current.totalHours).toBe(8);
     expect(cmp.previous.totalHours).toBe(8);
     expect(cmp.deltaHoursPct).toBe(0);
+  });
+
+  it('il confronto del netto tiene conto anche delle prestazioni occasionali', () => {
+    const occasionalWork = [{ id: 1, date: '2026-09-10', description: 'Consulenza', grossAmount: 1000 }];
+    const settingsWithOcc = { ...settings, occasionalTaxRatePercent: 0 }; // per un confronto diretto, niente tasse
+    const withOcc = compareMonths([], sites, settingsWithOcc, 2026, 9, occasionalWork);
+    const withoutOcc = compareMonths([], sites, settingsWithOcc, 2026, 9);
+    expect(withOcc.current.netTotal).toBe(1000);
+    expect(withoutOcc.current.netTotal).toBe(0);
   });
 });

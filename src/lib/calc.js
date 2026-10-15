@@ -178,38 +178,58 @@ function aggregate(filteredShifts, sites, settings) {
   return { perSite, totalHours, totalRevenue, totalRivalsa, totalInvoice, taxPercent, taxes, net, shiftCount: filteredShifts.length };
 }
 
-/** Riepilogo di un mese: ore/fatturato per sede, totali, tasse, netto. */
-export function computeMonthSummary(shifts, sites, settings, year, month) {
-  return { year, month, ...aggregate(shiftsInMonth(shifts, year, month), sites, settings) };
+// Prestazioni occasionali: reddito diverso dal lavoro nelle sedi — niente
+// rivalsa (non è prevista per questo tipo di reddito), tassazione separata
+// a un'aliquota stimata (IRPEF a scaglioni, non l'aliquota del regime
+// forfettario che vale solo per il fatturato da partita IVA).
+function aggregateOccasional(filteredOccasional, settings) {
+  const occasionalGross = round2(filteredOccasional.reduce((a, o) => a + (Number(o.grossAmount) || 0), 0));
+  const occasionalTaxPercent = Number(settings.occasionalTaxRatePercent) || 0;
+  const occasionalTaxes = round2(occasionalGross * (occasionalTaxPercent / 100));
+  const occasionalNet = round2(occasionalGross - occasionalTaxes);
+  return { occasionalGross, occasionalTaxPercent, occasionalTaxes, occasionalNet, occasionalCount: filteredOccasional.length };
+}
+
+/** Riepilogo di un mese: ore/fatturato per sede, totali, tasse, netto — più le prestazioni occasionali. */
+export function computeMonthSummary(shifts, sites, settings, year, month, occasionalWork = []) {
+  const base = { year, month, ...aggregate(shiftsInMonth(shifts, year, month), sites, settings) };
+  const occ = aggregateOccasional(shiftsInMonth(occasionalWork, year, month), settings);
+  return { ...base, ...occ, netTotal: round2(base.net + occ.occasionalNet) };
 }
 
 /** Riepilogo di un intervallo di date [startISO, endISO] incluso. */
-export function computeRangeSummary(shifts, sites, settings, startISO, endISO) {
-  return { startISO, endISO, label: shortRangeLabel(startISO, endISO), ...aggregate(shiftsInRange(shifts, startISO, endISO), sites, settings) };
+export function computeRangeSummary(shifts, sites, settings, startISO, endISO, occasionalWork = []) {
+  const base = { startISO, endISO, label: shortRangeLabel(startISO, endISO), ...aggregate(shiftsInRange(shifts, startISO, endISO), sites, settings) };
+  const occ = aggregateOccasional(shiftsInRange(occasionalWork, startISO, endISO), settings);
+  return { ...base, ...occ, netTotal: round2(base.net + occ.occasionalNet) };
 }
 
 /** Riepilogo della settimana (lun–dom) che contiene dateISO. */
-export function computeWeekSummary(shifts, sites, settings, dateISO = todayISO()) {
-  return computeRangeSummary(shifts, sites, settings, startOfWeek(dateISO), endOfWeek(dateISO));
+export function computeWeekSummary(shifts, sites, settings, dateISO = todayISO(), occasionalWork = []) {
+  return computeRangeSummary(shifts, sites, settings, startOfWeek(dateISO), endOfWeek(dateISO), occasionalWork);
 }
 
-export function computeYearSummary(shifts, sites, settings, year) {
+export function computeYearSummary(shifts, sites, settings, year, occasionalWork = []) {
   const months = [];
   for (let m = 1; m <= 12; m++) {
-    const s = computeMonthSummary(shifts, sites, settings, year, m);
-    if (s.shiftCount > 0) months.push(s);
+    const s = computeMonthSummary(shifts, sites, settings, year, m, occasionalWork);
+    if (s.shiftCount > 0 || s.occasionalCount > 0) months.push(s);
   }
   const totalHours = round2(months.reduce((a, m) => a + m.totalHours, 0));
   const totalInvoice = round2(months.reduce((a, m) => a + m.totalInvoice, 0));
+  const occasionalGross = round2(months.reduce((a, m) => a + m.occasionalGross, 0));
+  const occasionalTaxes = round2(months.reduce((a, m) => a + m.occasionalTaxes, 0));
+  const occasionalNet = round2(months.reduce((a, m) => a + m.occasionalNet, 0));
   const totalTaxes = round2(months.reduce((a, m) => a + m.taxes, 0));
   const totalNet = round2(months.reduce((a, m) => a + m.net, 0));
-  return { year, months, totalHours, totalInvoice, totalTaxes, totalNet };
+  const totalNetAll = round2(totalNet + occasionalNet);
+  return { year, months, totalHours, totalInvoice, totalTaxes, totalNet, occasionalGross, occasionalTaxes, occasionalNet, totalNetAll };
 }
 
-// Elenco (anno,mese) con almeno un turno, più recenti prima
-export function monthsWithData(shifts) {
+// Elenco (anno,mese) con almeno un turno o una prestazione occasionale, più recenti prima
+export function monthsWithData(shifts, occasionalWork = []) {
   const set = new Set();
-  for (const s of shifts) {
+  for (const s of [...shifts, ...occasionalWork]) {
     const { year, month } = shiftYearMonth(s);
     if (year && month) set.add(`${year}-${month}`);
   }
@@ -218,21 +238,21 @@ export function monthsWithData(shifts) {
 }
 
 // ── Andamento (per grafici) ──────────────────────────────────────────────
-export function lastNWeeksSummaries(shifts, sites, settings, n, refDateISO = todayISO()) {
+export function lastNWeeksSummaries(shifts, sites, settings, n, refDateISO = todayISO(), occasionalWork = []) {
   const out = [];
   let cursor = startOfWeek(refDateISO);
   for (let i = 0; i < n; i++) {
-    out.unshift(computeRangeSummary(shifts, sites, settings, cursor, endOfWeek(cursor)));
+    out.unshift(computeRangeSummary(shifts, sites, settings, cursor, endOfWeek(cursor), occasionalWork));
     cursor = addDaysISO(cursor, -7);
   }
   return out;
 }
 
-export function lastNMonthsSummaries(shifts, sites, settings, n, refYear, refMonth) {
+export function lastNMonthsSummaries(shifts, sites, settings, n, refYear, refMonth, occasionalWork = []) {
   const out = [];
   let y = refYear, m = refMonth;
   for (let i = 0; i < n; i++) {
-    out.unshift({ ...computeMonthSummary(shifts, sites, settings, y, m), label: MONTHS_IT[m - 1].slice(0, 3) });
+    out.unshift({ ...computeMonthSummary(shifts, sites, settings, y, m, occasionalWork), label: MONTHS_IT[m - 1].slice(0, 3) });
     m -= 1; if (m < 1) { m = 12; y -= 1; }
   }
   return out;
@@ -244,25 +264,25 @@ function pctDelta(cur, prev) {
   return round2(((cur - prev) / prev) * 100);
 }
 
-export function compareWeeks(shifts, sites, settings, refDateISO = todayISO()) {
+export function compareWeeks(shifts, sites, settings, refDateISO = todayISO(), occasionalWork = []) {
   const curStart = startOfWeek(refDateISO);
-  const current = computeRangeSummary(shifts, sites, settings, curStart, endOfWeek(refDateISO));
+  const current = computeRangeSummary(shifts, sites, settings, curStart, endOfWeek(refDateISO), occasionalWork);
   const prevStart = addDaysISO(curStart, -7);
-  const previous = computeRangeSummary(shifts, sites, settings, prevStart, endOfWeek(prevStart));
-  return { current, previous, deltaHoursPct: pctDelta(current.totalHours, previous.totalHours), deltaNetPct: pctDelta(current.net, previous.net) };
+  const previous = computeRangeSummary(shifts, sites, settings, prevStart, endOfWeek(prevStart), occasionalWork);
+  return { current, previous, deltaHoursPct: pctDelta(current.totalHours, previous.totalHours), deltaNetPct: pctDelta(current.netTotal, previous.netTotal) };
 }
 
-export function compareMonths(shifts, sites, settings, year, month) {
-  const current = computeMonthSummary(shifts, sites, settings, year, month);
+export function compareMonths(shifts, sites, settings, year, month, occasionalWork = []) {
+  const current = computeMonthSummary(shifts, sites, settings, year, month, occasionalWork);
   const py = month === 1 ? year - 1 : year, pm = month === 1 ? 12 : month - 1;
-  const previous = computeMonthSummary(shifts, sites, settings, py, pm);
-  return { current, previous, deltaHoursPct: pctDelta(current.totalHours, previous.totalHours), deltaNetPct: pctDelta(current.net, previous.net) };
+  const previous = computeMonthSummary(shifts, sites, settings, py, pm, occasionalWork);
+  return { current, previous, deltaHoursPct: pctDelta(current.totalHours, previous.totalHours), deltaNetPct: pctDelta(current.netTotal, previous.netTotal) };
 }
 
-export function compareYears(shifts, sites, settings, year) {
-  const current = computeYearSummary(shifts, sites, settings, year);
-  const previous = computeYearSummary(shifts, sites, settings, year - 1);
-  return { current, previous, deltaHoursPct: pctDelta(current.totalHours, previous.totalHours), deltaNetPct: pctDelta(current.totalNet, previous.totalNet) };
+export function compareYears(shifts, sites, settings, year, occasionalWork = []) {
+  const current = computeYearSummary(shifts, sites, settings, year, occasionalWork);
+  const previous = computeYearSummary(shifts, sites, settings, year - 1, occasionalWork);
+  return { current, previous, deltaHoursPct: pctDelta(current.totalHours, previous.totalHours), deltaNetPct: pctDelta(current.totalNetAll, previous.totalNetAll) };
 }
 
 function round2(n) { return Math.round((n + Number.EPSILON) * 100) / 100; }

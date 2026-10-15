@@ -14,9 +14,10 @@ const fmt = (n) => n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximum
 
 export default function SummaryTab({ state, year, month, setYear, setMonth }) {
   const sum = useMemo(
-    () => computeMonthSummary(state.shifts, state.sites, state.settings, year, month),
-    [state.shifts, state.sites, state.settings, year, month],
+    () => computeMonthSummary(state.shifts, state.sites, state.settings, year, month, state.occasionalWork),
+    [state.shifts, state.sites, state.settings, year, month, state.occasionalWork],
   );
+  const hasData = sum.shiftCount > 0 || sum.occasionalCount > 0;
 
   const prevMonth = () => { if (month === 1) { setYear(year - 1); setMonth(12); } else setMonth(month - 1); };
   const nextMonth = () => { if (month === 12) { setYear(year + 1); setMonth(1); } else setMonth(month + 1); };
@@ -36,7 +37,7 @@ export default function SummaryTab({ state, year, month, setYear, setMonth }) {
           <button className="btn" onClick={nextMonth}>›</button>
         </div>
 
-        {sum.shiftCount === 0 ? (
+        {!hasData ? (
           <EmptyState icon="euro" title="Nessun turno questo mese" hint="Il riepilogo comparirà qui appena registri un turno." />
         ) : (
           <div className="form-row" style={{ marginBottom: 0 }}>
@@ -70,6 +71,18 @@ export default function SummaryTab({ state, year, month, setYear, setMonth }) {
         </div>
       )}
 
+      {sum.occasionalCount > 0 && (
+        <div className="panel">
+          <h2 className="panel-title">Prestazioni occasionali</h2>
+          <p className="panel-desc">Reddito diverso dal lavoro nelle sedi, tassato a parte (niente rivalsa).</p>
+          <div className="summary-flow">
+            <div className="flow-row total"><span className="flow-label">Lordo ({sum.occasionalCount} {sum.occasionalCount === 1 ? 'prestazione' : 'prestazioni'})</span><span className="flow-value">€{fmt(sum.occasionalGross)}</span></div>
+            <div className="flow-row taxes"><span className="flow-label">Accantonamento stimato ({sum.occasionalTaxPercent}%)</span><span className="flow-value red">−€{fmt(sum.occasionalTaxes)}</span></div>
+            <div className="flow-row net"><span className="flow-label">Netto prestazioni</span><span className="flow-value green">€{fmt(sum.occasionalNet)}</span></div>
+          </div>
+        </div>
+      )}
+
       <div className="panel">
         <h2 className="panel-title">Riepilogo</h2>
         {sum.totalInvoice > 0 && (
@@ -94,7 +107,10 @@ export default function SummaryTab({ state, year, month, setYear, setMonth }) {
           <div className="flow-row"><span className="flow-label">Rivalsa</span><span className="flow-value">€{fmt(sum.totalRivalsa)}</span></div>
           <div className="flow-row total"><span className="flow-label">Totale fatturato</span><span className="flow-value">€{fmt(sum.totalInvoice)}</span></div>
           <div className="flow-row taxes"><span className="flow-label">Tasse da accantonare ({sum.taxPercent}%)</span><span className="flow-value red">−€{fmt(sum.taxes)}</span></div>
-          <div className="flow-row net"><span className="flow-label">Ti resta (netto)</span><span className="flow-value green">€{fmt(sum.net)}</span></div>
+          <div className="flow-row net"><span className="flow-label">{sum.occasionalCount > 0 ? 'Netto sedi di lavoro' : 'Ti resta (netto)'}</span><span className="flow-value green">€{fmt(sum.net)}</span></div>
+          {sum.occasionalCount > 0 && (
+            <div className="flow-row net"><span className="flow-label"><b>Netto totale (sedi + prestazioni)</b></span><span className="flow-value green"><b>€{fmt(sum.netTotal)}</b></span></div>
+          )}
         </div>
         <p className="fiscal-footnote">Stima, non sostituisce il calcolo del commercialista.</p>
       </div>

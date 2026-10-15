@@ -32,7 +32,7 @@ function mergeTombstoneMap(localT = {}, remoteT = {}) {
   return out;
 }
 
-const COLLECTIONS = ['sites', 'shifts', 'favorites', 'expenses'];
+const COLLECTIONS = ['sites', 'shifts', 'favorites', 'expenses', 'occasionalWork'];
 
 function mergeTombstones(localTomb = {}, remoteTomb = {}) {
   const out = {};

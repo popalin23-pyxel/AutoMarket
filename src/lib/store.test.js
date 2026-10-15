@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   removeShift, addShift, restoreShift, removeSite, removeFavorite, removeExpense,
+  addOccasionalWork, removeOccasionalWork,
   importBackupFromText,
 } from './store.js';
 
@@ -9,10 +10,11 @@ const baseState = () => ({
   shifts: [{ id: 1, date: '2026-09-01', siteId: 1, start: '06:00', end: '14:00', note: '' }],
   favorites: [{ id: 1, siteId: 1, start: '06:00', end: '14:00', label: 'CDS mattina' }],
   expenses: [{ id: 1, date: '2026-09-01', category: 'altro', amount: 50, note: '' }],
+  occasionalWork: [{ id: 1, date: '2026-09-01', description: 'Consulenza', grossAmount: 200, note: '' }],
   lastSiteId: 1,
-  settings: { taxRatePercent: 15, contributionsPercent: 10, taxPercent: 25, rivalsaPercent: 4, monthlyGoal: 4000 },
-  seq: { site: 2, shift: 2, favorite: 2, expense: 2 },
-  tombstones: { sites: {}, shifts: {}, favorites: {}, expenses: {} },
+  settings: { taxRatePercent: 15, contributionsPercent: 10, taxPercent: 25, rivalsaPercent: 4, monthlyGoal: 4000, occasionalTaxRatePercent: 23 },
+  seq: { site: 2, shift: 2, favorite: 2, expense: 2, occasionalWork: 2 },
+  tombstones: { sites: {}, shifts: {}, favorites: {}, expenses: {}, occasionalWork: {} },
 });
 
 describe('eliminazioni: tracciano un tombstone (per la sync multi-dispositivo)', () => {
@@ -31,10 +33,11 @@ describe('eliminazioni: tracciano un tombstone (per la sync multi-dispositivo)',
     expect(restored.tombstones.shifts[1]).toBeUndefined();
   });
 
-  it('eliminare una sede / scorciatoia / spesa registra il tombstone nella collezione giusta', () => {
+  it('eliminare una sede / scorciatoia / spesa / prestazione occasionale registra il tombstone nella collezione giusta', () => {
     expect(removeSite(baseState(), 1).tombstones.sites[1]).toBeTypeOf('number');
     expect(removeFavorite(baseState(), 1).tombstones.favorites[1]).toBeTypeOf('number');
     expect(removeExpense(baseState(), 1).tombstones.expenses[1]).toBeTypeOf('number');
+    expect(removeOccasionalWork(baseState(), 1).tombstones.occasionalWork[1]).toBeTypeOf('number');
   });
 
   it('eliminare un turno non va in errore anche se lo stato arriva senza tombstones (es. dati cloud salvati da una versione più vecchia dell\'app)', () => {
@@ -53,6 +56,15 @@ describe('eliminazioni: tracciano un tombstone (per la sync multi-dispositivo)',
   });
 });
 
+describe('prestazioni occasionali', () => {
+  it('addOccasionalWork aggiunge una voce con id progressivo, senza sede/orario', () => {
+    const next = addOccasionalWork(baseState(), { date: '2026-09-15', description: 'Corso formazione', grossAmount: 150, note: '' });
+    expect(next.occasionalWork).toHaveLength(2);
+    expect(next.occasionalWork[1]).toMatchObject({ id: 2, description: 'Corso formazione', grossAmount: 150 });
+    expect(next.seq.occasionalWork).toBe(3);
+  });
+});
+
 describe('importBackupFromText: ripristino da file di backup', () => {
   const wrap = (state) => JSON.stringify({ app: 'turnio', version: 1, exportedAt: new Date().toISOString(), state });
 
@@ -63,6 +75,7 @@ describe('importBackupFromText: ripristino da file di backup', () => {
     expect(imported.shifts).toHaveLength(1);
     expect(imported.expenses).toHaveLength(1);
     expect(imported.favorites).toHaveLength(1);
+    expect(imported.occasionalWork).toHaveLength(1);
     expect(imported.settings.monthlyGoal).toBe(4000);
     expect(imported.tombstones).toEqual(state.tombstones);
   });
@@ -87,7 +100,8 @@ describe('importBackupFromText: ripristino da file di backup', () => {
     const imported = importBackupFromText(wrap(oldState));
     expect(imported.favorites).toEqual([]);
     expect(imported.expenses).toEqual([]);
-    expect(imported.tombstones).toEqual({ sites: {}, shifts: {}, favorites: {}, expenses: {} });
+    expect(imported.occasionalWork).toEqual([]);
+    expect(imported.tombstones).toEqual({ sites: {}, shifts: {}, favorites: {}, expenses: {}, occasionalWork: {} });
     expect(imported.settings.taxRatePercent).toBe(25); // compatibilità: l'aliquota unica diventa taxRatePercent
     expect(imported.settings.contributionsPercent).toBe(0);
   });

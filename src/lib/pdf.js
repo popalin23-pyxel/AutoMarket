@@ -84,7 +84,19 @@ export function exportMonthPdf(sum, opts = {}) {
   y += 2;
   doc.setDrawColor(200, 208, 216);
   doc.line(marginX, y - 5, 210 - marginX, y - 5);
-  totalRow('Netto stimato', `€${fmt(sum.net)}`, { bold: true, color: [5, 150, 105] });
+  totalRow(sum.occasionalCount > 0 ? 'Netto sedi di lavoro' : 'Netto stimato', `€${fmt(sum.net)}`,
+    { bold: sum.occasionalCount === 0, color: [5, 150, 105] });
+
+  if (sum.occasionalCount > 0) {
+    y += 4;
+    totalRow('Prestazioni occasionali (lordo)', `€${fmt(sum.occasionalGross)}`);
+    totalRow(`Tasse stimate (${sum.occasionalTaxPercent}%)`, `−€${fmt(sum.occasionalTaxes)}`, { color: [225, 29, 72] });
+    totalRow('Netto prestazioni occasionali', `€${fmt(sum.occasionalNet)}`);
+    y += 2;
+    doc.setDrawColor(200, 208, 216);
+    doc.line(marginX, y - 5, 210 - marginX, y - 5);
+    totalRow('Netto totale (sedi + prestazioni)', `€${fmt(sum.netTotal)}`, { bold: true, color: [5, 150, 105] });
+  }
 
   // ── Nota fiscale + piè di pagina ──────────────────────────
   y += 14;

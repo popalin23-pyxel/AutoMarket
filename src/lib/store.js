@@ -11,11 +11,14 @@ function freshState() {
     shifts: [],  // [{ id, date: 'YYYY-MM-DD', siteId, start: 'HH:MM', end: 'HH:MM', note }]
     favorites: [], // [{ id, siteId, start: 'HH:MM', end: 'HH:MM', label }] — scorciatoie turno
     expenses: [], // [{ id, date: 'YYYY-MM-DD', category, amount, note }]
+    // prestazioni occasionali: reddito diverso dal lavoro nelle sedi (niente sede/orario,
+    // importo libero), tassato separatamente — vedi aggregateOccasional in calc.js
+    occasionalWork: [], // [{ id, date: 'YYYY-MM-DD', description, grossAmount, note }]
     lastSiteId: null, // ultima sede usata, per pre-selezionarla nel prossimo turno
     settings: { ...DEFAULT_SETTINGS },
-    seq: { site: 1, shift: 1, favorite: 1, expense: 1 },
+    seq: { site: 1, shift: 1, favorite: 1, expense: 1, occasionalWork: 1 },
     // id eliminati (con timestamp): evita che riappaiano dopo un'unione multi-dispositivo (vedi mergeState.js)
-    tombstones: { sites: {}, shifts: {}, favorites: {}, expenses: {} },
+    tombstones: { sites: {}, shifts: {}, favorites: {}, expenses: {}, occasionalWork: {} },
   };
 }
 
@@ -51,11 +54,12 @@ export function sanitizeState(parsed) {
     shifts: Array.isArray(parsed.shifts) ? parsed.shifts : [],
     favorites: Array.isArray(parsed.favorites) ? parsed.favorites : [],
     expenses: Array.isArray(parsed.expenses) ? parsed.expenses : [],
+    occasionalWork: Array.isArray(parsed.occasionalWork) ? parsed.occasionalWork : [],
     lastSiteId: parsed.lastSiteId ?? null,
     settings: sanitizeSettings(parsed.settings),
-    seq: { site: 1, shift: 1, favorite: 1, expense: 1, ...(parsed.seq ?? {}) },
+    seq: { site: 1, shift: 1, favorite: 1, expense: 1, occasionalWork: 1, ...(parsed.seq ?? {}) },
     tombstones: {
-      sites: {}, shifts: {}, favorites: {}, expenses: {},
+      sites: {}, shifts: {}, favorites: {}, expenses: {}, occasionalWork: {},
       ...(parsed.tombstones ?? {}),
     },
   };
@@ -166,6 +170,26 @@ export function addExpense(state, expense) {
 
 export function removeExpense(state, id) {
   return removeWithTombstone(state, 'expenses', id);
+}
+
+// ── Prestazioni occasionali ──────────────────────────────────────────
+// Reddito diverso dal lavoro nelle sedi: niente sede/orario, importo libero
+// inserito al momento, tassato separatamente (vedi calc.js).
+export function addOccasionalWork(state, entry) {
+  const id = state.seq.occasionalWork;
+  return {
+    ...state,
+    occasionalWork: [...state.occasionalWork, { id, ...entry }],
+    seq: { ...state.seq, occasionalWork: id + 1 },
+  };
+}
+
+export function updateOccasionalWork(state, id, patch) {
+  return { ...state, occasionalWork: state.occasionalWork.map((o) => (o.id === id ? { ...o, ...patch } : o)) };
+}
+
+export function removeOccasionalWork(state, id) {
+  return removeWithTombstone(state, 'occasionalWork', id);
 }
 
 // ── Impostazioni ─────────────────────────────────────────────────────

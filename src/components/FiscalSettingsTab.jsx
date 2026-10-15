@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { computeMonthSummary, todayISO } from '../lib/calc.js';
-import { updateFiscalSettings } from '../lib/store.js';
+import { updateFiscalSettings, updateSettings } from '../lib/store.js';
 import NumberInput from './NumberInput.jsx';
 import Icon from './icons/Icon.jsx';
 
@@ -25,6 +25,13 @@ export default function FiscalSettingsTab({ state, setState, onBack }) {
   );
 
   const patch = (p) => setState((s) => updateFiscalSettings(s, p));
+  const patchSettings = (p) => setState((s) => updateSettings(s, p));
+
+  const occasionalYearGross = useMemo(
+    () => state.occasionalWork.filter((o) => (o.date || '').slice(0, 4) === String(y))
+      .reduce((a, o) => a + (Number(o.grossAmount) || 0), 0),
+    [state.occasionalWork, y],
+  );
 
   return (
     <div className="panel">
@@ -99,6 +106,26 @@ export default function FiscalSettingsTab({ state, setState, onBack }) {
           <div className="hint hint-info" style={{ marginBottom: 0 }}>
             Totale accantonato sul fatturato: <b>{(Number(settings.taxRatePercent) || 0) + (Number(settings.contributionsPercent) || 0)}%</b>.
             Ogni sede può avere una rivalsa diversa da quella di default (scheda "Sedi").
+          </div>
+
+          <h2 className="panel-title" style={{ marginTop: 22 }}>Prestazioni occasionali</h2>
+          <p className="panel-desc">
+            Reddito diverso dal lavoro nelle sedi (es. consulenze, corsi) — niente rivalsa, e si tassa secondo
+            gli scaglioni IRPEF ordinari invece dell'aliquota del regime forfettario, che vale solo per il
+            fatturato da partita IVA.
+          </p>
+          <div className="field" style={{ marginBottom: 14 }}>
+            <label className="field-label">Aliquota stimata da accantonare (%)</label>
+            <NumberInput value={settings.occasionalTaxRatePercent} onChange={(v) => patchSettings({ occasionalTaxRatePercent: v })} min={0} max={100} />
+          </div>
+          <div className="hint hint-info" style={{ marginBottom: 0 }}>
+            È solo una stima (23% = primo scaglione IRPEF): l'aliquota reale dipende dal tuo reddito complessivo
+            e si calcola in dichiarazione dei redditi — verificala col commercialista.
+            {occasionalYearGross > 0 && (
+              <> Nel {y} hai dichiarato finora <b>€{fmt(occasionalYearGross)}</b> di prestazioni occasionali
+                {occasionalYearGross > 5000 ? ', sopra la soglia di €5.000: oltre questa cifra potrebbe essere dovuto il contributo INPS Gestione Separata.' : ' (soglia €5.000/anno oltre la quale potrebbe servire il contributo INPS Gestione Separata).'}
+              </>
+            )}
           </div>
         </>
       )}
