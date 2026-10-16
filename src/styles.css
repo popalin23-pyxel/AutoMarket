@@ -634,7 +634,7 @@ td .site-picker { flex-wrap: nowrap; }
   color: var(--accent-text); font-size: 13px; font-weight: 600; text-align: left;
 }
 
-/* ── Anteprima mese per sede (Studio → Sedi & Paghe) ─────────── */
+/* ── Anteprima mese per sede (Studio → Sedi) ─────────── */
 .site-bars { display: flex; flex-direction: column; gap: 8px; }
 .site-bar-row { display: grid; grid-template-columns: minmax(0, 7rem) 1fr auto; align-items: center; gap: 10px; font-size: 13px; }
 .site-bar-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
@@ -785,8 +785,8 @@ code { background: rgba(var(--ink), 0.08); padding: 1px 5px; border-radius: 4px;
 }
 .month-hero-net-caption { font-size: 12px; color: var(--text-mut); margin: 2px 0 16px; }
 .month-hero-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-.mh-stat { display: flex; flex-direction: column; gap: 2px; padding: 10px; border-radius: var(--radius-sm); border: 1px solid var(--border); min-width: 0; overflow: hidden; }
-.mh-val { font-size: 15px; font-weight: 700; font-family: var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mh-stat { display: flex; flex-direction: column; gap: 2px; padding: 10px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border); min-width: 0; overflow: hidden; }
+.mh-val { font-size: 14px; font-weight: 700; font-family: var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mh-lbl { font-size: 10.5px; color: var(--text-mut); }
 .month-hero-goal-block { margin-top: 16px; }
 .month-hero-goal-text { font-size: 12.5px; color: var(--text-dim); margin-top: 8px; }
@@ -819,10 +819,11 @@ code { background: rgba(var(--ink), 0.08); padding: 1px 5px; border-radius: 4px;
 .goal-bar-fill { height: 100%; border-radius: 5px; background: var(--accent); transition: width 0.5s ease; }
 .goal-bar-fill.reached { background: var(--green); }
 
-.week-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 14px 18px; }
-.week-row-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text-mut); margin-right: auto; }
-.week-row-val { font-size: 14px; font-weight: 700; }
-.week-row-val.gold { color: var(--text); }
+.week-row { display: flex; flex-direction: column; gap: 8px; padding: 14px 18px; }
+.week-row-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text-mut); }
+.week-row-vals { display: flex; align-items: center; gap: 14px; white-space: nowrap; }
+.week-row-val { font-size: 15px; font-weight: 700; }
+.week-row-delta { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-mut); margin-left: auto; }
 
 .home-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 18px; }
 .home-actions .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 14px; }

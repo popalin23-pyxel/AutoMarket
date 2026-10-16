@@ -9,7 +9,7 @@ import NumberInput from './NumberInput.jsx';
 
 const SUB_TABS = [
   { id: 'anagrafica', label: 'Anagrafica' },
-  { id: 'sites', label: 'Sedi & Paghe' },
+  { id: 'sites', label: 'Sedi' },
   { id: 'fiscal', label: 'Fiscali' },
   { id: 'goal', label: 'Obiettivo' },
 ];

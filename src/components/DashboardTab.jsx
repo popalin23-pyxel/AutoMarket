@@ -11,6 +11,7 @@ import BackupReminder from './BackupReminder.jsx';
 
 const fmt = (n) => n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const fmt0 = (n) => n.toLocaleString('it-IT', { maximumFractionDigits: 1 });
+const fmtInt = (n) => n.toLocaleString('it-IT', { maximumFractionDigits: 0 });
 
 function greetingWord() {
   const h = new Date().getHours();
@@ -31,12 +32,15 @@ function siteFor(sites, siteId) {
 
 // Primi passi per chi inizia (es. un nuovo cliente): sparisce da solo appena completati.
 function SetupCard({ state, onNavigate }) {
+  const st = state.settings;
+  const hasData = state.shifts.length > 0 || state.occasionalWork.length > 0;
   const steps = [
-    { done: !!(state.settings.displayName || '').trim(), label: 'Completa la tua anagrafica', go: () => onNavigate('studio', 'anagrafica') },
+    { done: !!((st.displayName || '').trim() || st.professionalRole || (st.vatNumber || '').trim()), label: 'Completa la tua anagrafica', go: () => onNavigate('studio', 'anagrafica') },
     { done: state.sites.length > 0, label: 'Aggiungi la prima sede con la paga oraria', go: () => onNavigate('studio', 'sites') },
-    { done: state.shifts.length > 0, label: 'Registra il primo turno', go: () => onNavigate('calendar') },
+    { done: hasData, label: 'Registra il primo turno', go: () => onNavigate('calendar') },
   ];
-  if (steps.every((s) => s.done)) return null;
+  // serve solo per iniziare: sparisce appena c'è il primo turno o la prima prestazione
+  if (hasData || steps.every((s) => s.done)) return null;
   return (
     <div className="panel setup-card">
       <h2 className="panel-title">Primi passi</h2>
@@ -75,7 +79,7 @@ function MonthCard({ month, monthLabel, prevMonthLabel, goal }) {
 
       <div className="month-hero-grid">
         <div className="mh-stat">
-          <span className="mh-val">€<CountUpText value={cur.totalInvoice} format={fmt0} /></span>
+          <span className="mh-val">€<CountUpText value={cur.totalInvoice} format={fmtInt} /></span>
           <span className="mh-lbl">fatturato</span>
         </div>
         <div className="mh-stat">
@@ -185,14 +189,16 @@ function WeekRow({ week }) {
   return (
     <div className="panel week-row">
       <span className="week-row-label">Questa settimana</span>
-      <span className="week-row-val mono">{fmt0(week.current.totalHours)}h</span>
-      <span className="week-row-val mono gold">€{fmt(week.current.netTotal)}</span>
-      <DeltaBadge pct={week.deltaNetPct} />
+      <span className="week-row-vals">
+        <span className="week-row-val mono">{fmt0(week.current.totalHours)}h</span>
+        <span className="week-row-val mono">€{fmt(week.current.netTotal)}</span>
+        <span className="week-row-delta"><DeltaBadge pct={week.deltaNetPct} /> vs sett. scorsa</span>
+      </span>
     </div>
   );
 }
 
-export default function DashboardTab({ state, userEmail, isAdmin, onNavigate }) {
+export default function DashboardTab({ state, userEmail, isAdmin, onNavigate, onOpenCurrentMonth }) {
   const today = todayISO();
   const y = Number(today.slice(0, 4));
   const m = Number(today.slice(5, 7));
@@ -226,16 +232,18 @@ export default function DashboardTab({ state, userEmail, isAdmin, onNavigate }) 
           goal={Number(state.settings.monthlyGoal) || 0} />
       )}
 
-      {state.sites.length > 0 && <TodayCard state={state} today={today} />}
+      {(state.sites.length > 0 || hasAnyData) && <TodayCard state={state} today={today} />}
 
       {hasAnyData && <WeekRow week={week} />}
 
-      {state.sites.length > 0 && (
+      {(state.sites.length > 0 || hasAnyData) && (
         <div className="home-actions">
-          <button className="btn btn-primary" onClick={() => onNavigate('calendar')}>
-            <Icon name="calendar" size={16} /> Registra un turno
-          </button>
-          <button className="btn" onClick={() => onNavigate('earnings', 'summary')}>
+          {state.sites.length > 0 && (
+            <button className="btn btn-primary" onClick={() => onOpenCurrentMonth('calendar')}>
+              <Icon name="calendar" size={16} /> Registra un turno
+            </button>
+          )}
+          <button className="btn" onClick={() => onOpenCurrentMonth('earnings', 'summary')}>
             <Icon name="euro" size={16} /> Riepilogo del mese
           </button>
           {isAdmin && (

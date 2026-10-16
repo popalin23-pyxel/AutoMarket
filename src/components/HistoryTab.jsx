@@ -16,8 +16,10 @@ export default function HistoryTab({ state, year, yearSelect, onOpenMonth }) {
   );
   // media sui soli mesi con almeno un turno registrato: corretta anche ad
   // anno in corso, senza dividere per 12 se non hai ancora lavorato tutto l'anno
-  const avgGrossPerMonth = y.months.length > 0 ? y.totalInvoice / y.months.length : 0;
-  const avgNetPerMonth = y.months.length > 0 ? y.totalNet / y.months.length : 0;
+  // (solo mesi con turni: fatturato e netto qui sono quelli delle sedi; le prestazioni hanno la loro voce)
+  const workedMonths = y.months.filter((mm) => mm.shiftCount > 0).length;
+  const avgGrossPerMonth = workedMonths > 0 ? y.totalInvoice / workedMonths : 0;
+  const avgNetPerMonth = workedMonths > 0 ? y.totalNet / workedMonths : 0;
 
   return (
     <>
@@ -45,9 +47,9 @@ export default function HistoryTab({ state, year, yearSelect, onOpenMonth }) {
             Netto totale dell'anno, sedi + prestazioni occasionali: <b>€{fmt(y.totalNetAll)}</b>.
           </div>
         )}
-        {y.months.length > 0 && (
+        {workedMonths > 0 && (
           <div className="fiscal-footnote" style={{ marginTop: 12 }}>
-            Le medie sono calcolate sui {y.months.length} {y.months.length === 1 ? 'mese lavorato' : 'mesi lavorati'} di
+            Le medie sono calcolate sui {workedMonths} {workedMonths === 1 ? 'mese lavorato' : 'mesi lavorati'} di
             quest'anno, non su 12 — così sono corrette anche ad anno non ancora finito.
           </div>
         )}

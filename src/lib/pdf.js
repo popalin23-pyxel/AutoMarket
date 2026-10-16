@@ -2,8 +2,10 @@
 
 import { jsPDF } from 'jspdf';
 import { MONTHS_IT } from './defaults.js';
+import { pdfSafe } from './pdfText.js';
 
 const fmt = (n) => (n ?? 0).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
 
 export function exportMonthPdf(sum, opts = {}) {
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
@@ -22,7 +24,7 @@ export function exportMonthPdf(sum, opts = {}) {
   (opts.headerLines || []).slice(0, 3).forEach((line, i) => {
     doc.setFont('helvetica', i === 0 ? 'bold' : 'normal');
     doc.setTextColor(...(i === 0 ? [15, 42, 61] : [120, 130, 140]));
-    doc.text(String(line), 210 - marginX, y + i * 5, { align: 'right' });
+    doc.text(pdfSafe(line), 210 - marginX, y + i * 5, { align: 'right' });
   });
   doc.setFont('helvetica', 'normal');
 
@@ -59,7 +61,7 @@ export function exportMonthPdf(sum, opts = {}) {
   doc.setFontSize(10);
   doc.setTextColor(30, 40, 50);
   for (const p of sum.perSite) {
-    doc.text(String(p.name), cols[0].x, y);
+    doc.text(pdfSafe(p.name), cols[0].x, y);
     doc.text(fmt(p.hours), cols[1].x + cols[1].w, y, { align: 'right' });
     doc.text(p.rate ? fmt(p.rate) : '–', cols[2].x + cols[2].w, y, { align: 'right' });
     doc.text(`€${fmt(p.revenue)}`, cols[3].x + cols[3].w, y, { align: 'right' });

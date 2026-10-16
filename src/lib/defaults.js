@@ -7,7 +7,7 @@ export const DEFAULT_SETTINGS = {
   fiscalRegime: 'forfettario', // solo informativo, non influisce sul calcolo
   rivalsaPercent: 4,   // maggiorazione di default in fattura (es. rivalsa INPS/ENPAPI); modificabile per sede
   displayName: '',     // nome e cognome (Anagrafica): saluto in Home e intestazione dei report
-  professionalRole: '',      // 'infermiere' | 'medico' | 'altro' | '' (Anagrafica)
+  professionalRole: '',      // id da PROFESSIONAL_ROLES o '' (Anagrafica)
   professionalRoleOther: '', // testo libero se professionalRole === 'altro' (es. "Fisioterapista")
   vatNumber: '',             // P.IVA o n. iscrizione all'albo, facoltativo (intestazione report)
   monthlyGoal: 0,      // obiettivo di netto mensile (€); 0 = nessun obiettivo impostato
@@ -17,10 +17,13 @@ export const DEFAULT_SETTINGS = {
   occasionalTaxRatePercent: 23,
 };
 
+// La forma (maschile/femminile) la sceglie la persona: compare così com'è nel saluto e nei report.
 export const PROFESSIONAL_ROLES = [
-  { id: 'infermiere', label: 'Infermiere/a' },
+  { id: 'infermiere', label: 'Infermiere' },
+  { id: 'infermiera', label: 'Infermiera' },
   { id: 'medico', label: 'Medico' },
-  { id: 'altro', label: 'Altro' },
+  { id: 'medica', label: 'Medica' },
+  { id: 'altro', label: 'Altro (specifica)' },
 ];
 
 // Etichetta leggibile del ruolo (es. per intestazioni e saluto); '' se non impostato.

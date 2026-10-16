@@ -54,8 +54,8 @@ function Shell() {
   const { user, isAdmin, isApproved, signOut } = useAuth();
   const [state, setState] = useState(loadState);
   const [active, setActive] = useState('dashboard');
-  // sotto-scheda con cui aprire Guadagni/Analisi/Studio (es. un collegamento verso "Studio → Sedi & Paghe");
-  // la nav in basso riapre sempre la prima sotto-scheda
+  // sotto-scheda con cui aprire Guadagni/Analisi/Studio da un collegamento (es. "Studio → Sedi").
+  // Fa parte della key del contenitore: cambiarla rimonta la scheda sulla sotto-scheda richiesta.
   const [subTab, setSubTab] = useState(null);
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
@@ -140,8 +140,19 @@ function Shell() {
     return () => clearTimeout(saveTimer.current);
   }, [state, user, isApproved]);
 
-  const navigate = (tab, sub = null) => { setSubTab(sub); setActive(tab); window.scrollTo(0, 0); };
+  const navigate = (tab, sub = null) => {
+    // ritoccare la scheda già aperta (senza sotto-scheda esplicita) non la rimonta:
+    // porta solo in cima, senza perdere moduli non ancora salvati
+    if (!(tab === active && sub == null)) { setSubTab(sub); setActive(tab); }
+    window.scrollTo(0, 0);
+  };
   const openMonthSummary = (y, m) => { setYear(y); setMonth(m); navigate('earnings', 'summary'); };
+  // azioni della Home: aprono sempre il mese corrente, non l'ultimo mese consultato
+  const openCurrentMonth = (tab, sub = null) => {
+    const d = new Date();
+    setYear(d.getFullYear()); setMonth(d.getMonth() + 1);
+    navigate(tab, sub);
+  };
 
   const doLogout = async () => {
     await signOut();
@@ -197,7 +208,8 @@ function Shell() {
       <div className="app-body">
         <div key={`${active}:${subTab ?? ''}`} className="tab-fade">
           {active === 'dashboard' && (
-            <DashboardTab state={state} userEmail={user?.email} isAdmin={isAdmin} onNavigate={navigate} />
+            <DashboardTab state={state} userEmail={user?.email} isAdmin={isAdmin} onNavigate={navigate}
+              onOpenCurrentMonth={openCurrentMonth} />
           )}
           {active === 'calendar' && (
             <ShiftsTab state={state} setState={setState} year={year} month={month} setYear={setYear} setMonth={setMonth}
@@ -205,7 +217,7 @@ function Shell() {
           )}
           {active === 'earnings' && (
             <GuadagniTab state={state} setState={setState} year={year} month={month} setYear={setYear} setMonth={setMonth}
-              initialSub={subTab ?? undefined} />
+              initialSub={subTab ?? undefined} onNavigate={navigate} />
           )}
           {active === 'analisi' && (
             <AnalisiTab state={state} initialSub={subTab ?? undefined} onOpenMonth={openMonthSummary} />

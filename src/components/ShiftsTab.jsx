@@ -130,8 +130,8 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
   const weekStart = startOfWeek(today);
   const weekEnd = endOfWeek(today);
   const weekSummary = useMemo(
-    () => computeWeekSummary(state.shifts, state.sites, state.settings, today),
-    [state.shifts, state.sites, state.settings, today],
+    () => computeWeekSummary(state.shifts, state.sites, state.settings, today, state.occasionalWork),
+    [state.shifts, state.sites, state.settings, today, state.occasionalWork],
   );
   const thisWeekShifts = useMemo(() => shiftsInRange(state.shifts, weekStart, weekEnd), [state.shifts, weekStart, weekEnd]);
   const weekLabel = useMemo(() => {
@@ -273,7 +273,7 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
             Prima di registrare i turni, aggiungi almeno una sede di lavoro con la sua paga oraria.
             {onNavigate && (
               <div><button className="link-btn" style={{ marginTop: 8 }} onClick={() => onNavigate('studio', 'sites')}>
-                Aggiungi una sede in Studio → Sedi & Paghe →
+                Aggiungi una sede in Studio → Sedi →
               </button></div>
             )}
           </div>
@@ -312,7 +312,7 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
           <span className="week-total-label">Questa settimana ({weekLabel})</span>
           <div className="week-total-row">
             <span><b>{fmt(weekSummary.totalHours)}h</b> lavorate</span>
-            <span>€<b>{fmt(weekSummary.net)}</b> netto stimato</span>
+            <span>€<b>{fmt(weekSummary.netTotal)}</b> netto stimato</span>
           </div>
         </div>
       )}

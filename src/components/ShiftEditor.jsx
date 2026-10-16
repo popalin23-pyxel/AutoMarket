@@ -65,7 +65,7 @@ export default function ShiftEditor({
         </div>
 
         {sites.length === 0 ? (
-          <p className="hint hint-warn">Aggiungi prima una sede in Studio → Sedi &amp; Paghe.</p>
+          <p className="hint hint-warn">Aggiungi prima una sede in Studio → Sedi.</p>
         ) : (
           <>
             {favorites.length > 0 && (

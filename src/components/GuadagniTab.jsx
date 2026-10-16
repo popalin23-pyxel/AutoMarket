@@ -11,7 +11,7 @@ const SUB_TABS = [
   { id: 'expenses', label: 'Spese' },
 ];
 
-export default function GuadagniTab({ state, setState, year, month, setYear, setMonth, initialSub = 'summary' }) {
+export default function GuadagniTab({ state, setState, year, month, setYear, setMonth, initialSub = 'summary', onNavigate }) {
   const [sub, setSub] = useState(initialSub);
 
   return (
@@ -27,7 +27,7 @@ export default function GuadagniTab({ state, setState, year, month, setYear, set
       {sub === 'summary' && (
         <SummaryTab state={state} year={year} month={month} setYear={setYear} setMonth={setMonth} />
       )}
-      {sub === 'sim' && <EarningsSimulator state={state} />}
+      {sub === 'sim' && <EarningsSimulator state={state} onNavigate={onNavigate} />}
       {sub === 'expenses' && <ExpensesTab state={state} setState={setState} />}
     </>
   );

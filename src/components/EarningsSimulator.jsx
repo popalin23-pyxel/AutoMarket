@@ -5,7 +5,7 @@ import EmptyState from './EmptyState.jsx';
 const fmt = (n) => n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const round2 = (n) => Math.round((n + Number.EPSILON) * 100) / 100;
 
-export default function EarningsSimulator({ state }) {
+export default function EarningsSimulator({ state, onNavigate }) {
   const { sites, settings } = state;
   const [hoursPerShift, setHoursPerShift] = useState(8);
   const [counts, setCounts] = useState({}); // { [siteId]: number }
@@ -40,6 +40,9 @@ export default function EarningsSimulator({ state }) {
       <div className="panel">
         <h2 className="panel-title">Simulatore guadagni</h2>
         <EmptyState icon="euro" title="Aggiungi prima una sede" hint="Il simulatore usa la paga oraria delle tue sedi per stimare i guadagni." />
+        {onNavigate && (
+          <button className="link-btn" onClick={() => onNavigate('studio', 'sites')}>Aggiungi una sede in Studio → Sedi →</button>
+        )}
       </div>
     );
   }

@@ -19,15 +19,13 @@ export default function AnagraficaTab({ state, setState }) {
           onChange={(e) => patch({ displayName: e.target.value })} style={{ width: '100%', minWidth: 0 }} />
       </div>
 
-      <div className="field-label" style={{ marginBottom: 8 }}>Ruolo professionale</div>
-      <div className="theme-switch" style={{ marginBottom: settings.professionalRole === 'altro' ? 10 : 14 }}>
-        {PROFESSIONAL_ROLES.map((r) => (
-          <button key={r.id} type="button"
-            className={`theme-opt ${settings.professionalRole === r.id ? 'active' : ''}`}
-            onClick={() => patch({ professionalRole: settings.professionalRole === r.id ? '' : r.id })}>
-            {r.label}
-          </button>
-        ))}
+      <div className="field" style={{ marginBottom: settings.professionalRole === 'altro' ? 10 : 14 }}>
+        <label className="field-label" htmlFor="anag-role">Ruolo professionale</label>
+        <select id="anag-role" value={settings.professionalRole}
+          onChange={(e) => patch({ professionalRole: e.target.value })} style={{ width: '100%', minWidth: 0 }}>
+          <option value="">— Seleziona —</option>
+          {PROFESSIONAL_ROLES.map((r) => <option key={r.id} value={r.id}>{r.label}</option>)}
+        </select>
       </div>
       {settings.professionalRole === 'altro' && (
         <div className="field" style={{ marginBottom: 14 }}>

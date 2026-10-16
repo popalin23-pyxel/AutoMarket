@@ -89,7 +89,7 @@ export default function SummaryTab({ state, year, month, setYear, setMonth }) {
           <div className="ring-row">
             <RingChart
               segments={[{ value: sum.net, color: 'var(--green)' }, { value: sum.taxes, color: 'var(--red)' }]}
-              centerValue={`€${Math.round(animatedNet)}`} centerLabel="netto" />
+              centerValue={`€${Math.round(animatedNet)}`} centerLabel={sum.occasionalCount > 0 ? 'netto sedi' : 'netto'} />
             <div className="ring-legend">
               <div className="ring-legend-item"><span className="dot" style={{ background: 'var(--green)' }} /> Netto {sum.totalInvoice ? Math.round((sum.net / sum.totalInvoice) * 100) : 0}%</div>
               <div className="ring-legend-item"><span className="dot" style={{ background: 'var(--red)' }} /> Tasse {sum.totalInvoice ? Math.round((sum.taxes / sum.totalInvoice) * 100) : 0}%</div>
@@ -99,7 +99,7 @@ export default function SummaryTab({ state, year, month, setYear, setMonth }) {
         <div className="stats-row">
           <div className="stat"><div className="stat-label">Ore totali</div><div className="stat-value"><CountUpText value={sum.totalHours} format={fmt} /></div></div>
           <div className="stat"><div className="stat-label">Fatturato</div><div className="stat-value">€<CountUpText value={sum.totalInvoice} format={fmt} /></div></div>
-          <div className="stat"><div className="stat-label">Netto stimato</div><div className="stat-value gold">€<CountUpText value={sum.net} format={fmt} /></div></div>
+          <div className="stat"><div className="stat-label">{sum.occasionalCount > 0 ? 'Netto totale' : 'Netto stimato'}</div><div className="stat-value gold">€<CountUpText value={sum.netTotal} format={fmt} /></div></div>
         </div>
 
         <div className="summary-flow">

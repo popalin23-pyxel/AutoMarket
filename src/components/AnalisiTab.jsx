@@ -99,7 +99,7 @@ export default function AnalisiTab({ state, initialSub = 'trend', onOpenMonth })
     set.add(new Date().getFullYear());
     return [...set].sort((a, b) => b - a);
   }, [state.shifts, state.occasionalWork]);
-  const [year, setYear] = useState(years[0]);
+  const [year, setYear] = useState(() => new Date().getFullYear());
 
   const hasAnyData = state.shifts.length > 0 || state.occasionalWork.length > 0;
   const yearSelect = (

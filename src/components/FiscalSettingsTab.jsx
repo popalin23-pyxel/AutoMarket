@@ -104,7 +104,7 @@ export default function FiscalSettingsTab({ state, setState }) {
 
           <div className="hint hint-info" style={{ marginBottom: 0 }}>
             Totale accantonato sul fatturato: <b>{(Number(settings.taxRatePercent) || 0) + (Number(settings.contributionsPercent) || 0)}%</b>.
-            Ogni sede può avere una rivalsa diversa da quella di default (in "Sedi & Paghe").
+            Ogni sede può avere una rivalsa diversa da quella di default (in Studio → Sedi).
           </div>
 
           <h2 className="panel-title" style={{ marginTop: 22 }}>Prestazioni occasionali</h2>
