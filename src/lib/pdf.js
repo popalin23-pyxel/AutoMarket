@@ -19,7 +19,12 @@ export function exportMonthPdf(sum, opts = {}) {
   doc.setTextColor(120, 130, 140);
   doc.setFont('helvetica', 'normal');
   doc.text('Riepilogo turni e compensi', marginX, y + 6);
-  if (opts.userLabel) doc.text(opts.userLabel, 210 - marginX, y, { align: 'right' });
+  (opts.headerLines || []).slice(0, 3).forEach((line, i) => {
+    doc.setFont('helvetica', i === 0 ? 'bold' : 'normal');
+    doc.setTextColor(...(i === 0 ? [15, 42, 61] : [120, 130, 140]));
+    doc.text(String(line), 210 - marginX, y + i * 5, { align: 'right' });
+  });
+  doc.setFont('helvetica', 'normal');
 
   y += 16;
   doc.setDrawColor(220, 226, 232);

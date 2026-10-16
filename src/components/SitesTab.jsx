@@ -37,7 +37,7 @@ export default function SitesTab({ state, setState }) {
       <h2 className="panel-title">Sedi di lavoro</h2>
       <p className="panel-desc">
         Aggiungi ogni posto dove lavori con la sua paga oraria. La rivalsa lasciala vuota per usare
-        quella di default (impostazioni); impostala solo se questa sede fa eccezione.
+        quella di default (in Fiscali); impostala solo se questa sede fa eccezione.
       </p>
 
       <div className="form-row">

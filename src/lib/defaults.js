@@ -6,13 +6,38 @@ export const DEFAULT_SETTINGS = {
   contributionsPercent: 0, // contributi previdenziali (es. ENPAPI)
   fiscalRegime: 'forfettario', // solo informativo, non influisce sul calcolo
   rivalsaPercent: 4,   // maggiorazione di default in fattura (es. rivalsa INPS/ENPAPI); modificabile per sede
-  displayName: '',     // nome mostrato nel saluto della Home
+  displayName: '',     // nome e cognome (Anagrafica): saluto in Home e intestazione dei report
+  professionalRole: '',      // 'infermiere' | 'medico' | 'altro' | '' (Anagrafica)
+  professionalRoleOther: '', // testo libero se professionalRole === 'altro' (es. "Fisioterapista")
+  vatNumber: '',             // P.IVA o n. iscrizione all'albo, facoltativo (intestazione report)
   monthlyGoal: 0,      // obiettivo di netto mensile (€); 0 = nessun obiettivo impostato
   // prestazioni occasionali (redditi diversi, non regime forfettario): niente rivalsa,
   // tassazione IRPEF a scaglioni invece dell'aliquota forfettaria — qui solo una stima
   // accantonabile, 23% = primo scaglione IRPEF 2024, da adattare col commercialista
   occasionalTaxRatePercent: 23,
 };
+
+export const PROFESSIONAL_ROLES = [
+  { id: 'infermiere', label: 'Infermiere/a' },
+  { id: 'medico', label: 'Medico' },
+  { id: 'altro', label: 'Altro' },
+];
+
+// Etichetta leggibile del ruolo (es. per intestazioni e saluto); '' se non impostato.
+export function roleLabel(settings) {
+  if (settings?.professionalRole === 'altro') return (settings.professionalRoleOther || '').trim();
+  return PROFESSIONAL_ROLES.find((r) => r.id === settings?.professionalRole)?.label ?? '';
+}
+
+// Righe di intestazione professionale per i report (nome, ruolo, P.IVA), solo quelle compilate.
+export function professionalHeaderLines(settings) {
+  const vat = (settings?.vatNumber || '').trim();
+  return [
+    (settings?.displayName || '').trim(),
+    roleLabel(settings),
+    vat ? `P.IVA / Albo: ${vat}` : '',
+  ].filter(Boolean);
+}
 
 // Categorie di spesa professionale
 export const EXPENSE_CATEGORIES = [

@@ -1,16 +1,14 @@
 import React, { useState } from 'react';
 import SummaryTab from './SummaryTab.jsx';
-import SitesTab from './SitesTab.jsx';
 import EarningsSimulator from './EarningsSimulator.jsx';
-import GoalTimeCalculator from './GoalTimeCalculator.jsx';
 import ExpensesTab from './ExpensesTab.jsx';
 
+// Il denaro del lavoro svolto. Sedi, tasse e obiettivo si configurano in Studio;
+// grafici e confronti stanno in Analisi.
 const SUB_TABS = [
   { id: 'summary', label: 'Riepilogo' },
   { id: 'sim', label: 'Simulatore' },
-  { id: 'goal', label: 'Obiettivo' },
   { id: 'expenses', label: 'Spese' },
-  { id: 'sites', label: 'Sedi' },
 ];
 
 export default function GuadagniTab({ state, setState, year, month, setYear, setMonth, initialSub = 'summary' }) {
@@ -30,9 +28,7 @@ export default function GuadagniTab({ state, setState, year, month, setYear, set
         <SummaryTab state={state} year={year} month={month} setYear={setYear} setMonth={setMonth} />
       )}
       {sub === 'sim' && <EarningsSimulator state={state} />}
-      {sub === 'goal' && <GoalTimeCalculator state={state} />}
       {sub === 'expenses' && <ExpensesTab state={state} setState={setState} />}
-      {sub === 'sites' && <SitesTab state={state} setState={setState} />}
     </>
   );
 }

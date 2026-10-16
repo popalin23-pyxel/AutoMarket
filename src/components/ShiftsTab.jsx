@@ -38,7 +38,7 @@ function DayPopoverOverlay({ dateISO, onClose, children }) {
   );
 }
 
-export default function ShiftsTab({ state, setState, year, month, setYear, setMonth }) {
+export default function ShiftsTab({ state, setState, year, month, setYear, setMonth, onNavigate }) {
   const [editing, setEditing] = useState(null); // { date, shift: null|obj }
   const [editingOccasional, setEditingOccasional] = useState(null); // { date, entry: null|obj }
   const [dayPopover, setDayPopover] = useState(null); // dateISO (solo vista calendario)
@@ -270,7 +270,12 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
 
         {state.sites.length === 0 && (
           <div className="hint hint-warn" style={{ marginTop: 12 }}>
-            Prima di registrare i turni, aggiungi almeno una sede nella scheda "Sedi".
+            Prima di registrare i turni, aggiungi almeno una sede di lavoro con la sua paga oraria.
+            {onNavigate && (
+              <div><button className="link-btn" style={{ marginTop: 8 }} onClick={() => onNavigate('studio', 'sites')}>
+                Aggiungi una sede in Studio → Sedi & Paghe →
+              </button></div>
+            )}
           </div>
         )}
       </div>

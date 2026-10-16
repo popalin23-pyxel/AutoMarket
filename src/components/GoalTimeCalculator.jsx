@@ -13,9 +13,12 @@ export default function GoalTimeCalculator({ state }) {
   const m = Number(today.slice(5, 7));
 
   const sum = useMemo(
-    () => computeMonthSummary(state.shifts, state.sites, state.settings, y, m),
-    [state.shifts, state.sites, state.settings, y, m],
+    () => computeMonthSummary(state.shifts, state.sites, state.settings, y, m, state.occasionalWork),
+    [state.shifts, state.sites, state.settings, y, m, state.occasionalWork],
   );
+  // l'obiettivo si misura sul netto totale (sedi + prestazioni occasionali), come in Home;
+  // la stima delle ore resta sulla resa oraria delle sedi (le prestazioni non sono a ore)
+  const net = sum.netTotal;
 
   const goal = Number(settings.monthlyGoal) || 0;
 
@@ -33,13 +36,13 @@ export default function GoalTimeCalculator({ state }) {
       <div className="panel">
         <h2 className="panel-title">Quanto devo ancora lavorare?</h2>
         <EmptyState icon="checkCircle" title="Imposta prima un obiettivo"
-          hint='Vai su Profilo → Obiettivo mensile per impostare quanto vuoi guadagnare questo mese, poi torna qui.' />
+          hint="Scrivi qui sopra quanto vuoi guadagnare (netto) questo mese: il calcolo comparirà qui." />
       </div>
     );
   }
 
-  const remaining = Math.max(0, round2(goal - sum.net));
-  const reached = sum.net >= goal;
+  const remaining = Math.max(0, round2(goal - net));
+  const reached = net >= goal;
   const hoursNeeded = !reached && netHourlyRate > 0 ? remaining / netHourlyRate : 0;
   const fullShifts = Math.floor(hoursNeeded / 8);
   const restHours = round2(hoursNeeded - fullShifts * 8);
@@ -56,16 +59,16 @@ export default function GoalTimeCalculator({ state }) {
 
       <div className="stats-row">
         <div className="stat"><div className="stat-label">Obiettivo netto</div><div className="stat-value">€{fmt(goal)}</div></div>
-        <div className="stat"><div className="stat-label">Netto attuale</div><div className="stat-value gold">€{fmt(sum.net)}</div></div>
+        <div className="stat"><div className="stat-label">Netto attuale</div><div className="stat-value gold">€{fmt(net)}</div></div>
       </div>
 
       <div className="goal-bar-track" style={{ marginBottom: 14 }}>
-        <div className={`goal-bar-fill ${reached ? 'reached' : ''}`} style={{ width: `${Math.min(100, Math.round((sum.net / goal) * 100))}%` }} />
+        <div className={`goal-bar-fill ${reached ? 'reached' : ''}`} style={{ width: `${Math.min(100, Math.round((net / goal) * 100))}%` }} />
       </div>
 
       {reached ? (
         <div className="hint hint-info" style={{ marginBottom: 0 }}>
-          🎯 Obiettivo raggiunto! Sei a €{fmt(sum.net - goal)} oltre il tuo obiettivo.
+          🎯 Obiettivo raggiunto! Sei a €{fmt(net - goal)} oltre il tuo obiettivo.
         </div>
       ) : (
         <>

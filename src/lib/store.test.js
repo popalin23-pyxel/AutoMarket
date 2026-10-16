@@ -106,6 +106,18 @@ describe('importBackupFromText: ripristino da file di backup', () => {
     expect(imported.settings.contributionsPercent).toBe(0);
   });
 
+  it('dati salvati prima dell\'Anagrafica: nome e turni restano, i nuovi campi arrivano vuoti', () => {
+    const before = { ...baseState(), settings: { taxPercent: 25, displayName: 'Maria Rossi', monthlyGoal: 3000 } };
+    const imported = importBackupFromText(wrap(before));
+    expect(imported.settings.displayName).toBe('Maria Rossi');
+    expect(imported.settings.monthlyGoal).toBe(3000);
+    expect(imported.settings.professionalRole).toBe('');
+    expect(imported.settings.professionalRoleOther).toBe('');
+    expect(imported.settings.vatNumber).toBe('');
+    expect(imported.shifts).toHaveLength(1);
+    expect(imported.sites).toHaveLength(1);
+  });
+
   it('accetta anche il file senza l\'involucro {app, state} (solo lo stato grezzo)', () => {
     const imported = importBackupFromText(JSON.stringify(baseState()));
     expect(imported.shifts).toHaveLength(1);

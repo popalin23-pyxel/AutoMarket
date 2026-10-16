@@ -1,13 +1,15 @@
 import React, { useRef, useState } from 'react';
-import { updateSettings, exportBackup, importBackup, importBackupFromText, resetState } from '../lib/store.js';
+import { exportBackup, importBackup, importBackupFromText, resetState } from '../lib/store.js';
+import { roleLabel } from '../lib/defaults.js';
 import { loadTheme, applyTheme } from '../lib/theme.js';
 import { loadAccent, applyAccent, ACCENT_COLORS } from '../lib/accentColor.js';
 import { loadDensity, applyDensity } from '../lib/density.js';
 import { useAuth } from '../lib/AuthContext.jsx';
 import { useConfirm } from '../lib/ConfirmContext.jsx';
-import NumberInput from './NumberInput.jsx';
 
-export default function SettingsTab({ state, setState, onLogout, isAdmin, onOpenAdmin, onOpenFiscal, onOpenPrivacy, onOpenSites }) {
+// Profilo: tu e l'app (account, aspetto, backup). Ciò che riguarda l'attività
+// professionale (anagrafica, sedi, fiscale, obiettivo) sta nella scheda Studio.
+export default function SettingsTab({ state, setState, onLogout, isAdmin, onOpenAdmin, onOpenPrivacy, onOpenAnagrafica }) {
   const { user, updatePassword, deleteAccount } = useAuth();
   const confirmAction = useConfirm();
   const [deleting, setDeleting] = useState(false);
@@ -24,8 +26,8 @@ export default function SettingsTab({ state, setState, onLogout, isAdmin, onOpen
   const [pwMsg, setPwMsg] = useState(null);
   const [pwBusy, setPwBusy] = useState(false);
 
-  const setDisplayName = (v) => setState((s) => updateSettings(s, { displayName: v }));
-  const setMonthlyGoal = (v) => setState((s) => updateSettings(s, { monthlyGoal: v === '' ? 0 : v }));
+  const displayName = (state.settings.displayName || '').trim();
+  const role = roleLabel(state.settings);
 
   const doImport = async (e) => {
     const file = e.target.files?.[0];
@@ -90,6 +92,40 @@ export default function SettingsTab({ state, setState, onLogout, isAdmin, onOpen
   return (
     <>
       <div className="panel">
+        <h2 className="panel-title">Profilo</h2>
+        <div className="profile-id">
+          <div className="profile-id-name">{displayName || 'Nome non impostato'}</div>
+          <div className="profile-id-sub">{[role, user?.email].filter(Boolean).join(' · ')}</div>
+        </div>
+        <button className="link-btn" onClick={onOpenAnagrafica}>Nome, ruolo e P.IVA si modificano in Studio → Anagrafica →</button>
+      </div>
+
+      <div className="panel">
+        <h2 className="panel-title">Account</h2>
+        <p className="panel-desc">I tuoi dati sono privati e sincronizzati con il cloud.</p>
+
+        <form onSubmit={changePassword} className="form-row" style={{ alignItems: 'flex-end' }}>
+          <div className="field">
+            <label className="field-label">Nuova password</label>
+            <input type="password" autoComplete="new-password" value={pw} onChange={(e) => setPw(e.target.value)} />
+          </div>
+          <div className="field">
+            <label className="field-label">Conferma</label>
+            <input type="password" autoComplete="new-password" value={pw2} onChange={(e) => setPw2(e.target.value)} />
+          </div>
+          <button className="btn" disabled={pwBusy}>{pwBusy ? '…' : 'Cambia password'}</button>
+        </form>
+        {pwMsg && <div className={`hint hint-${pwMsg.type}`} style={{ marginTop: 10, marginBottom: 0 }}>{pwMsg.text}</div>}
+
+        <button className="btn btn-block" style={{ marginTop: 14 }} onClick={onOpenPrivacy}>📄 Privacy Policy</button>
+
+        {isAdmin && (
+          <button className="btn btn-block" style={{ marginTop: 10 }} onClick={onOpenAdmin}>⚡ Pannello Amministrazione</button>
+        )}
+        <button className="btn btn-danger" style={{ marginTop: 14 }} onClick={onLogout}>Esci</button>
+      </div>
+
+      <div className="panel">
         <h2 className="panel-title">Aspetto</h2>
         <p className="panel-desc">Scegli come vuoi vedere l'app.</p>
         <div className="theme-switch">
@@ -120,71 +156,6 @@ export default function SettingsTab({ state, setState, onLogout, isAdmin, onOpen
             onClick={() => { applyDensity('compact'); setDensity('compact'); }}>
             Compatta
           </button>
-        </div>
-      </div>
-
-      <div className="panel">
-        <h2 className="panel-title">Account</h2>
-        <p className="panel-desc">Accesso effettuato come <b>{user?.email}</b>. I tuoi dati sono privati e sincronizzati con il cloud.</p>
-
-        <div className="field" style={{ marginBottom: 14 }}>
-          <label className="field-label">Il tuo nome (mostrato nel saluto della Home)</label>
-          <input type="text" value={state.settings.displayName} placeholder="es. Alin"
-            onChange={(e) => setDisplayName(e.target.value)} style={{ width: '100%', minWidth: 0 }} />
-        </div>
-
-        <form onSubmit={changePassword} className="form-row" style={{ alignItems: 'flex-end' }}>
-          <div className="field">
-            <label className="field-label">Nuova password</label>
-            <input type="password" autoComplete="new-password" value={pw} onChange={(e) => setPw(e.target.value)} />
-          </div>
-          <div className="field">
-            <label className="field-label">Conferma</label>
-            <input type="password" autoComplete="new-password" value={pw2} onChange={(e) => setPw2(e.target.value)} />
-          </div>
-          <button className="btn" disabled={pwBusy}>{pwBusy ? '…' : 'Cambia password'}</button>
-        </form>
-        {pwMsg && <div className={`hint hint-${pwMsg.type}`} style={{ marginTop: 10, marginBottom: 0 }}>{pwMsg.text}</div>}
-
-        <button className="btn btn-block" style={{ marginTop: 14 }} onClick={onOpenPrivacy}>📄 Privacy Policy</button>
-
-        {isAdmin && (
-          <button className="btn btn-block" style={{ marginTop: 10 }} onClick={onOpenAdmin}>⚡ Pannello Amministrazione</button>
-        )}
-        <button className="btn btn-danger" style={{ marginTop: 14 }} onClick={onLogout}>Esci</button>
-
-        <button className="danger-link" style={{ marginTop: 16 }} onClick={doDeleteAccount} disabled={deleting}>
-          {deleting ? 'Eliminazione in corso…' : 'Elimina il mio account e tutti i dati'}
-        </button>
-      </div>
-
-      <div className="panel">
-        <h2 className="panel-title">Sedi di lavoro</h2>
-        <p className="panel-desc">
-          Gli ospedali/strutture dove lavori, con la paga oraria di ciascuna — necessarie prima di poter
-          registrare un turno.
-        </p>
-        <button className="btn btn-block" onClick={onOpenSites}>🏢 Gestisci sedi →</button>
-      </div>
-
-      <div className="panel">
-        <h2 className="panel-title">Tasse e rivalsa</h2>
-        <p className="panel-desc">
-          Aliquota, contributi e rivalsa che l'app usa per stimare il netto — con la spiegazione di come
-          si arriva al risultato.
-        </p>
-        <button className="btn btn-block" onClick={onOpenFiscal}>📐 Impostazioni fiscali →</button>
-      </div>
-
-      <div className="panel">
-        <h2 className="panel-title">Obiettivo mensile</h2>
-        <p className="panel-desc">
-          Quanto vorresti guadagnare (netto) questo mese. Lo vedrai come barra di avanzamento nella Home.
-          Lascia 0 per nascondere l'obiettivo.
-        </p>
-        <div className="field">
-          <label className="field-label">Obiettivo netto (€)</label>
-          <NumberInput value={state.settings.monthlyGoal} onChange={setMonthlyGoal} min={0} max={99999} allowEmpty />
         </div>
       </div>
 
@@ -222,6 +193,10 @@ export default function SettingsTab({ state, setState, onLogout, isAdmin, onOpen
           </div>
         )}
       </div>
+
+      <button className="danger-link" style={{ marginBottom: 18 }} onClick={doDeleteAccount} disabled={deleting}>
+        {deleting ? 'Eliminazione in corso…' : 'Elimina il mio account e tutti i dati'}
+      </button>
     </>
   );
 }

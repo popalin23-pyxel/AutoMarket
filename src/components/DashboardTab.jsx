@@ -1,26 +1,16 @@
 import React, { useMemo } from 'react';
 import {
-  compareWeeks, compareMonths, compareYears,
-  lastNWeeksSummaries, lastNMonthsSummaries, todayISO, tomorrowISO,
-  shiftsToday, nextShiftAfter, weekdayOf, shiftsInMonth, monthsWithData,
+  compareWeeks, compareMonths, todayISO, tomorrowISO, shiftsToday, nextShiftAfter, weekdayOf, shiftsOnDay,
 } from '../lib/calc.js';
-import { MONTHS_IT, WEEKDAYS_IT_LONG } from '../lib/defaults.js';
-import AreaChart from './charts/AreaChart.jsx';
+import { MONTHS_IT, WEEKDAYS_IT_LONG, roleLabel } from '../lib/defaults.js';
 import Icon from './icons/Icon.jsx';
-import EmptyState from './EmptyState.jsx';
 import SiteAvatar from './SiteAvatar.jsx';
 import CountUpText from './CountUpText.jsx';
+import DeltaBadge from './DeltaBadge.jsx';
 import BackupReminder from './BackupReminder.jsx';
 
 const fmt = (n) => n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const fmt0 = (n) => n.toLocaleString('it-IT', { maximumFractionDigits: 1 });
-
-function DeltaBadge({ pct }) {
-  if (pct == null) return <span className="delta-badge neutral">nuovo</span>;
-  if (pct === 0) return <span className="delta-badge neutral">= 0%</span>;
-  const up = pct > 0;
-  return <span className={`delta-badge ${up ? 'up' : 'down'}`}>{up ? '▲' : '▼'} {Math.abs(pct)}%</span>;
-}
 
 function greetingWord() {
   const h = new Date().getHours();
@@ -39,8 +29,84 @@ function siteFor(sites, siteId) {
   return sites.find((s) => s.id === siteId) || { name: 'Sede eliminata', color: '#6b7280' };
 }
 
-function TodayCard({ state, today, firstName }) {
+// Primi passi per chi inizia (es. un nuovo cliente): sparisce da solo appena completati.
+function SetupCard({ state, onNavigate }) {
+  const steps = [
+    { done: !!(state.settings.displayName || '').trim(), label: 'Completa la tua anagrafica', go: () => onNavigate('studio', 'anagrafica') },
+    { done: state.sites.length > 0, label: 'Aggiungi la prima sede con la paga oraria', go: () => onNavigate('studio', 'sites') },
+    { done: state.shifts.length > 0, label: 'Registra il primo turno', go: () => onNavigate('calendar') },
+  ];
+  if (steps.every((s) => s.done)) return null;
+  return (
+    <div className="panel setup-card">
+      <h2 className="panel-title">Primi passi</h2>
+      <div className="setup-list">
+        {steps.map((s) => (
+          <button key={s.label} type="button" className={`setup-step ${s.done ? 'done' : ''}`} onClick={s.go} disabled={s.done}>
+            <span className="setup-check">{s.done ? <Icon name="checkCircle" size={18} /> : <span className="setup-dot" />}</span>
+            <span className="setup-label">{s.label}</span>
+            {!s.done && <span className="setup-go">›</span>}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function MonthCard({ month, monthLabel, prevMonthLabel, goal }) {
+  const cur = month.current;
+  const hourlyNet = cur.totalHours > 0 ? cur.net / cur.totalHours : 0;
+  const hasData = cur.shiftCount > 0 || cur.occasionalCount > 0;
+  const goalPct = goal > 0 ? Math.round((cur.netTotal / goal) * 100) : null;
+  const reached = goal > 0 && cur.netTotal >= goal;
+
+  return (
+    <div className="panel month-hero">
+      <div className="month-hero-top">
+        <span className="month-hero-label">{monthLabel}</span>
+        {hasData && (
+          <span className="month-hero-delta"><DeltaBadge pct={month.deltaNetPct} /> <span>vs {prevMonthLabel}</span></span>
+        )}
+      </div>
+      <div className="month-hero-net">€<CountUpText value={cur.netTotal} format={fmt} /></div>
+      <div className="month-hero-net-caption">
+        netto stimato{cur.occasionalCount > 0 ? ` · di cui €${fmt(cur.occasionalNet)} da prestazioni occasionali` : ''}
+      </div>
+
+      <div className="month-hero-grid">
+        <div className="mh-stat">
+          <span className="mh-val">€<CountUpText value={cur.totalInvoice} format={fmt0} /></span>
+          <span className="mh-lbl">fatturato</span>
+        </div>
+        <div className="mh-stat">
+          <span className="mh-val"><CountUpText value={cur.totalHours} format={fmt0} />h</span>
+          <span className="mh-lbl">lavorate</span>
+        </div>
+        <div className="mh-stat">
+          <span className="mh-val">€<CountUpText value={hourlyNet} format={fmt} />/h</span>
+          <span className="mh-lbl">netto medio</span>
+        </div>
+      </div>
+
+      {goalPct != null && (
+        <div className="month-hero-goal-block">
+          <div className="goal-bar-track">
+            <div className={`goal-bar-fill ${reached ? 'reached' : ''}`} style={{ width: `${Math.min(100, goalPct)}%` }} />
+          </div>
+          <div className="month-hero-goal-text">
+            {reached
+              ? <>Obiettivo raggiunto · €{fmt(cur.netTotal)} su €{fmt(goal)}</>
+              : <><b>{goalPct}%</b> dell'obiettivo · mancano €{fmt(Math.max(0, goal - cur.netTotal))}</>}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TodayCard({ state, today }) {
   const todays = useMemo(() => shiftsToday(state.shifts, today), [state.shifts, today]);
+  const todaysOccasional = useMemo(() => shiftsOnDay(state.occasionalWork, today), [state.occasionalWork, today]);
   const upcoming = useMemo(() => (todays.length ? null : nextShiftAfter(state.shifts, today)),
     [state.shifts, today, todays.length]);
 
@@ -51,11 +117,6 @@ function TodayCard({ state, today, firstName }) {
 
   return (
     <div className="panel hero-today">
-      <div className="hero-greeting">
-        {greetingWord()}{firstName ? `, ${firstName}` : ''} <Icon name="wave" size={20} className="wave-icon" />
-      </div>
-      <div className="hero-date">{formatDateLong(today)}</div>
-
       {todays.length > 0 ? (
         <div className="hero-today-box working">
           <div className="hero-today-label">Oggi lavori</div>
@@ -86,6 +147,19 @@ function TodayCard({ state, today, firstName }) {
         </div>
       )}
 
+      {todaysOccasional.length > 0 && (
+        <div className="hero-today-box off" style={{ marginTop: 10 }}>
+          <div className="hero-today-label">Prestazioni di oggi</div>
+          {todaysOccasional.map((o) => (
+            <div key={o.id} className="hero-today-row">
+              <span className="occasional-dot">💼</span>
+              <span className="hero-today-site">{o.description}</span>
+              <span className="hero-today-time">€{fmt(Number(o.grossAmount) || 0)}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
       {tomorrowShifts.length > 0 && (
         <div className="tomorrow-banner">
           <Icon name="bell" size={17} className="tomorrow-banner-icon" />
@@ -107,88 +181,13 @@ function TodayCard({ state, today, firstName }) {
   );
 }
 
-function MonthHeroCard({ month, monthLabel, goal }) {
-  const net = month.current.net;
-  const netTotal = month.current.netTotal;
-  const invoice = month.current.totalInvoice;
-  const hours = month.current.totalHours;
-  const hourlyNet = hours > 0 ? net / hours : 0;
-  const goalPct = goal > 0 ? Math.round((netTotal / goal) * 100) : null;
-
-  if (month.current.shiftCount === 0 && month.current.occasionalCount === 0) return null;
-
+function WeekRow({ week }) {
   return (
-    <div className="panel month-hero">
-      <div className="month-hero-label">{monthLabel}</div>
-      <div className="month-hero-net">€<CountUpText value={netTotal} format={fmt} /></div>
-      <div className="month-hero-net-caption">netto stimato</div>
-      {month.current.occasionalCount > 0 && (
-        <div className="month-hero-net-caption">di cui €{fmt(month.current.occasionalNet)} da prestazioni occasionali</div>
-      )}
-
-      <div className="month-hero-grid">
-        <div className="mh-stat">
-          <span className="mh-val">€<CountUpText value={invoice} format={fmt0} /></span>
-          <span className="mh-lbl">fatturato</span>
-        </div>
-        <div className="mh-stat">
-          <span className="mh-val"><CountUpText value={hours} format={fmt0} />h</span>
-          <span className="mh-lbl">lavorate</span>
-        </div>
-        <div className="mh-stat">
-          <span className="mh-val">€<CountUpText value={hourlyNet} format={fmt} />/h</span>
-          <span className="mh-lbl">netto medio</span>
-        </div>
-      </div>
-
-      {goalPct != null && (
-        <div className="month-hero-goal">🎯 <b>{goalPct}%</b> dell'obiettivo di €{fmt(goal)}</div>
-      )}
-    </div>
-  );
-}
-
-function GoalCard({ goal, net }) {
-  if (!goal) return null;
-  const pct = Math.min(100, Math.round((net / goal) * 100));
-  const reached = net >= goal;
-  return (
-    <div className="panel">
-      <div className="goal-head">
-        <h2 className="panel-title" style={{ marginBottom: 0 }}>Obiettivo del mese</h2>
-        <span className="goal-pct"><CountUpText value={pct} format={(v) => Math.round(v)} />%</span>
-      </div>
-      <div className="goal-bar-track">
-        <div className={`goal-bar-fill ${reached ? 'reached' : ''}`} style={{ width: `${pct}%` }} />
-      </div>
-      <div className="goal-sub">
-        {reached
-          ? `Obiettivo raggiunto — €${fmt(net)} su €${fmt(goal)} 🎉`
-          : `€${fmt(net)} su €${fmt(goal)} — mancano €${fmt(Math.max(0, goal - net))}`}
-      </div>
-    </div>
-  );
-}
-
-function NavGrid({ state, y, m, onNavigate, isAdmin }) {
-  const shiftsThisMonth = shiftsInMonth(state.shifts, y, m).length;
-  const monthsCount = monthsWithData(state.shifts).length;
-  const items = [
-    { id: 'calendar', icon: 'calendar', tile: 'teal', label: 'Calendario', hint: `${shiftsThisMonth} turni questo mese` },
-    { id: 'earnings', icon: 'euro', tile: 'gold', label: 'Guadagni', hint: `${state.sites.length} sedi · riepilogo` },
-    { id: 'stats', icon: 'history', tile: 'rose', label: 'Statistiche', hint: `${monthsCount} mesi registrati` },
-    { id: 'settings', icon: 'settings', tile: 'lime', label: 'Profilo', hint: 'Account e backup' },
-    ...(isAdmin ? [{ id: 'admin', icon: 'zap', tile: 'violet', label: 'Admin', hint: 'Utenti e approvazioni' }] : []),
-  ];
-  return (
-    <div className="nav-grid">
-      {items.map((it) => (
-        <button key={it.id} className="nav-card" onClick={() => onNavigate(it.id)}>
-          <span className={`nav-icon-tile tile-${it.tile}`}><Icon name={it.icon} size={19} /></span>
-          <span className="nav-card-label">{it.label}</span>
-          <span className="nav-card-hint">{it.hint}</span>
-        </button>
-      ))}
+    <div className="panel week-row">
+      <span className="week-row-label">Questa settimana</span>
+      <span className="week-row-val mono">{fmt0(week.current.totalHours)}h</span>
+      <span className="week-row-val mono gold">€{fmt(week.current.netTotal)}</span>
+      <DeltaBadge pct={week.deltaNetPct} />
     </div>
   );
 }
@@ -201,87 +200,50 @@ export default function DashboardTab({ state, userEmail, isAdmin, onNavigate }) 
     || (userEmail || '').split('@')[0].replace(/[^a-zA-Z]+/g, ' ').trim().split(' ')[0]
     || '';
   const firstName = rawName ? rawName[0].toUpperCase() + rawName.slice(1) : '';
+  const role = roleLabel(state.settings);
 
   const week = useMemo(() => compareWeeks(state.shifts, state.sites, state.settings, today, state.occasionalWork),
     [state.shifts, state.sites, state.settings, today, state.occasionalWork]);
   const month = useMemo(() => compareMonths(state.shifts, state.sites, state.settings, y, m, state.occasionalWork),
-    [state.shifts, state.sites, state.settings, y, m, state.occasionalWork]);
-  const year = useMemo(() => compareYears(state.shifts, state.sites, state.settings, y, state.occasionalWork),
-    [state.shifts, state.sites, state.settings, y, state.occasionalWork]);
-  const weeksTrend = useMemo(() => lastNWeeksSummaries(state.shifts, state.sites, state.settings, 8, today, state.occasionalWork),
-    [state.shifts, state.sites, state.settings, today, state.occasionalWork]);
-  const monthsTrend = useMemo(() => lastNMonthsSummaries(state.shifts, state.sites, state.settings, 6, y, m, state.occasionalWork),
     [state.shifts, state.sites, state.settings, y, m, state.occasionalWork]);
 
   const hasAnyData = state.shifts.length > 0 || state.occasionalWork.length > 0;
 
   return (
     <>
-      <BackupReminder state={state} />
-
-      <MonthHeroCard month={month} monthLabel={`${MONTHS_IT[m - 1].toUpperCase()} ${y}`} goal={Number(state.settings.monthlyGoal) || 0} />
-
-      <TodayCard state={state} today={today} firstName={firstName} />
-
-      <NavGrid state={state} y={y} m={m} onNavigate={onNavigate} isAdmin={isAdmin} />
-
-      <GoalCard goal={Number(state.settings.monthlyGoal) || 0} net={month.current.netTotal} />
-
-      <div className="panel hero-week">
-        <div className="hero-week-label">Questa settimana</div>
-        {!hasAnyData ? (
-          <EmptyState icon="calendar" title="Ancora nessun turno"
-            hint="Registra qualche turno per iniziare a vedere le statistiche." />
-        ) : (
-          <>
-            <div className="hero-week-row">
-              <div className="hero-stat">
-                <span className="hero-num"><CountUpText value={week.current.totalHours} format={fmt0} /><span className="hero-unit">h</span></span>
-                <span className="hero-caption">ore lavorate</span>
-              </div>
-              <div className="hero-stat">
-                <span className="hero-num gold">€<CountUpText value={week.current.netTotal} format={fmt} /></span>
-                <span className="hero-caption">netto stimato</span>
-              </div>
-            </div>
-            <div className="hero-deltas">
-              <span>vs settimana scorsa (ore) <DeltaBadge pct={week.deltaHoursPct} /></span>
-              <span>vs settimana scorsa (netto) <DeltaBadge pct={week.deltaNetPct} /></span>
-            </div>
-          </>
-        )}
+      <div className="home-greeting">
+        <div className="hero-greeting">{greetingWord()}{firstName ? `, ${firstName}` : ''}</div>
+        <div className="hero-date">{[role, formatDateLong(today)].filter(Boolean).join(' · ')}</div>
       </div>
 
+      <BackupReminder state={state} />
+
+      <SetupCard state={state} onNavigate={onNavigate} />
+
       {hasAnyData && (
-        <>
-          <div className="panel">
-            <h2 className="panel-title">Ultime 8 settimane</h2>
-            <p className="panel-desc">Netto per settimana</p>
-            <AreaChart data={weeksTrend} valueKey="netTotal" labelKey="label" color="var(--gold)" height={140} />
-          </div>
+        <MonthCard month={month} monthLabel={`${MONTHS_IT[m - 1]} ${y}`}
+          prevMonthLabel={MONTHS_IT[month.previous.month - 1].toLowerCase()}
+          goal={Number(state.settings.monthlyGoal) || 0} />
+      )}
 
-          <div className="panel">
-            <h2 className="panel-title">Confronti</h2>
-            <div className="compare-grid">
-              <div className="compare-card">
-                <div className="compare-title">{MONTHS_IT[m - 1]} vs {MONTHS_IT[month.previous.month - 1]}</div>
-                <div className="compare-nums">€{fmt(month.current.netTotal)} <span className="vs">vs</span> €{fmt(month.previous.netTotal)}</div>
-                <DeltaBadge pct={month.deltaNetPct} />
-              </div>
-              <div className="compare-card">
-                <div className="compare-title">{y} vs {y - 1}</div>
-                <div className="compare-nums">€{fmt(year.current.totalNetAll)} <span className="vs">vs</span> €{fmt(year.previous.totalNetAll)}</div>
-                <DeltaBadge pct={year.deltaNetPct} />
-              </div>
-            </div>
-          </div>
+      {state.sites.length > 0 && <TodayCard state={state} today={today} />}
 
-          <div className="panel">
-            <h2 className="panel-title">Ultimi 6 mesi</h2>
-            <p className="panel-desc">Ore lavorate per mese</p>
-            <AreaChart data={monthsTrend} valueKey="totalHours" labelKey="label" color="var(--accent)" height={140} />
-          </div>
-        </>
+      {hasAnyData && <WeekRow week={week} />}
+
+      {state.sites.length > 0 && (
+        <div className="home-actions">
+          <button className="btn btn-primary" onClick={() => onNavigate('calendar')}>
+            <Icon name="calendar" size={16} /> Registra un turno
+          </button>
+          <button className="btn" onClick={() => onNavigate('earnings', 'summary')}>
+            <Icon name="euro" size={16} /> Riepilogo del mese
+          </button>
+          {isAdmin && (
+            <button className="btn" onClick={() => onNavigate('admin')}>
+              <Icon name="zap" size={16} /> Amministrazione
+            </button>
+          )}
+        </div>
       )}
     </>
   );

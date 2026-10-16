@@ -14,9 +14,9 @@ import AdminTab from './components/AdminTab.jsx';
 import DashboardTab from './components/DashboardTab.jsx';
 import ShiftsTab from './components/ShiftsTab.jsx';
 import GuadagniTab from './components/GuadagniTab.jsx';
-import HistoryTab from './components/HistoryTab.jsx';
+import AnalisiTab from './components/AnalisiTab.jsx';
+import StudioTab from './components/StudioTab.jsx';
 import SettingsTab from './components/SettingsTab.jsx';
-import FiscalSettingsTab from './components/FiscalSettingsTab.jsx';
 import NotificheTab from './components/NotificheTab.jsx';
 import PrivacyPolicyTab from './components/PrivacyPolicyTab.jsx';
 import Icon from './components/icons/Icon.jsx';
@@ -54,7 +54,9 @@ function Shell() {
   const { user, isAdmin, isApproved, signOut } = useAuth();
   const [state, setState] = useState(loadState);
   const [active, setActive] = useState('dashboard');
-  const [earningsSubTab, setEarningsSubTab] = useState('summary');
+  // sotto-scheda con cui aprire Guadagni/Analisi/Studio (es. un collegamento verso "Studio → Sedi & Paghe");
+  // la nav in basso riapre sempre la prima sotto-scheda
+  const [subTab, setSubTab] = useState(null);
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [syncStatus, setSyncStatus] = useState('idle'); // idle | syncing | ok | error
@@ -138,7 +140,8 @@ function Shell() {
     return () => clearTimeout(saveTimer.current);
   }, [state, user, isApproved]);
 
-  const goToMonth = (y, m) => { setYear(y); setMonth(m); setActive('calendar'); };
+  const navigate = (tab, sub = null) => { setSubTab(sub); setActive(tab); window.scrollTo(0, 0); };
+  const openMonthSummary = (y, m) => { setYear(y); setMonth(m); navigate('earnings', 'summary'); };
 
   const doLogout = async () => {
     await signOut();
@@ -150,12 +153,13 @@ function Shell() {
     [state.shifts, state.sites, state.settings, state.occasionalWork],
   );
 
+  // Il Profilo (account, aspetto, backup) si apre dall'avatar in alto a destra.
   const TABS = [
     { id: 'dashboard', label: 'Home', icon: 'home' },
     { id: 'calendar', label: 'Calendario', icon: 'calendar' },
     { id: 'earnings', label: 'Guadagni', icon: 'euro' },
-    { id: 'stats', label: 'Statistiche', icon: 'history' },
-    { id: 'settings', label: 'Profilo', icon: 'settings' },
+    { id: 'analisi', label: 'Analisi', icon: 'chart' },
+    { id: 'studio', label: 'Studio', icon: 'briefcase' },
   ];
 
   const initial = (user?.email || '?').trim()[0]?.toUpperCase() || '?';
@@ -178,50 +182,53 @@ function Shell() {
               title={syncStatus === 'error' ? 'Sincronizzazione non riuscita, riprovo automaticamente'
                 : syncStatus === 'syncing' ? 'Sincronizzazione in corso…' : 'Sincronizzato'} />
           )}
-          <button className="notif-bell-btn" onClick={() => setActive('notifications')} title="Notifiche">
+          <button className={`notif-bell-btn ${active === 'notifications' ? 'active' : ''}`}
+            onClick={() => navigate('notifications')} title="Notifiche" aria-label="Notifiche">
             <Icon name="bell" size={16} />
           </button>
-          <button className="avatar" style={{ background: avatarColor(user?.email) }}
-            onClick={() => setActive('settings')} title={user?.email}>
+          <button className={`avatar ${['settings', 'admin', 'privacy'].includes(active) ? 'active' : ''}`}
+            style={{ background: avatarColor(user?.email) }}
+            onClick={() => navigate('settings')} title="Profilo" aria-label="Profilo">
             {initial}
           </button>
         </div>
       </header>
 
       <div className="app-body">
-        <div key={active} className="tab-fade">
+        <div key={`${active}:${subTab ?? ''}`} className="tab-fade">
           {active === 'dashboard' && (
-            <DashboardTab state={state} userEmail={user?.email} isAdmin={isAdmin} onNavigate={setActive} />
+            <DashboardTab state={state} userEmail={user?.email} isAdmin={isAdmin} onNavigate={navigate} />
           )}
           {active === 'calendar' && (
-            <ShiftsTab state={state} setState={setState} year={year} month={month} setYear={setYear} setMonth={setMonth} />
+            <ShiftsTab state={state} setState={setState} year={year} month={month} setYear={setYear} setMonth={setMonth}
+              onNavigate={navigate} />
           )}
           {active === 'earnings' && (
             <GuadagniTab state={state} setState={setState} year={year} month={month} setYear={setYear} setMonth={setMonth}
-              initialSub={earningsSubTab} />
+              initialSub={subTab ?? undefined} />
           )}
-          {active === 'stats' && <HistoryTab state={state} onOpenMonth={goToMonth} />}
+          {active === 'analisi' && (
+            <AnalisiTab state={state} initialSub={subTab ?? undefined} onOpenMonth={openMonthSummary} />
+          )}
+          {active === 'studio' && (
+            <StudioTab state={state} setState={setState} initialSub={subTab ?? undefined} onNavigate={navigate} />
+          )}
           {active === 'settings' && (
             <SettingsTab state={state} setState={setState} onLogout={doLogout} isAdmin={isAdmin}
-              onOpenAdmin={() => setActive('admin')} onOpenFiscal={() => setActive('fiscal')}
-              onOpenPrivacy={() => setActive('privacy')}
-              onOpenSites={() => { setEarningsSubTab('sites'); setActive('earnings'); }} />
+              onOpenAdmin={() => navigate('admin')} onOpenPrivacy={() => navigate('privacy')}
+              onOpenAnagrafica={() => navigate('studio', 'anagrafica')} />
           )}
-          {active === 'fiscal' && (
-            <FiscalSettingsTab state={state} setState={setState} onBack={() => setActive('settings')} />
-          )}
-          {active === 'admin' && isAdmin && <AdminTab onBack={() => setActive('settings')} />}
-          {active === 'privacy' && <PrivacyPolicyTab onBack={() => setActive('settings')} />}
+          {active === 'admin' && isAdmin && <AdminTab onBack={() => navigate('settings')} />}
+          {active === 'privacy' && <PrivacyPolicyTab onBack={() => navigate('settings')} />}
           {active === 'notifications' && (
-            <NotificheTab state={state} onBack={() => setActive('dashboard')} />
+            <NotificheTab state={state} onBack={() => navigate('dashboard')} />
           )}
         </div>
       </div>
 
       <nav className="bottom-nav">
         {TABS.map((t) => (
-          <button key={t.id} className={`bnav-btn ${active === t.id ? 'active' : ''}`}
-            onClick={() => { if (t.id === 'earnings') setEarningsSubTab('summary'); setActive(t.id); }}>
+          <button key={t.id} className={`bnav-btn ${active === t.id ? 'active' : ''}`} onClick={() => navigate(t.id)}>
             <span className="bnav-icon"><Icon name={t.icon} size={20} /></span>
             <span className="bnav-label">{t.label}</span>
           </button>

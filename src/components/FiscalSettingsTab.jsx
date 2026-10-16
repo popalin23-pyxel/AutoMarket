@@ -12,8 +12,8 @@ const REGIMES = [
   { id: 'altro', label: 'Altro' },
 ];
 
-export default function FiscalSettingsTab({ state, setState, onBack }) {
-  const [sub, setSub] = useState('details');
+export default function FiscalSettingsTab({ state, setState }) {
+  const [sub, setSub] = useState('params');
   const { settings } = state;
 
   const today = todayISO();
@@ -35,12 +35,11 @@ export default function FiscalSettingsTab({ state, setState, onBack }) {
 
   return (
     <div className="panel">
-      {onBack && <button className="btn btn-sm" style={{ marginBottom: 12 }} onClick={onBack}>‹ Profilo</button>}
       <h2 className="panel-title">Impostazioni fiscali</h2>
 
-      <div className="tabs">
-        <button className={`tab ${sub === 'details' ? 'active' : ''}`} onClick={() => setSub('details')}>Dettagli calcolo</button>
-        <button className={`tab ${sub === 'params' ? 'active' : ''}`} onClick={() => setSub('params')}>Parametri</button>
+      <div className="theme-switch" style={{ margin: '10px 0 14px' }}>
+        <button className={`theme-opt ${sub === 'params' ? 'active' : ''}`} onClick={() => setSub('params')}>Parametri</button>
+        <button className={`theme-opt ${sub === 'details' ? 'active' : ''}`} onClick={() => setSub('details')}>Come si calcola</button>
       </div>
 
       {sub === 'details' ? (
@@ -105,7 +104,7 @@ export default function FiscalSettingsTab({ state, setState, onBack }) {
 
           <div className="hint hint-info" style={{ marginBottom: 0 }}>
             Totale accantonato sul fatturato: <b>{(Number(settings.taxRatePercent) || 0) + (Number(settings.contributionsPercent) || 0)}%</b>.
-            Ogni sede può avere una rivalsa diversa da quella di default (scheda "Sedi").
+            Ogni sede può avere una rivalsa diversa da quella di default (in "Sedi & Paghe").
           </div>
 
           <h2 className="panel-title" style={{ marginTop: 22 }}>Prestazioni occasionali</h2>

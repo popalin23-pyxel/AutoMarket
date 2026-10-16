@@ -6,10 +6,10 @@ import Icon from './icons/Icon.jsx';
 const KEY = 'turnio_onboarding_seen';
 
 const STEPS = [
-  { icon: 'home', title: 'Benvenuta su Turnio', text: 'Registra i tuoi turni per sede e calcola automaticamente fatturato, rivalsa e tasse da accantonare.' },
-  { icon: 'mapPin', title: 'Prima cosa: le sedi', text: 'Nella scheda "Sedi" aggiungi ogni posto dove lavori, con la sua paga oraria.' },
-  { icon: 'calendar', title: 'Poi: i turni', text: 'In "Turni" registra data, sede e orario di ogni turno. Puoi modificarlo in ogni momento se cambia.' },
-  { icon: 'euro', title: 'Tutto calcolato per te', text: 'In "Riepilogo" trovi ore, fatturato e quanto mettere da parte per le tasse, mese per mese.' },
+  { icon: 'home', title: 'Ti diamo il benvenuto su Turnio', text: 'Registra i tuoi turni per sede e calcola automaticamente fatturato, rivalsa e tasse da accantonare.' },
+  { icon: 'briefcase', title: 'Prima cosa: lo Studio', text: 'Nella scheda "Studio" inserisci la tua anagrafica, le sedi dove lavori con la paga oraria, e le tue aliquote fiscali.' },
+  { icon: 'calendar', title: 'Poi: i turni', text: 'Nel "Calendario" registra data, sede e orario di ogni turno, o una prestazione occasionale. Puoi modificarli in ogni momento.' },
+  { icon: 'euro', title: 'Tutto calcolato per te', text: 'In "Guadagni" trovi il riepilogo del mese e quanto accantonare per le tasse; in "Analisi" andamenti e confronti nel tempo.' },
 ];
 
 export function needsOnboarding() {

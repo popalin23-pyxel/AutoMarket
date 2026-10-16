@@ -11,11 +11,15 @@ function safeText(v) {
   return typeof v === 'string' && FORMULA_TRIGGER.test(v) ? `'${v}` : v;
 }
 
-export function exportMonthExcel(sum) {
+export function exportMonthExcel(sum, opts = {}) {
   const wb = XLSX.utils.book_new();
   const title = `${MONTHS_IT[sum.month - 1]} ${sum.year}`;
 
+  const header = (opts.headerLines || []).map((line) => [safeText(String(line))]);
   const rows = [
+    ...header,
+    [`Riepilogo ${title}`],
+    [],
     ['Sede', 'Ore', '€/h', 'Fatturato', 'Rivalsa %', 'Rivalsa €', 'Totale'],
     ...sum.perSite.map((p) => [safeText(p.name), p.hours, p.rate, p.revenue, p.rivalsaPercent, p.rivalsa, p.total]),
     [],

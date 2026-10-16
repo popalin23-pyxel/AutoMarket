@@ -5,7 +5,7 @@ export default function PrivacyPolicyTab({ onBack }) {
     <div className="panel privacy-page">
       {onBack && <button className="btn btn-sm" style={{ marginBottom: 12 }} onClick={onBack}>‹ Indietro</button>}
       <h2 className="panel-title">Privacy Policy di Turnio</h2>
-      <p className="panel-desc">Ultimo aggiornamento: 29 settembre 2026</p>
+      <p className="panel-desc">Ultimo aggiornamento: 15 ottobre 2026</p>
 
       <div className="privacy-body">
         <h3>1. Titolare del trattamento</h3>
@@ -18,11 +18,12 @@ export default function PrivacyPolicyTab({ onBack }) {
         <p>Per far funzionare l'app raccogliamo e conserviamo:</p>
         <ul>
           <li><b>Dati account</b>: email, password (mai salvata in chiaro: viene cifrata dal nostro fornitore di autenticazione), data di creazione dell'account.</li>
-          <li><b>Nome</b>, solo se scelto di inserirlo in Profilo.</li>
+          <li><b>Anagrafica</b> (facoltativa): nome e cognome, ruolo professionale, Partita IVA o numero di iscrizione all'albo — solo se scegli di inserirli in Studio → Anagrafica.</li>
           <li><b>Sedi di lavoro</b>: nomi delle strutture/datori di lavoro inseriti e la relativa paga oraria.</li>
           <li><b>Turni</b>: data, orario, sede e note personali inserite per ciascun turno.</li>
+          <li><b>Prestazioni occasionali</b>: data, descrizione, importo e note inserite per ciascuna prestazione.</li>
           <li><b>Spese</b>: importi, categorie, date e note inserite nella sezione Spese.</li>
-          <li><b>Impostazioni fiscali</b>: aliquota, contributi, rivalsa e obiettivo di guadagno mensile impostati.</li>
+          <li><b>Impostazioni fiscali</b>: regime, aliquote, contributi, rivalsa e obiettivo di guadagno mensile impostati.</li>
           <li><b>Dati tecnici minimi</b> raccolti automaticamente dai fornitori di infrastruttura (Supabase, Vercel) per far funzionare il servizio: indirizzo IP e log di accesso ai server.</li>
         </ul>
         <p>
@@ -51,15 +52,15 @@ export default function PrivacyPolicyTab({ onBack }) {
 
         <h3>5. Per quanto tempo conserviamo i dati</h3>
         <p>
-          Finché il tuo account resta attivo. Se cancelli il tuo account dalla scheda Profilo, i tuoi dati
-          (turni, sedi, spese, impostazioni) vengono <b>eliminati definitivamente e immediatamente</b> dai nostri
+          Finché il tuo account resta attivo. Se cancelli il tuo account dal Profilo, i tuoi dati
+          (turni, prestazioni, sedi, spese, anagrafica, impostazioni) vengono <b>eliminati definitivamente e immediatamente</b> dai nostri
           server, senza bisogno di richiederlo a nessuno.
         </p>
 
         <h3>6. I tuoi diritti</h3>
         <ul>
-          <li><b>Accesso ed esportazione</b>: puoi scaricare in ogni momento una copia completa dei tuoi dati in formato JSON dalla scheda Profilo ("Esporta backup").</li>
-          <li><b>Cancellazione</b>: puoi eliminare definitivamente il tuo account e tutti i tuoi dati dalla scheda Profilo, senza contattare nessuno.</li>
+          <li><b>Accesso ed esportazione</b>: puoi scaricare in ogni momento una copia completa dei tuoi dati in formato JSON dal Profilo (tocca la tua iniziale in alto a destra → "Esporta backup").</li>
+          <li><b>Cancellazione</b>: puoi eliminare definitivamente il tuo account e tutti i tuoi dati dal Profilo, senza contattare nessuno.</li>
           <li><b>Rettifica</b>: puoi modificare o correggere in ogni momento i tuoi dati direttamente nell'app.</li>
           <li><b>Reclamo</b>: hai sempre diritto a presentare reclamo al Garante per la protezione dei dati personali (garanteprivacy.it).</li>
         </ul>

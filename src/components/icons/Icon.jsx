@@ -67,6 +67,24 @@ const PATHS = {
       <path d="M7.5 3.5v3.2c0 2 1.6 3.4 3.2 4.3.5.3.5 1 0 1.3-1.6.9-3.2 2.3-3.2 4.3v3.4M16.5 3.5v3.2c0 2-1.6 3.4-3.2 4.3-.5.3-.5 1 0 1.3 1.6.9 3.2 2.3 3.2 4.3v3.4" />
     </>
   ),
+  chart: (
+    <>
+      <path d="M3.5 3.5v16a1 1 0 0 0 1 1h16" />
+      <path d="m7.5 15 3.5-4.5 3 2.5 5-6.5" />
+    </>
+  ),
+  briefcase: (
+    <>
+      <rect x="3" y="7" width="18" height="13" rx="2.2" />
+      <path d="M8.5 7V5.5a1.5 1.5 0 0 1 1.5-1.5h4a1.5 1.5 0 0 1 1.5 1.5V7M3 12.5h18" />
+    </>
+  ),
+  user: (
+    <>
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4.5 20.5a7.5 7.5 0 0 1 15 0" />
+    </>
+  ),
 };
 
 export default function Icon({ name, size = 20, strokeWidth = 1.8, className, style }) {
