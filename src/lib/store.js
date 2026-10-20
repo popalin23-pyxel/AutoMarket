@@ -42,6 +42,8 @@ function sanitizeSettings(rawSettings) {
     settings.contributionsPercent = 0;
   }
   settings.taxPercent = (Number(settings.taxRatePercent) || 0) + (Number(settings.contributionsPercent) || 0);
+  // il ruolo "Medica" è stato rimosso: chi l'aveva scelto passa a "Medico"
+  if (settings.professionalRole === 'medica') settings.professionalRole = 'medico';
   return settings;
 }
 

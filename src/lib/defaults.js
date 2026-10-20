@@ -22,7 +22,7 @@ export const PROFESSIONAL_ROLES = [
   { id: 'infermiere', label: 'Infermiere' },
   { id: 'infermiera', label: 'Infermiera' },
   { id: 'medico', label: 'Medico' },
-  { id: 'medica', label: 'Medica' },
+  { id: 'fisioterapista', label: 'Fisioterapista' },
   { id: 'altro', label: 'Altro (specifica)' },
 ];
 

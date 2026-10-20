@@ -118,6 +118,11 @@ describe('importBackupFromText: ripristino da file di backup', () => {
     expect(imported.sites).toHaveLength(1);
   });
 
+  it('il ruolo "Medica", non più disponibile, diventa "Medico"', () => {
+    const imported = importBackupFromText(wrap({ ...baseState(), settings: { taxPercent: 25, professionalRole: 'medica' } }));
+    expect(imported.settings.professionalRole).toBe('medico');
+  });
+
   it('accetta anche il file senza l\'involucro {app, state} (solo lo stato grezzo)', () => {
     const imported = importBackupFromText(JSON.stringify(baseState()));
     expect(imported.shifts).toHaveLength(1);

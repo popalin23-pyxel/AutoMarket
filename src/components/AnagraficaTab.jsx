@@ -30,7 +30,7 @@ export default function AnagraficaTab({ state, setState }) {
       {settings.professionalRole === 'altro' && (
         <div className="field" style={{ marginBottom: 14 }}>
           <label className="field-label">Specifica</label>
-          <input type="text" value={settings.professionalRoleOther} placeholder="es. Fisioterapista, Ostetrica"
+          <input type="text" value={settings.professionalRoleOther} placeholder="es. Ostetrica, Logopedista"
             onChange={(e) => patch({ professionalRoleOther: e.target.value })} style={{ width: '100%', minWidth: 0 }} />
         </div>
       )}

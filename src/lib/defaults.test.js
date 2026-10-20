@@ -6,7 +6,7 @@ describe('Anagrafica: ruolo e intestazione dei report', () => {
     expect(roleLabel({ professionalRole: 'medico' })).toBe('Medico');
     expect(roleLabel({ professionalRole: 'infermiere' })).toBe('Infermiere');
     expect(roleLabel({ professionalRole: 'infermiera' })).toBe('Infermiera');
-    expect(roleLabel({ professionalRole: 'medica' })).toBe('Medica');
+    expect(roleLabel({ professionalRole: 'fisioterapista' })).toBe('Fisioterapista');
   });
 
   it('con "Altro" usa il testo libero, e vuoto se non specificato', () => {
