@@ -11,7 +11,7 @@ const fmt = (n) => n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximum
 const round2 = (n) => Math.round((n + Number.EPSILON) * 100) / 100;
 
 export default function ShiftEditor({
-  date, shift, sites, favorites = [], lastSiteId, settings,
+  date, shift, sites, favorites = [], lastSiteId, settings, allShifts = [],
   onSave, onDelete, onClose, onSaveFavorite, onDeleteFavorite, onCopy,
 }) {
   const [siteId, setSiteId] = useState(shift?.siteId ?? lastSiteId ?? sites[0]?.id ?? null);
@@ -59,6 +59,12 @@ export default function ShiftEditor({
   };
 
   const siteRate = siteRateOn(site, date);
+  // tetto di ore al mese per la struttura (scheda della sede): avviso, non blocca
+  const monthCap = Number(site?.maxHoursMonth) || 0;
+  const monthHoursWithThis = monthCap > 0 && hours > 0 && status !== 'cancelled'
+    ? allShifts.filter((x) => x.siteId === site.id && x.id !== shift?.id && x.status !== 'cancelled' && (x.date || '').slice(0, 7) === date.slice(0, 7))
+      .reduce((a, x) => a + hoursOfShift(x), 0) + hours
+    : 0;
   const rateUsed = customRateOn && customRate !== '' && customRate != null ? Number(customRate) : siteRate;
 
   let breakdown = null;
@@ -148,6 +154,13 @@ export default function ShiftEditor({
                 <label className="field-label">Tariffa di questo turno (€/h)</label>
                 <NumberInput value={customRate} onChange={setCustomRate} min={0} max={999} allowEmpty />
               </div>
+            )}
+
+            {monthCap > 0 && monthHoursWithThis > monthCap && (
+              <p className="hint hint-warn" style={{ marginTop: 10, marginBottom: 0 }}>
+                Con questo turno arrivi a {Math.round(monthHoursWithThis * 100) / 100} ore a {site.name} questo mese:
+                il massimo nella scheda della struttura è {monthCap}.
+              </p>
             )}
 
             {breakdown && (

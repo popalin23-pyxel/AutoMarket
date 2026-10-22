@@ -5,6 +5,7 @@ import { useConfirm } from '../lib/ConfirmContext.jsx';
 import NumberInput from './NumberInput.jsx';
 import EmptyState from './EmptyState.jsx';
 import RateChangeDialog from './RateChangeDialog.jsx';
+import SiteDetailsDialog from './SiteDetailsDialog.jsx';
 
 const fmtRate = (n) => (Number(n) || 0).toLocaleString('it-IT', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 const fmtDay = (iso) => { const [y, m, d] = iso.split('-'); return `${Number(d)}/${Number(m)}/${y.slice(2)}`; };
@@ -15,6 +16,10 @@ export default function SitesTab({ state, setState }) {
   const [color, setColor] = useState(SITE_COLORS[state.sites.length % SITE_COLORS.length]);
   const confirmAction = useConfirm();
   const [rateSite, setRateSite] = useState(null); // sede di cui si cambia la paga
+  const [detailsSite, setDetailsSite] = useState(null); // scheda della struttura
+  const [showArchived, setShowArchived] = useState(false);
+  const activeSites = state.sites.filter((s) => !s.archived);
+  const archivedSites = state.sites.filter((s) => s.archived);
 
   const add = () => {
     const n = name.trim();
@@ -27,10 +32,14 @@ export default function SitesTab({ state, setState }) {
 
   const patch = (id, p) => setState((s) => updateSite(s, id, p));
 
+  // Archiviare: la sede sparisce dalle scelte per i nuovi turni, ma i turni passati restano
+  // con i loro guadagni (eliminandola diventerebbero "Sede eliminata" a 0 €).
+  const archive = (site, archived) => patch(site.id, { archived: archived || undefined });
+
   const del = async (site) => {
     const nShifts = state.shifts.filter((sh) => sh.siteId === site.id).length;
     const msg = nShifts > 0
-      ? `"${site.name}" ha ${nShifts} turni registrati. Eliminandola, quei turni resteranno nel calendario ma senza sede (0€ nel calcolo). Continuare?`
+      ? `"${site.name}" ha ${nShifts} turni registrati. Eliminandola, quei turni resteranno nel calendario ma senza sede (0€ nel calcolo): per tenerli conviene "Archivia". Eliminare comunque?`
       : `Eliminare "${site.name}"?`;
     const ok = await confirmAction(msg, { title: 'Eliminare sede', danger: true, confirmLabel: 'Elimina' });
     if (!ok) return;
@@ -69,11 +78,11 @@ export default function SitesTab({ state, setState }) {
         <button className="btn btn-primary" onClick={add}>Aggiungi</button>
       </div>
 
-      {state.sites.length === 0 && (
+      {activeSites.length === 0 && (
         <EmptyState icon="mapPin" title="Nessuna sede configurata" hint="Aggiungine una qui sopra per iniziare a registrare i turni." />
       )}
 
-      {state.sites.length > 0 && (
+      {activeSites.length > 0 && (
       <div className="table-wrap">
         <table>
           <thead>
@@ -83,7 +92,7 @@ export default function SitesTab({ state, setState }) {
             </tr>
           </thead>
           <tbody>
-            {state.sites.map((s) => (
+            {activeSites.map((s) => (
               <tr key={s.id}>
                 <td>
                   <div className="site-picker">
@@ -116,12 +125,45 @@ export default function SitesTab({ state, setState }) {
                     {s.rivalsaPercent == null ? '(default)' : ''}
                   </span>
                 </td>
-                <td><button className="btn btn-sm btn-danger" onClick={() => del(s)}>Elimina</button></td>
+                <td>
+                  <div className="row-actions">
+                    <button className="btn btn-sm" onClick={() => setDetailsSite(s)} title="Contatti, contratto, tetto ore">Scheda</button>
+                    <button className="btn btn-sm" onClick={() => archive(s, true)} title="Non compare più tra le sedi, i turni passati restano">Archivia</button>
+                  </div>
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+      )}
+
+      {archivedSites.length > 0 && (
+        <div style={{ marginTop: 14 }}>
+          <button className="link-btn" onClick={() => setShowArchived(!showArchived)}>
+            {showArchived ? '▾' : '▸'} Sedi archiviate ({archivedSites.length})
+          </button>
+          {showArchived && (
+            <div className="archived-list">
+              {archivedSites.map((s) => (
+                <div key={s.id} className="archived-row">
+                  <span className="site-dot" style={{ background: s.color }} />
+                  <span className="archived-name">{s.name}</span>
+                  <button className="btn btn-sm" onClick={() => archive(s, false)}>Ripristina</button>
+                  <button className="btn btn-sm btn-danger" onClick={() => del(s)}>Elimina</button>
+                </div>
+              ))}
+              <p className="panel-desc" style={{ marginTop: 6, marginBottom: 0 }}>
+                I turni passati di queste sedi restano nel calendario e nei guadagni.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {detailsSite && (
+        <SiteDetailsDialog site={detailsSite} onClose={() => setDetailsSite(null)}
+          onSave={(p) => { patch(detailsSite.id, p); setDetailsSite(null); }} />
       )}
 
       {rateSite && (

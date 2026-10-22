@@ -8,7 +8,8 @@ const fmt = (n) => n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximum
 const round2 = (n) => Math.round((n + Number.EPSILON) * 100) / 100;
 
 export default function EarningsSimulator({ state, onNavigate }) {
-  const { sites, settings } = state;
+  const { settings } = state;
+  const sites = useMemo(() => state.sites.filter((s) => !s.archived), [state.sites]);
   const [hoursPerShift, setHoursPerShift] = useState(8);
   const [counts, setCounts] = useState({}); // { [siteId]: number }
 

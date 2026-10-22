@@ -7,7 +7,8 @@ const fmt1 = (n) => n.toLocaleString('it-IT', { maximumFractionDigits: 1 });
 const round2 = (n) => Math.round((n + Number.EPSILON) * 100) / 100;
 
 export default function GoalTimeCalculator({ state }) {
-  const { sites, settings } = state;
+  const { settings } = state;
+  const sites = state.sites.filter((s) => !s.archived);
   const today = todayISO();
   const y = Number(today.slice(0, 4));
   const m = Number(today.slice(5, 7));

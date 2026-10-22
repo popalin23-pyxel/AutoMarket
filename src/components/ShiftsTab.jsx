@@ -66,6 +66,9 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
   const today = todayISO();
   const holidaySet = useMemo(() => holidaysOfYear(year), [year]);
   const siteById = useMemo(() => new Map(state.sites.map((s) => [s.id, s])), [state.sites]);
+  // sedi archiviate: restano per i turni passati ma non si propongono per quelli nuovi
+  const activeSites = useMemo(() => state.sites.filter((s) => !s.archived), [state.sites]);
+  const activeFavorites = useMemo(() => state.favorites.filter((f) => activeSites.some((s) => s.id === f.siteId)), [state.favorites, activeSites]);
 
   const prevMonth = () => { if (month === 1) { setYear(year - 1); setMonth(12); } else setMonth(month - 1); };
   const nextMonth = () => { if (month === 12) { setYear(year + 1); setMonth(1); } else setMonth(month + 1); };
@@ -125,7 +128,7 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
   };
 
   const startStamp = () => {
-    const fav = state.favorites.find((f) => siteById.has(f.siteId));
+    const fav = activeFavorites[0];
     setStamp(fav ? { type: 'shift', siteId: fav.siteId, start: fav.start, end: fav.end } : null);
     setStampCount(0);
     setDayPopover(null);
@@ -291,7 +294,7 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
           </div>
         ))}
         <div className="day-add-row">
-          <button className="day-add-btn" onClick={() => openNew(dateISO)} disabled={state.sites.length === 0}>
+          <button className="day-add-btn" onClick={() => openNew(dateISO)} disabled={activeSites.length === 0}>
             + turno
           </button>
           <button className="day-add-btn" onClick={() => openNewOccasional(dateISO)}>
@@ -323,7 +326,7 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
         <div className="view-row">
           <div className="view-row-left">
             <button className="btn btn-sm" onClick={goToday}>Vai a oggi</button>
-            {state.sites.length > 0 && (
+            {activeSites.length > 0 && (
               <button className={`btn btn-sm ${stampOn ? 'btn-primary' : ''}`} onClick={() => (stampOn ? setStampOn(false) : startStamp())}
                 title="Riempi il mese toccando i giorni">
                 ✋ Timbro
@@ -342,12 +345,12 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
           </button>
         )}
 
-        {state.sites.length > 1 && (
+        {activeSites.length > 1 && (
           <div className="filter-row">
             <button className={`filter-chip ${filterSite == null ? 'active' : ''}`} onClick={() => setFilterSite(null)}>
               Tutte le sedi
             </button>
-            {state.sites.map((s) => (
+            {activeSites.map((s) => (
               <button key={s.id} className={`filter-chip ${filterSite === s.id ? 'active' : ''}`}
                 onClick={() => setFilterSite(filterSite === s.id ? null : s.id)}>
                 <span className="site-dot" style={{ background: s.color }} />{s.name}
@@ -356,7 +359,7 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
           </div>
         )}
 
-        {state.sites.length === 0 && (
+        {activeSites.length === 0 && (
           <div className="hint hint-warn" style={{ marginTop: 12 }}>
             Prima di registrare i turni, aggiungi almeno una sede di lavoro con la sua paga oraria.
             {onNavigate && (
@@ -414,8 +417,10 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
       )}
 
       {editing && (
-        <ShiftEditor date={editing.date} shift={editing.shift} sites={state.sites} settings={state.settings}
-          favorites={state.favorites} lastSiteId={state.lastSiteId}
+        <ShiftEditor date={editing.date} shift={editing.shift} settings={state.settings}
+          sites={state.sites.filter((s) => !s.archived || s.id === editing.shift?.siteId)}
+          favorites={activeFavorites} lastSiteId={activeSites.some((s) => s.id === state.lastSiteId) ? state.lastSiteId : null}
+          allShifts={state.shifts}
           onSave={save} onDelete={del} onClose={() => setEditing(null)} onCopy={copyShiftTo}
           onSaveFavorite={saveFavorite} onDeleteFavorite={deleteFavorite} />
       )}
@@ -427,7 +432,7 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
       )}
 
       {stampOn && (
-        <StampBar sites={state.sites} favorites={state.favorites} markKinds={DAY_MARK_KINDS} stamp={stamp} setStamp={setStamp}
+        <StampBar sites={activeSites} favorites={activeFavorites} markKinds={DAY_MARK_KINDS} stamp={stamp} setStamp={setStamp}
           count={stampCount} onDone={() => setStampOn(false)} />
       )}
 

@@ -69,6 +69,32 @@ export default function NotificheTab({ state, onBack }) {
     }
   }
 
+  // strutture: contratto in scadenza e tetto di ore del mese (dalla scheda della sede)
+  for (const site of state.sites.filter((s) => !s.archived)) {
+    if (site.contractEnd) {
+      const daysLeft = Math.round((new Date(site.contractEnd) - new Date(today)) / 86400000);
+      const notice = Number(site.noticeDays) || 0;
+      const alertDays = Math.max(30, notice + 7);
+      if (daysLeft >= 0 && daysLeft <= alertDays) {
+        const [cy, cm, cd] = site.contractEnd.split('-');
+        const noticeText = notice > 0 && daysLeft >= notice
+          ? ` Per disdire o rinnovare serve un preavviso di ${notice} giorni.`
+          : '';
+        items.push({ id: `contract-${site.id}`, icon: 'history', tile: 'gold', title: 'Contratto in scadenza', site,
+          text: `${site.name}: finisce il ${Number(cd)}/${Number(cm)}/${cy} (${daysLeft === 0 ? 'oggi' : `tra ${daysLeft} ${daysLeft === 1 ? 'giorno' : 'giorni'}`}).${noticeText}` });
+      }
+    }
+    const cap = Number(site.maxHoursMonth) || 0;
+    if (cap > 0) {
+      const hours = progress.total.perSite.find((p) => p.siteId === site.id)?.hours ?? 0;
+      if (hours >= cap * 0.9) {
+        items.push({ id: `cap-${site.id}`, icon: 'hourglass', tile: hours > cap ? 'rose' : 'gold',
+          title: hours > cap ? 'Tetto di ore superato' : 'Vicina al tetto di ore', site,
+          text: `${site.name}: ${hours} ore su ${cap} questo mese (turni in programma compresi).` });
+      }
+    }
+  }
+
   const active = activeShifts(state.shifts);
   if (active.length > 0) {
     const lastDate = active.reduce((max, s) => (s.date > max ? s.date : max), active[0].date);
