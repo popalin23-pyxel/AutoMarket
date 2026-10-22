@@ -4,6 +4,7 @@ import {
 } from '../lib/calc.js';
 import { useNow } from '../lib/useNow.js';
 import ConfirmShiftsCard from './ConfirmShiftsCard.jsx';
+import InstallCard from './InstallCard.jsx';
 import { MONTHS_IT, WEEKDAYS_IT_LONG, roleLabel, dayMarkKind } from '../lib/defaults.js';
 import Icon from './icons/Icon.jsx';
 import SiteAvatar from './SiteAvatar.jsx';
@@ -254,6 +255,8 @@ export default function DashboardTab({ state, setState, userEmail, isAdmin, onNa
         <div className="hero-greeting">{greetingWord()}{firstName ? `, ${firstName}` : ''}</div>
         <div className="hero-date">{[role, formatDateLong(today)].filter(Boolean).join(' · ')}</div>
       </div>
+
+      <InstallCard />
 
       <BackupReminder state={state} />
 

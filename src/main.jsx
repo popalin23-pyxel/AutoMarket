@@ -2,6 +2,7 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App.jsx';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
+import './lib/install.js'; // cattura subito l'invito a installare l'app (Android/Chrome)
 import './styles.css';
 
 // Quando pubblichiamo un aggiornamento il service worker lo scarica in background, ma la

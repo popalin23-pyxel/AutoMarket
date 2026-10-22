@@ -6,6 +6,8 @@ import { loadAccent, applyAccent, ACCENT_COLORS } from '../lib/accentColor.js';
 import { loadDensity, applyDensity } from '../lib/density.js';
 import { useAuth } from '../lib/AuthContext.jsx';
 import { useConfirm } from '../lib/ConfirmContext.jsx';
+import { isStandalone } from '../lib/install.js';
+import InstallGuide from './InstallGuide.jsx';
 
 // Profilo: tu e l'app (account, aspetto, backup). Ciò che riguarda l'attività
 // professionale (anagrafica, sedi, fiscale, obiettivo) sta nella scheda Studio.
@@ -13,6 +15,7 @@ export default function SettingsTab({ state, setState, onLogout, isAdmin, onOpen
   const { user, updatePassword, deleteAccount } = useAuth();
   const confirmAction = useConfirm();
   const [deleting, setDeleting] = useState(false);
+  const [installGuide, setInstallGuide] = useState(false);
   const fileRef = useRef(null);
   const [msg, setMsg] = useState(null);
   const [pasteOpen, setPasteOpen] = useState(false);
@@ -117,7 +120,11 @@ export default function SettingsTab({ state, setState, onLogout, isAdmin, onOpen
         </form>
         {pwMsg && <div className={`hint hint-${pwMsg.type}`} style={{ marginTop: 10, marginBottom: 0 }}>{pwMsg.text}</div>}
 
+        {!isStandalone() && (
+          <button className="btn btn-block" style={{ marginTop: 14 }} onClick={() => setInstallGuide(true)}>📲 Installa l'app sul telefono</button>
+        )}
         <button className="btn btn-block" style={{ marginTop: 14 }} onClick={onOpenPrivacy}>📄 Privacy Policy</button>
+        {installGuide && <InstallGuide onClose={() => setInstallGuide(false)} />}
 
         {isAdmin && (
           <button className="btn btn-block" style={{ marginTop: 10 }} onClick={onOpenAdmin}>⚡ Pannello Amministrazione</button>
