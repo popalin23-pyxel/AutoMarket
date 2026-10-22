@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { computeMonthSummary } from '../lib/calc.js';
-import { MONTHS_IT, hexToRgba, professionalHeaderLines } from '../lib/defaults.js';
+import { MONTHS_IT, hexToRgba, professionalHeaderLines, rivalsaLabel } from '../lib/defaults.js';
 
 // Excel e PDF (~675 KB) si caricano solo quando si apre il riepilogo, non a ogni avvio dell'app.
 const loadExcel = () => import('../lib/excel.js');
@@ -28,11 +28,13 @@ export default function SummaryTab({ state, year, month, setYear, setMonth }) {
   const swipe = useSwipe(nextMonth, prevMonth);
   const animatedNet = useCountUp(sum.net);
   const [timesheetSite, setTimesheetSite] = useState(undefined); // undefined = chiuso
+  const rivLabel = rivalsaLabel(state.settings);
+  const exact = sum.taxMode === 'forfettario';
 
   // precarica in background: al tocco su "Esporta" il modulo è già pronto e la condivisione
   // su iPhone parte ancora "dentro" il tocco (altrimenti Safari può bloccarla)
   useEffect(() => { loadExcel().catch(() => {}); loadPdf().catch(() => {}); }, []);
-  const exportOpts = { headerLines: professionalHeaderLines(state.settings) };
+  const exportOpts = { headerLines: professionalHeaderLines(state.settings), rivalsaLabel: rivalsaLabel(state.settings) };
   const exportExcel = async () => (await loadExcel()).exportMonthExcel(sum, exportOpts);
   const exportPdf = async () => (await loadPdf()).exportMonthPdf(sum, exportOpts);
 
@@ -77,7 +79,7 @@ export default function SummaryTab({ state, year, month, setYear, setMonth }) {
                   <div><span className="ssc-lbl">Ore</span><span className="mono">{fmt(p.hours)}</span></div>
                   <div><span className="ssc-lbl">{p.mixedRate ? '€/h (media)' : '€/h'}</span><span className="mono">{fmt(p.rate)}</span></div>
                   <div><span className="ssc-lbl">Fatturato</span><span className="mono">€{fmt(p.revenue)}</span></div>
-                  <div><span className="ssc-lbl">Rivalsa {p.rivalsaPercent}%</span><span className="mono">€{fmt(p.rivalsa)}</span></div>
+                  <div><span className="ssc-lbl">{rivLabel} {p.rivalsaPercent}%</span><span className="mono">€{fmt(p.rivalsa)}</span></div>
                 </div>
                 {p.siteId != null && (
                   <button className="link-btn ssc-timesheet" onClick={() => setTimesheetSite(p.siteId)}>📄 Foglio ore da mandare alla struttura</button>
@@ -109,7 +111,7 @@ export default function SummaryTab({ state, year, month, setYear, setMonth }) {
               centerValue={`€${Math.round(animatedNet)}`} centerLabel={sum.occasionalCount > 0 ? 'netto sedi' : 'netto'} />
             <div className="ring-legend">
               <div className="ring-legend-item"><span className="dot" style={{ background: 'var(--green)' }} /> Netto {sum.totalInvoice ? Math.round((sum.net / sum.totalInvoice) * 100) : 0}%</div>
-              <div className="ring-legend-item"><span className="dot" style={{ background: 'var(--red)' }} /> Tasse {sum.totalInvoice ? Math.round((sum.taxes / sum.totalInvoice) * 100) : 0}%</div>
+              <div className="ring-legend-item"><span className="dot" style={{ background: 'var(--red)' }} /> {exact ? 'Tasse e contributi' : 'Tasse'} {sum.totalInvoice ? Math.round((sum.taxes / sum.totalInvoice) * 100) : 0}%</div>
             </div>
           </div>
         )}
@@ -121,15 +123,27 @@ export default function SummaryTab({ state, year, month, setYear, setMonth }) {
 
         <div className="summary-flow">
           <div className="flow-row"><span className="flow-label">Compensi (ore × paga)</span><span className="flow-value">€{fmt(sum.totalRevenue)}</span></div>
-          <div className="flow-row"><span className="flow-label">Rivalsa</span><span className="flow-value">€{fmt(sum.totalRivalsa)}</span></div>
+          <div className="flow-row"><span className="flow-label">{rivLabel}</span><span className="flow-value">€{fmt(sum.totalRivalsa)}</span></div>
           <div className="flow-row total"><span className="flow-label">Totale fatturato</span><span className="flow-value">€{fmt(sum.totalInvoice)}</span></div>
-          <div className="flow-row taxes"><span className="flow-label">Tasse da accantonare ({sum.taxPercent}%)</span><span className="flow-value red">−€{fmt(sum.taxes)}</span></div>
+          {exact ? (
+            <>
+              {sum.integrativo > 0 && (
+                <div className="flow-row taxes"><span className="flow-label">Integrativo da versare alla cassa</span><span className="flow-value red">−€{fmt(sum.integrativo)}</span></div>
+              )}
+              <div className="flow-row taxes"><span className="flow-label">Contributi previdenziali</span><span className="flow-value red">−€{fmt(sum.contributions)}</span></div>
+              <div className="flow-row taxes"><span className="flow-label">Imposta sostitutiva</span><span className="flow-value red">−€{fmt(sum.incomeTax)}</span></div>
+            </>
+          ) : (
+            <div className="flow-row taxes"><span className="flow-label">Tasse da accantonare ({sum.taxPercent}%)</span><span className="flow-value red">−€{fmt(sum.taxes)}</span></div>
+          )}
           <div className="flow-row net"><span className="flow-label">{sum.occasionalCount > 0 ? 'Netto sedi di lavoro' : 'Ti resta (netto)'}</span><span className="flow-value green">€{fmt(sum.net)}</span></div>
           {sum.occasionalCount > 0 && (
             <div className="flow-row net"><span className="flow-label"><b>Netto totale (sedi + prestazioni)</b></span><span className="flow-value green"><b>€{fmt(sum.netTotal)}</b></span></div>
           )}
         </div>
-        <p className="fiscal-footnote">Stima, non sostituisce il calcolo del commercialista.</p>
+        <p className="fiscal-footnote">
+          Stima, non sostituisce il calcolo del commercialista.{exact ? ' Calcolo del regime forfettario: vedi Studio → Fiscali → Come si calcola.' : ''}
+        </p>
       </div>
 
       {timesheetSite !== undefined && (

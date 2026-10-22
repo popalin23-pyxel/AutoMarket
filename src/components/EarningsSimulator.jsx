@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import SiteAvatar from './SiteAvatar.jsx';
 import EmptyState from './EmptyState.jsx';
 import NumberInput from './NumberInput.jsx';
+import { computeTaxes } from '../lib/calc.js';
 
 const fmt = (n) => n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const round2 = (n) => Math.round((n + Number.EPSILON) * 100) / 100;
@@ -27,10 +28,8 @@ export default function EarningsSimulator({ state, onNavigate }) {
     const totalHours = round2(perSite.reduce((a, p) => a + p.hours, 0));
     const totalRevenue = round2(perSite.reduce((a, p) => a + p.revenue, 0));
     const totalRivalsa = round2(perSite.reduce((a, p) => a + p.rivalsa, 0));
-    const totalInvoice = round2(totalRevenue + totalRivalsa);
-    const taxes = round2(totalInvoice * ((Number(settings.taxPercent) || 0) / 100));
-    const net = round2(totalInvoice - taxes);
-    return { perSite, totalHours, totalRevenue, totalRivalsa, totalInvoice, taxes, net };
+    const t = computeTaxes(totalRevenue, totalRivalsa, settings);
+    return { perSite, totalHours, totalRevenue, totalRivalsa, totalInvoice: t.invoice, taxes: t.taxes, net: t.net };
   }, [sites, counts, hoursPerShift, settings]);
 
   const goal = Number(settings.monthlyGoal) || 0;

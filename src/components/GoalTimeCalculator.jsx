@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { computeMonthSummary, todayISO } from '../lib/calc.js';
+import { computeMonthSummary, computeTaxes, todayISO } from '../lib/calc.js';
 import EmptyState from './EmptyState.jsx';
 
 const fmt = (n) => n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -27,8 +27,8 @@ export default function GoalTimeCalculator({ state }) {
     if (sites.length === 0) return 0;
     const avgRate = sites.reduce((a, s) => a + (Number(s.rate) || 0), 0) / sites.length;
     const avgRivalsa = sites.reduce((a, s) => a + (s.rivalsaPercent != null ? s.rivalsaPercent : (Number(settings.rivalsaPercent) || 0)), 0) / sites.length;
-    const taxPct = Number(settings.taxPercent) || 0;
-    return avgRate * (1 + avgRivalsa / 100) * (1 - taxPct / 100);
+    // netto di un'ora "media", con lo stesso calcolo delle tasse usato nel resto dell'app
+    return computeTaxes(avgRate, avgRate * (avgRivalsa / 100), settings).net;
   }, [sum, sites, settings]);
 
   if (goal <= 0) {

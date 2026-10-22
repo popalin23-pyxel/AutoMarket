@@ -46,7 +46,7 @@ export function exportMonthPdf(sum, opts = {}) {
     { label: 'Ore', x: marginX + 46, w: 18, align: 'right' },
     { label: '€/h', x: marginX + 64, w: 18, align: 'right' },
     { label: 'Fatturato', x: marginX + 82, w: 28, align: 'right' },
-    { label: 'Rivalsa', x: marginX + 110, w: 26, align: 'right' },
+    { label: (opts.rivalsaLabel || 'Rivalsa').replace('Contributo integrativo', 'Integrativo'), x: marginX + 110, w: 26, align: 'right' },
     { label: 'Totale', x: marginX + 136, w: 28, align: 'right' },
   ];
 
@@ -86,9 +86,16 @@ export function exportMonthPdf(sum, opts = {}) {
     y += opts2.bold ? 8 : 7;
   };
 
+  const riv = opts.rivalsaLabel || 'Rivalsa';
   totalRow('Ore totali', `${fmt(sum.totalHours)} h`);
-  totalRow('Compensi + rivalsa (fatturato)', `€${fmt(sum.totalInvoice)}`);
-  totalRow(`Tasse da accantonare (${sum.taxPercent}%)`, `−€${fmt(sum.taxes)}`, { color: [225, 29, 72] });
+  totalRow(`Compensi + ${riv.toLowerCase()} (fatturato)`, `€${fmt(sum.totalInvoice)}`);
+  if (sum.taxMode === 'forfettario') {
+    if (sum.integrativo > 0) totalRow('Integrativo da versare alla cassa', `−€${fmt(sum.integrativo)}`, { color: [225, 29, 72] });
+    totalRow('Contributi previdenziali', `−€${fmt(sum.contributions)}`, { color: [225, 29, 72] });
+    totalRow('Imposta sostitutiva', `−€${fmt(sum.incomeTax)}`, { color: [225, 29, 72] });
+  } else {
+    totalRow(`Tasse da accantonare (${sum.taxPercent}%)`, `−€${fmt(sum.taxes)}`, { color: [225, 29, 72] });
+  }
   y += 2;
   doc.setDrawColor(200, 208, 216);
   doc.line(marginX, y - 5, 210 - marginX, y - 5);

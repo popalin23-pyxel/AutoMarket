@@ -174,6 +174,42 @@ export function dayKind(year, month, day, holidaySet) {
   return 'weekday';
 }
 
+// ── Tasse e contributi ───────────────────────────────────────────────────
+// Due modi, a scelta in Studio → Fiscali (taxMode):
+// - 'semplice' (com'era): si accantona una % fissa di tutto il fatturato (imposta + contributi);
+// - 'forfettario' (la formula del regime forfettario): reddito = compensi × coefficiente di
+//   redditività (78% per le professioni sanitarie); contributi della cassa = % del reddito;
+//   imposta sostitutiva (15%, o 5% i primi anni) su reddito meno contributi. Il contributo
+//   integrativo di una cassa (es. 4% ENPAPI) si versa alla cassa: non è un guadagno e non si
+//   tassa; la rivalsa INPS invece fa parte del compenso.
+// `taxes` è tutto ciò che non resta in tasca (imposta + contributi + integrativo da versare),
+// così netto = fatturato − taxes in entrambi i modi.
+export function computeTaxes(revenue, rivalsa, settings = {}) {
+  const invoice = round2((Number(revenue) || 0) + (Number(rivalsa) || 0));
+  if (settings.taxMode !== 'forfettario') {
+    const taxPercent = Number(settings.taxPercent) || 0;
+    const taxes = round2(invoice * (taxPercent / 100));
+    const contributions = round2(invoice * ((Number(settings.contributionsPercent) || 0) / 100));
+    return {
+      taxMode: 'semplice', invoice, income: invoice, taxable: invoice,
+      contributions, incomeTax: round2(taxes - contributions), integrativo: 0,
+      taxes, net: round2(invoice - taxes), taxPercent,
+    };
+  }
+  const integrativo = settings.rivalsaType === 'integrativo' ? round2(Number(rivalsa) || 0) : 0;
+  const income = round2(invoice - integrativo);
+  const coefficient = settings.coefficientPercent == null || settings.coefficientPercent === '' ? 78 : Number(settings.coefficientPercent) || 0;
+  const taxable = round2(income * (coefficient / 100));
+  const contributions = round2(taxable * ((Number(settings.forfContributionsPercent) || 0) / 100));
+  const incomeTax = round2(Math.max(0, taxable - contributions) * ((Number(settings.forfTaxRatePercent) || 0) / 100));
+  const taxes = round2(contributions + incomeTax + integrativo);
+  return {
+    taxMode: 'forfettario', invoice, income, taxable, coefficient,
+    contributions, incomeTax, integrativo, taxes, net: round2(invoice - taxes),
+    taxPercent: invoice > 0 ? round2((taxes / invoice) * 100) : 0,
+  };
+}
+
 // ── Paga oraria ──────────────────────────────────────────────────────────
 // Quando una sede cambia tariffa "a partire dal…", la vecchia resta in `pastRates`
 // ([{ before: 'YYYY-MM-DD', rate }], in ordine di data): vale per i turni prima di quella
@@ -236,12 +272,15 @@ function aggregate(shiftsIn, sites, settings) {
   const totalHours = round2(perSite.reduce((a, s) => a + s.hours, 0));
   const totalRevenue = round2(perSite.reduce((a, s) => a + s.revenue, 0));
   const totalRivalsa = round2(perSite.reduce((a, s) => a + s.rivalsa, 0));
-  const totalInvoice = round2(totalRevenue + totalRivalsa);
-  const taxPercent = Number(settings.taxPercent) || 0;
-  const taxes = round2(totalInvoice * (taxPercent / 100));
-  const net = round2(totalInvoice - taxes);
+  const tax = computeTaxes(totalRevenue, totalRivalsa, settings);
 
-  return { perSite, totalHours, totalRevenue, totalRivalsa, totalInvoice, taxPercent, taxes, net, shiftCount: filteredShifts.length };
+  return {
+    perSite, totalHours, totalRevenue, totalRivalsa, totalInvoice: tax.invoice,
+    taxPercent: tax.taxPercent, taxes: tax.taxes, net: tax.net,
+    // dettaglio (per "Come si calcola", riepilogo, PDF): contributi, imposta, integrativo da versare
+    taxMode: tax.taxMode, taxable: tax.taxable, contributions: tax.contributions, incomeTax: tax.incomeTax, integrativo: tax.integrativo,
+    shiftCount: filteredShifts.length,
+  };
 }
 
 /**
@@ -331,7 +370,12 @@ export function computeYearSummary(shifts, sites, settings, year, occasionalWork
   const totalTaxes = round2(months.reduce((a, m) => a + m.taxes, 0));
   const totalNet = round2(months.reduce((a, m) => a + m.net, 0));
   const totalNetAll = round2(totalNet + occasionalNet);
-  return { year, months, totalHours, totalInvoice, totalTaxes, totalNet, occasionalGross, occasionalTaxes, occasionalNet, totalNetAll };
+  const sumOf = (k) => round2(months.reduce((a, m) => a + (m[k] || 0), 0));
+  return {
+    year, months, totalHours, totalInvoice, totalTaxes, totalNet, occasionalGross, occasionalTaxes, occasionalNet, totalNetAll,
+    totalRevenue: sumOf('totalRevenue'), totalRivalsa: sumOf('totalRivalsa'), totalTaxable: sumOf('taxable'),
+    totalContributions: sumOf('contributions'), totalIncomeTax: sumOf('incomeTax'), totalIntegrativo: sumOf('integrativo'),
+  };
 }
 
 // Elenco (anno,mese) con almeno un turno o una prestazione occasionale, più recenti prima

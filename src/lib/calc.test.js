@@ -5,6 +5,7 @@ import {
   shiftsInMonth, shiftsOnDay, shiftsInRange, shiftsToday, nextShiftAfter,
   computeMonthSummary, computeYearSummary, compareMonths, compareWeeks,
   computeMonthProgress, shiftsToConfirm, isShiftDone, shiftEndDate, siteRateOn, shiftRate, computeTimesheet,
+  computeTaxes,
 } from './calc.js';
 import { changeSiteRate } from './store.js';
 
@@ -433,5 +434,52 @@ describe('foglio ore di una struttura', () => {
     expect(ts.rivalsaPercent).toBe(4);
     expect(ts.rivalsa).toBe(26.4);
     expect(ts.total).toBe(686.4);
+  });
+});
+
+describe('tasse: modalità semplice (com\'era) e forfettario esatto', () => {
+  it('semplice: una % fissa di tutto il fatturato, rivalsa compresa (comportamento di prima)', () => {
+    const t = computeTaxes(1000, 40, { taxPercent: 25, taxRatePercent: 15, contributionsPercent: 10 });
+    expect(t.invoice).toBe(1040);
+    expect(t.taxes).toBe(260);
+    expect(t.net).toBe(780);
+    expect(t.contributions).toBe(104);
+    expect(t.incomeTax).toBe(156);
+  });
+
+  it('forfettario con integrativo ENPAPI: il 4% va alla cassa, reddito = compensi × 78%', () => {
+    const settings = { taxMode: 'forfettario', forfTaxRatePercent: 15, forfContributionsPercent: 16, coefficientPercent: 78, rivalsaType: 'integrativo' };
+    const t = computeTaxes(1000, 40, settings);
+    expect(t.invoice).toBe(1040);       // in fattura
+    expect(t.integrativo).toBe(40);     // da versare a ENPAPI
+    expect(t.taxable).toBe(780);        // 1000 × 78%
+    expect(t.contributions).toBe(124.8);// 16% di 780
+    expect(t.incomeTax).toBe(98.28);    // 15% di (780 − 124,80)
+    expect(t.net).toBe(776.92);         // 1000 − 124,80 − 98,28
+    expect(t.taxes).toBeCloseTo(263.08, 2);
+  });
+
+  it('forfettario con rivalsa INPS: il 4% fa parte del compenso e si tassa', () => {
+    const settings = { taxMode: 'forfettario', forfTaxRatePercent: 5, forfContributionsPercent: 26.07, coefficientPercent: 78, rivalsaType: 'rivalsa' };
+    const t = computeTaxes(1000, 40, settings);
+    expect(t.integrativo).toBe(0);
+    expect(t.taxable).toBe(811.2);              // 1040 × 78%
+    expect(t.contributions).toBe(211.48);       // 26,07% di 811,20
+    expect(t.incomeTax).toBe(29.99);            // 5% di 599,72
+    expect(t.net).toBe(798.53);
+  });
+
+  it('il riepilogo del mese usa la modalità scelta e ne riporta il dettaglio', () => {
+    const sites = [{ id: 1, name: 'CDS', rate: 25, rivalsaPercent: 4 }];
+    const shifts = [{ id: 1, date: '2026-10-05', siteId: 1, start: '08:00', end: '16:00' }];
+    const settings = { taxMode: 'forfettario', forfTaxRatePercent: 15, forfContributionsPercent: 16, coefficientPercent: 78, rivalsaType: 'integrativo' };
+    const m = computeMonthSummary(shifts, sites, settings, 2026, 10);
+    expect(m.totalRevenue).toBe(200);
+    expect(m.totalInvoice).toBe(208);
+    expect(m.integrativo).toBe(8);
+    expect(m.net).toBe(155.38);
+    const y = computeYearSummary(shifts, sites, settings, 2026);
+    expect(y.totalIntegrativo).toBe(8);
+    expect(y.totalContributions).toBe(m.contributions);
   });
 });

@@ -507,6 +507,8 @@ td .site-picker { flex-wrap: nowrap; }
 .rate-mode-opt > span { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .rate-mode-opt small { color: var(--text-dim); font-size: 11.5px; line-height: 1.4; }
 .rate-mode-opt input[type=radio] { margin-top: 3px; }
+.rate-mode-opt.disabled { opacity: 0.55; cursor: not-allowed; }
+.fund-info { margin: 6px 0 4px 18px; padding: 0; font-size: 12.5px; color: var(--text-dim); line-height: 1.5; display: flex; flex-direction: column; gap: 4px; }
 .editor-breakdown {
   display: flex; flex-direction: column; gap: 3px; margin-top: 12px; padding: 10px 12px;
   border-radius: var(--radius-sm); background: rgba(var(--ink), 0.03); border: 1px solid var(--border);

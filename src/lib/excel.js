@@ -17,16 +17,24 @@ export function exportMonthExcel(sum, opts = {}) {
   const title = `${MONTHS_IT[sum.month - 1]} ${sum.year}`;
 
   const header = (opts.headerLines || []).map((line) => [safeText(String(line))]);
+  const riv = opts.rivalsaLabel || 'Rivalsa';
+  const taxRows = sum.taxMode === 'forfettario'
+    ? [
+      ...(sum.integrativo > 0 ? [['Integrativo da versare alla cassa', '', '', '', '', '', -sum.integrativo]] : []),
+      ['Contributi previdenziali', '', '', '', '', '', -sum.contributions],
+      ['Imposta sostitutiva', '', '', '', '', '', -sum.incomeTax],
+    ]
+    : [[`Tasse da accantonare (${sum.taxPercent}%)`, '', '', '', '', '', -sum.taxes]];
   const rows = [
     ...header,
     [`Riepilogo ${title}`],
     [],
-    ['Sede', 'Ore', '€/h', 'Fatturato', 'Rivalsa %', 'Rivalsa €', 'Totale'],
+    ['Sede', 'Ore', '€/h', 'Fatturato', `${riv} %`, `${riv} €`, 'Totale'],
     ...sum.perSite.map((p) => [safeText(p.name), p.hours, p.rate, p.revenue, p.rivalsaPercent, p.rivalsa, p.total]),
     [],
     ['Ore totali', sum.totalHours],
     ['Fatturato totale', '', '', '', '', '', sum.totalInvoice],
-    [`Tasse da accantonare (${sum.taxPercent}%)`, '', '', '', '', '', -sum.taxes],
+    ...taxRows,
     ['Netto sedi di lavoro', '', '', '', '', '', sum.net],
   ];
 
