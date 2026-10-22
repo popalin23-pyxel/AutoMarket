@@ -336,6 +336,39 @@ tbody tr:hover td { background: rgba(var(--accent-rgb), 0.07); }
 .view-toggle button { border: none; background: none; color: var(--text-mut); font-size: 12px; padding: 5px 10px; border-radius: 7px; cursor: pointer; }
 .view-toggle button.active { background: var(--accent); color: var(--on-accent); font-weight: 700; }
 
+/* ── Modalità timbro ───────────────────────────────────── */
+.view-row-left { display: flex; gap: 6px; flex-wrap: wrap; }
+.stamping .day-shifts { pointer-events: none; }
+.stamping .day-add-row { display: none; }
+.day-row.stamp-target { cursor: pointer; }
+.day-row.stamp-target:active { background: rgba(var(--accent-rgb), 0.14) !important; }
+.stamping.panel { margin-bottom: 190px; }
+.cal-grid-panel.stamping .cal-cell:not(.empty):active { background: rgba(var(--accent-rgb), 0.18); }
+.stamp-bar {
+  position: fixed; z-index: 70; left: 50%; transform: translateX(-50%);
+  bottom: calc(74px + env(safe-area-inset-bottom, 0px));
+  width: min(696px, calc(100% - 24px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)));
+  background: var(--header-bg); border: 1px solid var(--border-hi); border-radius: var(--radius);
+  box-shadow: 0 12px 34px var(--shadow-card); padding: 10px 12px;
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+}
+.stamp-bar-head { display: flex; align-items: center; gap: 8px; }
+.stamp-bar-title { font-weight: 800; font-size: 13.5px; flex: 1; }
+.stamp-bar-count { font-family: var(--mono); font-size: 12px; font-weight: 700; color: var(--accent-text); }
+.stamp-bar-hint { font-size: 12px; color: var(--text-dim); margin: 4px 0 8px; }
+.stamp-chips { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
+.stamp-chips::-webkit-scrollbar { display: none; }
+.stamp-chip {
+  flex-shrink: 0; display: inline-flex; align-items: center; gap: 6px; padding: 6px 11px; border-radius: 14px;
+  border: 1px solid var(--border-hi); background: rgba(var(--ink), 0.04); color: var(--text);
+  font-size: 12px; cursor: pointer; white-space: nowrap; font-family: inherit;
+}
+.stamp-chip.sel { border-color: var(--accent); background: rgba(var(--accent-rgb), 0.16); font-weight: 700; }
+.stamp-chip-mark.sel { border-color: var(--mark-color); background: color-mix(in srgb, var(--mark-color) 18%, transparent); }
+.stamp-custom { display: flex; gap: 6px; margin-top: 8px; }
+.stamp-custom select { flex: 1; min-width: 0; }
+.stamp-custom input[type=time] { width: 96px; min-width: 0; }
+
 /* ── Calendario a griglia ──────────────────────────────── */
 .cal-grid-panel { padding: 14px; }
 .cal-grid-head { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 6px; }
@@ -352,6 +385,8 @@ tbody tr:hover td { background: rgba(var(--accent-rgb), 0.07); }
 .cal-cell.holiday { background: rgba(251, 113, 133, 0.08); border-color: rgba(251, 113, 133, 0.25); }
 .cal-cell.today { border-color: var(--accent); box-shadow: var(--glow-soft); }
 .cal-cell-num { font-size: 13px; font-weight: 600; }
+.cal-cell { position: relative; }
+.cal-cell-mark { position: absolute; top: 2px; right: 3px; font-size: 10px; line-height: 1; }
 .cal-cell-dots { display: flex; gap: 2px; }
 .cal-dot { width: 5px; height: 5px; border-radius: 50%; }
 
@@ -927,6 +962,7 @@ code { background: rgba(var(--ink), 0.08); padding: 1px 5px; border-radius: 4px;
   }
   .bnav-btn { max-width: none; width: 100%; padding: 10px 2px; }
   .save-toast, .undo-toast { left: calc(50% + 46px); }
+  .stamp-bar { left: calc(50% + 46px); bottom: 16px; width: min(696px, calc(100% - 140px)); }
 }
 
 /* ── Densità compatta (Profilo → Aspetto) ─────────────────── */

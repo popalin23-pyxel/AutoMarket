@@ -3,10 +3,11 @@ import {
   monthDays, weekdayOf, shiftsOnDay, hoursOfShift, todayISO, holidaysOfYear, isHoliday,
   startOfWeek, endOfWeek, shiftsInRange, addDaysISO, computeWeekSummary,
 } from '../lib/calc.js';
-import { MONTHS_IT, WEEKDAYS_IT, hexToRgba } from '../lib/defaults.js';
+import { MONTHS_IT, WEEKDAYS_IT, DAY_MARK_KINDS, dayMarkKind, hexToRgba } from '../lib/defaults.js';
 import {
   addShift, updateShift, removeShift, restoreShift, addFavorite, removeFavorite,
   addOccasionalWork, updateOccasionalWork, removeOccasionalWork,
+  addDayMarks, updateDayMark, removeDayMark,
 } from '../lib/store.js';
 import { useSwipe } from '../lib/useSwipe.js';
 import { useConfirm } from '../lib/ConfirmContext.jsx';
@@ -17,6 +18,8 @@ import ShiftEditor from './ShiftEditor.jsx';
 import OccasionalEditor from './OccasionalEditor.jsx';
 import CalendarGridView from './charts/CalendarGridView.jsx';
 import SiteAvatar from './SiteAvatar.jsx';
+import StampBar from './StampBar.jsx';
+import MarkEditor from './MarkEditor.jsx';
 
 const fmt = (n) => n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -43,6 +46,7 @@ function DayPopoverOverlay({ dateISO, onClose, children }) {
 export default function ShiftsTab({ state, setState, year, month, setYear, setMonth, onNavigate }) {
   const [editing, setEditing] = useState(null); // { date, shift: null|obj }
   const [editingOccasional, setEditingOccasional] = useState(null); // { date, entry: null|obj }
+  const [editingMark, setEditingMark] = useState(null); // { date, mark: null|obj } — ferie e assenze
   const [dayPopover, setDayPopover] = useState(null); // dateISO (solo vista calendario)
   const [view, setView] = useState(() => { try { return localStorage.getItem(VIEW_KEY) || 'list'; } catch { return 'list'; } });
   const [toast, setToast] = useState(false);
@@ -50,6 +54,11 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
   const [filterSite, setFilterSite] = useState(null);
   const undoTimer = useRef(null);
   const confirmAction = useConfirm();
+  // modalità timbro: `stamp` è ciò che ogni tocco su un giorno aggiunge (o toglie)
+  const [stampOn, setStampOn] = useState(false);
+  const [stamp, setStamp] = useState(null);
+  const [stampCount, setStampCount] = useState(0);
+  useBackClose(() => setStampOn(false), stampOn);
 
   useEffect(() => { try { localStorage.setItem(VIEW_KEY, view); } catch {} }, [view]);
 
@@ -67,6 +76,9 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
   const openEdit = (dateISO, shift) => { setDayPopover(null); setEditing({ date: dateISO, shift }); };
   const openNewOccasional = (dateISO) => { setDayPopover(null); setEditingOccasional({ date: dateISO, entry: null }); };
   const openEditOccasional = (dateISO, entry) => { setDayPopover(null); setEditingOccasional({ date: dateISO, entry }); };
+  const openNewMark = (dateISO) => { setDayPopover(null); setEditingMark({ date: dateISO, mark: null }); };
+  const openEditMark = (mark) => { setDayPopover(null); setEditingMark({ date: mark.date, mark }); };
+  const dayMarks = state.dayMarks ?? [];
 
   const flashSaved = () => {
     setToast(true);
@@ -112,6 +124,41 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
     clearTimeout(undoTimer.current);
   };
 
+  const startStamp = () => {
+    const fav = state.favorites.find((f) => siteById.has(f.siteId));
+    setStamp(fav ? { type: 'shift', siteId: fav.siteId, start: fav.start, end: fav.end } : null);
+    setStampCount(0);
+    setDayPopover(null);
+    setStampOn(true);
+  };
+
+  // un tocco aggiunge il turno (o il giorno di ferie/assenza) timbrato su quel giorno, un secondo tocco lo toglie
+  const applyStamp = (dateISO) => {
+    if (stamp?.type === 'mark') {
+      const existingMark = dayMarks.find((m) => m.date === dateISO && m.kind === stamp.kind);
+      if (existingMark) {
+        setState((s) => removeDayMark(s, existingMark.id));
+        setStampCount((c) => c - 1);
+      } else {
+        setState((s) => addDayMarks(s, { kind: stamp.kind, from: dateISO }));
+        setStampCount((c) => c + 1);
+      }
+      try { navigator.vibrate?.(12); } catch {}
+      return;
+    }
+    if (!stamp || stamp.type !== 'shift' || stamp.siteId == null || !stamp.start || !stamp.end || stamp.start === stamp.end) return;
+    const existing = state.shifts.find((x) => x.date === dateISO && x.siteId === stamp.siteId
+      && x.start === stamp.start && x.end === stamp.end);
+    if (existing) {
+      setState((s) => removeShift(s, existing.id));
+      setStampCount((c) => c - 1);
+    } else {
+      setState((s) => addShift(s, { date: dateISO, siteId: stamp.siteId, start: stamp.start, end: stamp.end, note: '' }));
+      setStampCount((c) => c + 1);
+    }
+    try { navigator.vibrate?.(12); } catch {}
+  };
+
   const saveFavorite = (fav) => setState((s) => addFavorite(s, fav));
   const deleteFavorite = (id) => setState((s) => removeFavorite(s, id));
 
@@ -128,6 +175,10 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
     setState((s) => removeOccasionalWork(s, id));
     setEditingOccasional(null);
   };
+
+  const saveMarks = (data) => { setState((s) => addDayMarks(s, data)); setEditingMark(null); flashSaved(); };
+  const updateMark = (id, patch) => { setState((s) => updateDayMark(s, id, patch)); setEditingMark(null); flashSaved(); };
+  const delMark = (id) => { setState((s) => removeDayMark(s, id)); setEditingMark(null); };
 
   const weekStart = startOfWeek(today);
   const weekEnd = endOfWeek(today);
@@ -183,11 +234,34 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
     };
   }, [state.shifts, year, month, days, siteById]);
 
+  const monthPrefix = `${year}-${String(month).padStart(2, '0')}-`;
+  const monthMarksLabel = useMemo(() => {
+    const counts = new Map();
+    for (const mk of dayMarks) if (mk.date.startsWith(monthPrefix)) counts.set(mk.kind, (counts.get(mk.kind) || 0) + 1);
+    return DAY_MARK_KINDS.filter((k) => counts.has(k.id))
+      .map((k) => `${counts.get(k.id)} ${counts.get(k.id) === 1 ? 'giorno' : 'giorni'} ${k.label.toLowerCase()}`).join(' · ');
+  }, [dayMarks, monthPrefix]);
+
   const DayShiftsBlock = ({ dateISO }) => {
     const dayShifts = shiftsOnDay(state.shifts, dateISO).filter((sh) => !filterSite || sh.siteId === filterSite);
     const dayOccasional = shiftsOnDay(state.occasionalWork, dateISO);
+    const marks = shiftsOnDay(dayMarks, dateISO);
     return (
       <div className="day-shifts">
+        {marks.map((mk) => {
+          const k = dayMarkKind(mk.kind);
+          return (
+            <div key={`mk-${mk.id}`} className="shift-chip mark-chip"
+              style={{ borderLeftColor: k.color, background: hexToRgba(k.color, 0.12) }}
+              onClick={() => openEditMark(mk)}>
+              <div className="shift-chip-row">
+                <span className="occasional-dot">{k.icon}</span>
+                <span className="shift-site">{k.label}</span>
+              </div>
+              {mk.note && <div className="shift-note">📝 {mk.note}</div>}
+            </div>
+          );
+        })}
         {dayShifts.map((sh) => {
           const site = siteById.get(sh.siteId);
           const color = site?.color ?? '#6b7280';
@@ -222,6 +296,9 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
           <button className="day-add-btn" onClick={() => openNewOccasional(dateISO)}>
             + prestazione
           </button>
+          <button className="day-add-btn" onClick={() => openNewMark(dateISO)}>
+            + ferie/assenza
+          </button>
         </div>
       </div>
     );
@@ -237,13 +314,21 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
           <button className="btn" onClick={prevMonth}>‹</button>
           <div key={`${year}-${month}`} className="month-slide">
             <span className="month-label">{MONTHS_IT[month - 1]} {year}</span>
-            <span className="month-sub">{monthTotalHours}h totali questo mese</span>
+            <span className="month-sub">{monthTotalHours}h totali questo mese{monthMarksLabel ? ` · ${monthMarksLabel}` : ''}</span>
           </div>
           <button className="btn" onClick={nextMonth}>›</button>
         </div>
 
         <div className="view-row">
-          <button className="btn btn-sm" onClick={goToday}>Vai a oggi</button>
+          <div className="view-row-left">
+            <button className="btn btn-sm" onClick={goToday}>Vai a oggi</button>
+            {state.sites.length > 0 && (
+              <button className={`btn btn-sm ${stampOn ? 'btn-primary' : ''}`} onClick={() => (stampOn ? setStampOn(false) : startStamp())}
+                title="Riempi il mese toccando i giorni">
+                ✋ Timbro
+              </button>
+            )}
+          </div>
           <div className="view-toggle">
             <button className={view === 'list' ? 'active' : ''} onClick={() => setView('list')}>☰ Lista</button>
             <button className={view === 'grid' ? 'active' : ''} onClick={() => setView('grid')}>▦ Calendario</button>
@@ -283,7 +368,7 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
       </div>
 
       {view === 'list' ? (
-        <div className="panel" style={{ padding: 0 }}>
+        <div className={`panel ${stampOn ? 'stamping' : ''}`} style={{ padding: 0 }}>
           {Array.from({ length: days }, (_, i) => i + 1).map((d) => {
             const dateISO = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
             const wd = weekdayOf(year, month, d);
@@ -291,8 +376,9 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
             const isWeekend = wd >= 5 || holiday;
             const isToday = dateISO === today;
             return (
-              <div key={d} className={`day-row ${isWeekend ? 'weekend' : ''} ${holiday ? 'holiday' : ''}`}
-                style={{ padding: '10px 14px', ...(isToday ? { background: 'rgba(56,189,248,0.10)' } : {}) }}>
+              <div key={d} className={`day-row ${isWeekend ? 'weekend' : ''} ${holiday ? 'holiday' : ''} ${stampOn ? 'stamp-target' : ''}`}
+                style={{ padding: '10px 14px', ...(isToday ? { background: 'rgba(56,189,248,0.10)' } : {}) }}
+                onClick={stampOn ? () => applyStamp(dateISO) : undefined}>
                 <div className="day-num">
                   <b style={isToday ? { color: 'var(--accent)' } : undefined}>{d}</b>
                   <span style={holiday ? { color: 'var(--red)' } : undefined}>{holiday ? '★' : WEEKDAYS_IT[wd]}</span>
@@ -305,8 +391,9 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
       ) : (
         <CalendarGridView year={year} month={month}
           shifts={filterSite ? state.shifts.filter((sh) => sh.siteId === filterSite) : state.shifts}
-          occasionalWork={state.occasionalWork}
-          siteById={siteById} holidaySet={holidaySet} today={today} onDayClick={(dateISO) => setDayPopover(dateISO)} />
+          occasionalWork={state.occasionalWork} dayMarks={dayMarks}
+          siteById={siteById} holidaySet={holidaySet} today={today} stamping={stampOn}
+          onDayClick={(dateISO) => (stampOn ? applyStamp(dateISO) : setDayPopover(dateISO))} />
       )}
 
       {thisWeekShifts.length > 0 && (
@@ -338,7 +425,17 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
           onSave={saveOccasional} onDelete={delOccasional} onClose={() => setEditingOccasional(null)} />
       )}
 
-      {toast && <Portal><div className="save-toast">✓ Turno salvato</div></Portal>}
+      {stampOn && (
+        <StampBar sites={state.sites} favorites={state.favorites} markKinds={DAY_MARK_KINDS} stamp={stamp} setStamp={setStamp}
+          count={stampCount} onDone={() => setStampOn(false)} />
+      )}
+
+      {editingMark && (
+        <MarkEditor date={editingMark.date} mark={editingMark.mark}
+          onSave={saveMarks} onUpdate={updateMark} onDelete={delMark} onClose={() => setEditingMark(null)} />
+      )}
+
+      {toast && <Portal><div className="save-toast">✓ Salvato</div></Portal>}
 
       {undoShift && (
         <Portal>

@@ -56,6 +56,16 @@ export const EXPENSE_CATEGORIES = [
   { id: 'altro', label: 'Altro', tile: 'rose' },
 ];
 
+// Giorni segnati sul calendario: non pagati, servono a vederli e contarli nell'anno
+// (e a non proporli come giorni liberi nelle disponibilità)
+export const DAY_MARK_KINDS = [
+  { id: 'ferie', label: 'Ferie', icon: '🏖️', color: '#22d3ee' },
+  { id: 'malattia', label: 'Malattia', icon: '🤒', color: '#fb7185' },
+  { id: 'corso', label: 'Corso / ECM', icon: '📚', color: '#a78bfa' },
+  { id: 'nondisp', label: 'Non disponibile', icon: '⛔', color: '#94a3b8' },
+];
+export const dayMarkKind = (id) => DAY_MARK_KINDS.find((k) => k.id === id) ?? { id, label: id, icon: '•', color: '#94a3b8' };
+
 // Palette di colori pronti per le sedi (coordinata col tema dell'app)
 export const SITE_COLORS = [
   '#2dd4bf', '#f59e0b', '#818cf8', '#fb7185', '#a3e635', '#22d3ee', '#c084fc', '#fbbf24',

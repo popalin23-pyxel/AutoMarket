@@ -1,10 +1,10 @@
 import React from 'react';
 import { weekdayOf, monthDays, shiftsOnDay } from '../../lib/calc.js';
-import { WEEKDAYS_IT } from '../../lib/defaults.js';
+import { WEEKDAYS_IT, dayMarkKind, hexToRgba } from '../../lib/defaults.js';
 
 // Vista a griglia tradizionale del mese, con puntini colorati per sede
 // (dorato per le prestazioni occasionali, che non hanno una sede).
-export default function CalendarGridView({ year, month, shifts, occasionalWork = [], siteById, holidaySet, today, onDayClick }) {
+export default function CalendarGridView({ year, month, shifts, occasionalWork = [], dayMarks = [], siteById, holidaySet, today, stamping = false, onDayClick }) {
   const days = monthDays(year, month);
   const firstWd = weekdayOf(year, month, 1); // 0 = lunedì
   const cells = [];
@@ -13,7 +13,7 @@ export default function CalendarGridView({ year, month, shifts, occasionalWork =
   while (cells.length % 7 !== 0) cells.push(null);
 
   return (
-    <div className="panel cal-grid-panel">
+    <div className={`panel cal-grid-panel ${stamping ? 'stamping' : ''}`}>
       <div className="cal-grid-head">
         {WEEKDAYS_IT.map((w) => <div key={w} className="cal-grid-head-cell">{w}</div>)}
       </div>
@@ -27,10 +27,15 @@ export default function CalendarGridView({ year, month, shifts, occasionalWork =
           const isToday = dateISO === today;
           const dayShifts = shiftsOnDay(shifts, dateISO);
           const dayOccasional = shiftsOnDay(occasionalWork, dateISO);
+          const mark = shiftsOnDay(dayMarks, dateISO)[0];
+          const markKind = mark ? dayMarkKind(mark.kind) : null;
           return (
             <button key={i} type="button"
-              className={`cal-cell ${isWeekend ? 'weekend' : ''} ${holiday ? 'holiday' : ''} ${isToday ? 'today' : ''}`}
+              className={`cal-cell ${isWeekend ? 'weekend' : ''} ${holiday ? 'holiday' : ''} ${isToday ? 'today' : ''} ${mark ? 'marked' : ''}`}
+              style={markKind ? { background: hexToRgba(markKind.color, 0.16), borderColor: hexToRgba(markKind.color, 0.45) } : undefined}
+              title={markKind?.label}
               onClick={() => onDayClick(dateISO)}>
+              {markKind && <span className="cal-cell-mark" aria-label={markKind.label}>{markKind.icon}</span>}
               <span className="cal-cell-num">{d}</span>
               {(dayShifts.length > 0 || dayOccasional.length > 0) && (
                 <span className="cal-cell-dots">

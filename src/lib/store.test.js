@@ -3,6 +3,7 @@ import {
   removeShift, addShift, updateShift, restoreShift, removeSite, removeFavorite, removeExpense,
   addOccasionalWork, removeOccasionalWork, updateSettings,
   importBackupFromText, replaceAllData, clearAllData, sanitizeState,
+  addDayMarks, removeDayMark,
 } from './store.js';
 import { mergeStates, sameData } from './mergeState.js';
 
@@ -15,7 +16,7 @@ const baseState = () => ({
   lastSiteId: 1,
   settings: { taxRatePercent: 15, contributionsPercent: 10, taxPercent: 25, rivalsaPercent: 4, monthlyGoal: 4000, occasionalTaxRatePercent: 23 },
   seq: { site: 2, shift: 2, favorite: 2, expense: 2, occasionalWork: 2 },
-  tombstones: { sites: {}, shifts: {}, favorites: {}, expenses: {}, occasionalWork: {} },
+  tombstones: { sites: {}, shifts: {}, favorites: {}, expenses: {}, occasionalWork: {}, dayMarks: {} },
 });
 
 describe('eliminazioni: tracciano un tombstone (per la sync multi-dispositivo)', () => {
@@ -104,7 +105,7 @@ describe('importBackupFromText: ripristino da file di backup', () => {
     expect(imported.favorites).toEqual([]);
     expect(imported.expenses).toEqual([]);
     expect(imported.occasionalWork).toEqual([]);
-    expect(imported.tombstones).toEqual({ sites: {}, shifts: {}, favorites: {}, expenses: {}, occasionalWork: {} });
+    expect(imported.tombstones).toEqual({ sites: {}, shifts: {}, favorites: {}, expenses: {}, occasionalWork: {}, dayMarks: {} });
     expect(imported.settings.taxRatePercent).toBe(25); // compatibilità: l'aliquota unica diventa taxRatePercent
     expect(imported.settings.contributionsPercent).toBe(0);
   });
@@ -192,5 +193,34 @@ describe('ripristino backup e "Azzera tutti i dati" arrivano anche all\'altro te
     const merged = mergeStates(old(), restored);
     expect(merged.shifts.map((x) => x.id)).toEqual([1]);
     expect(merged.settings.monthlyGoal).toBe(1234);
+  });
+});
+
+describe('ferie e assenze (giorni segnati)', () => {
+  it('un periodo crea un giorno segnato per ogni data, estremi compresi', () => {
+    const next = addDayMarks(sanitizeState(baseState()), { kind: 'ferie', from: '2026-10-30', to: '2026-11-02', note: 'mare' });
+    expect(next.dayMarks.map((m) => m.date)).toEqual(['2026-10-30', '2026-10-31', '2026-11-01', '2026-11-02']);
+    expect(new Set(next.dayMarks.map((m) => m.id)).size).toBe(4);
+    expect(next.dayMarks.every((m) => m.kind === 'ferie' && m.note === 'mare' && m._u > 0)).toBe(true);
+  });
+
+  it('non duplica un giorno già segnato con lo stesso tipo', () => {
+    let s = addDayMarks(sanitizeState(baseState()), { kind: 'ferie', from: '2026-11-01' });
+    s = addDayMarks(s, { kind: 'ferie', from: '2026-10-31', to: '2026-11-01' });
+    expect(s.dayMarks).toHaveLength(2);
+  });
+
+  it('eliminare un giorno segnato lascia il tombstone (non ricompare dall\'altro telefono)', () => {
+    const s = addDayMarks(sanitizeState(baseState()), { kind: 'malattia', from: '2026-11-05' });
+    const id = s.dayMarks[0].id;
+    const removed = removeDayMark(s, id);
+    expect(removed.dayMarks).toHaveLength(0);
+    expect(removed.tombstones.dayMarks[id]).toBeTypeOf('number');
+    expect(mergeStates(s, removed).dayMarks).toHaveLength(0);
+  });
+
+  it('una data di fine prima dell\'inizio segna solo il primo giorno', () => {
+    const s = addDayMarks(sanitizeState(baseState()), { kind: 'corso', from: '2026-11-10', to: '2026-11-01' });
+    expect(s.dayMarks.map((m) => m.date)).toEqual(['2026-11-10']);
   });
 });

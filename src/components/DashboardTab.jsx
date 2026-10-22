@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import {
   compareWeeks, compareMonths, todayISO, tomorrowISO, shiftsToday, nextShiftAfter, weekdayOf, shiftsOnDay,
 } from '../lib/calc.js';
-import { MONTHS_IT, WEEKDAYS_IT_LONG, roleLabel } from '../lib/defaults.js';
+import { MONTHS_IT, WEEKDAYS_IT_LONG, roleLabel, dayMarkKind } from '../lib/defaults.js';
 import Icon from './icons/Icon.jsx';
 import SiteAvatar from './SiteAvatar.jsx';
 import CountUpText from './CountUpText.jsx';
@@ -111,6 +111,7 @@ function MonthCard({ month, monthLabel, prevMonthLabel, goal }) {
 function TodayCard({ state, today }) {
   const todays = useMemo(() => shiftsToday(state.shifts, today), [state.shifts, today]);
   const todaysOccasional = useMemo(() => shiftsOnDay(state.occasionalWork, today), [state.occasionalWork, today]);
+  const todaysMark = (state.dayMarks ?? []).find((mk) => mk.date === today);
   const upcoming = useMemo(() => (todays.length ? null : nextShiftAfter(state.shifts, today)),
     [state.shifts, today, todays.length]);
 
@@ -138,7 +139,11 @@ function TodayCard({ state, today }) {
         </div>
       ) : upcoming ? (
         <div className="hero-today-box off">
-          <div className="hero-today-label"><Icon name="checkCircle" size={14} className="inline-icon" /> Oggi non lavori</div>
+          <div className="hero-today-label">
+            {todaysMark
+              ? <>{dayMarkKind(todaysMark.kind).icon} Oggi: {dayMarkKind(todaysMark.kind).label.toLowerCase()}{todaysMark.note ? ` · ${todaysMark.note}` : ''}</>
+              : <><Icon name="checkCircle" size={14} className="inline-icon" /> Oggi non lavori</>}
+          </div>
           <div className="hero-today-row">
             <SiteAvatar site={siteFor(state.sites, upcoming.siteId)} size={20} />
             <span className="hero-today-site">Prossimo turno: {formatDateLong(upcoming.date)} — {siteFor(state.sites, upcoming.siteId).name}</span>
@@ -147,7 +152,9 @@ function TodayCard({ state, today }) {
         </div>
       ) : (
         <div className="hero-today-box off">
-          <div className="hero-today-label">Nessun turno in programma</div>
+          <div className="hero-today-label">
+            {todaysMark ? `${dayMarkKind(todaysMark.kind).icon} Oggi: ${dayMarkKind(todaysMark.kind).label.toLowerCase()} · ` : ''}Nessun turno in programma
+          </div>
         </div>
       )}
 

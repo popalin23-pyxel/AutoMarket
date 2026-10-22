@@ -1,6 +1,7 @@
 // Store persistente su localStorage per Turnio.
 
 import { DEFAULT_SETTINGS, SITE_COLORS } from './defaults.js';
+import { addDaysISO } from './calc.js';
 import { markFirstUse, markBackupDone } from './backupReminder.js';
 import { saveFile } from './saveFile.js';
 
@@ -15,12 +16,14 @@ function freshState() {
     // prestazioni occasionali: reddito diverso dal lavoro nelle sedi (niente sede/orario,
     // importo libero), tassato separatamente — vedi aggregateOccasional in calc.js
     occasionalWork: [], // [{ id, date: 'YYYY-MM-DD', description, grossAmount, note }]
+    // giorni segnati (ferie, malattia, corso, non disponibile): non pagati, vedi DAY_MARK_KINDS
+    dayMarks: [], // [{ id, date: 'YYYY-MM-DD', kind, note }]
     lastSiteId: null, // ultima sede usata, per pre-selezionarla nel prossimo turno
     settings: { ...DEFAULT_SETTINGS },
-    seq: { site: 1, shift: 1, favorite: 1, expense: 1, occasionalWork: 1 },
+    seq: { site: 1, shift: 1, favorite: 1, expense: 1, occasionalWork: 1, dayMark: 1 },
     settingsUpdatedAt: 0, // ultima modifica alle impostazioni (per l'unione tra dispositivi)
     // id eliminati (con timestamp): evita che riappaiano dopo un'unione multi-dispositivo (vedi mergeState.js)
-    tombstones: { sites: {}, shifts: {}, favorites: {}, expenses: {}, occasionalWork: {} },
+    tombstones: { sites: {}, shifts: {}, favorites: {}, expenses: {}, occasionalWork: {}, dayMarks: {} },
   };
 }
 
@@ -69,12 +72,13 @@ export function sanitizeState(parsed) {
     favorites: Array.isArray(parsed.favorites) ? parsed.favorites : [],
     expenses: Array.isArray(parsed.expenses) ? parsed.expenses : [],
     occasionalWork: Array.isArray(parsed.occasionalWork) ? parsed.occasionalWork : [],
+    dayMarks: Array.isArray(parsed.dayMarks) ? parsed.dayMarks : [],
     lastSiteId: parsed.lastSiteId ?? null,
     settings: sanitizeSettings(parsed.settings),
-    seq: { site: 1, shift: 1, favorite: 1, expense: 1, occasionalWork: 1, ...(parsed.seq ?? {}) },
+    seq: { site: 1, shift: 1, favorite: 1, expense: 1, occasionalWork: 1, dayMark: 1, ...(parsed.seq ?? {}) },
     settingsUpdatedAt: Number(parsed.settingsUpdatedAt) || 0,
     tombstones: {
-      sites: {}, shifts: {}, favorites: {}, expenses: {}, occasionalWork: {},
+      sites: {}, shifts: {}, favorites: {}, expenses: {}, occasionalWork: {}, dayMarks: {},
       ...(parsed.tombstones ?? {}),
     },
   };
@@ -101,7 +105,7 @@ export function resetState() {
   return s;
 }
 
-const COLLECTIONS = ['sites', 'shifts', 'favorites', 'expenses', 'occasionalWork'];
+const COLLECTIONS = ['sites', 'shifts', 'favorites', 'expenses', 'occasionalWork', 'dayMarks'];
 
 // Sostituisce tutti i dati di `current` con quelli di `next` (ripristino da backup,
 // "Azzera tutti i dati") in modo che la sostituzione arrivi anche agli altri dispositivi:
@@ -231,6 +235,36 @@ export function updateOccasionalWork(state, id, patch) {
 
 export function removeOccasionalWork(state, id) {
   return removeWithTombstone(state, 'occasionalWork', id);
+}
+
+// ── Giorni segnati (ferie, malattia, corso, non disponibile) ──────────
+// Un giorno per voce; un periodo (es. ferie dal 10 al 20) crea una voce per ogni giorno,
+// saltando quelli già segnati con lo stesso tipo.
+const MAX_MARK_DAYS = 366;
+export function addDayMarks(state, { kind, from, to = from, note = '' }) {
+  if (!kind || !from) return state;
+  let next = state;
+  const end = to && to >= from ? to : from;
+  let d = from;
+  for (let i = 0; i < MAX_MARK_DAYS && d <= end; i++, d = addDaysISO(d, 1)) {
+    const date = d;
+    if ((next.dayMarks ?? []).some((m) => m.date === date && m.kind === kind)) continue;
+    const id = nextId(next, 'dayMark');
+    next = {
+      ...next,
+      dayMarks: [...(next.dayMarks ?? []), touch({ id, date, kind, note })],
+      seq: { ...next.seq, dayMark: id + 1 },
+    };
+  }
+  return next;
+}
+
+export function updateDayMark(state, id, patch) {
+  return { ...state, dayMarks: (state.dayMarks ?? []).map((m) => (m.id === id ? touch({ ...m, ...patch }) : m)) };
+}
+
+export function removeDayMark(state, id) {
+  return removeWithTombstone(state, 'dayMarks', id);
 }
 
 // ── Impostazioni ─────────────────────────────────────────────────────

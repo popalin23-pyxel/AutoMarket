@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { computeYearSummary } from '../lib/calc.js';
-import { MONTHS_IT } from '../lib/defaults.js';
+import { MONTHS_IT, DAY_MARK_KINDS } from '../lib/defaults.js';
 import AreaChart from './charts/AreaChart.jsx';
 import YearHeatmap from './charts/YearHeatmap.jsx';
 import EmptyState from './EmptyState.jsx';
@@ -20,6 +20,14 @@ export default function HistoryTab({ state, year, yearSelect, onOpenMonth }) {
   const workedMonths = y.months.filter((mm) => mm.shiftCount > 0).length;
   const avgGrossPerMonth = workedMonths > 0 ? y.totalInvoice / workedMonths : 0;
   const avgNetPerMonth = workedMonths > 0 ? y.totalNet / workedMonths : 0;
+  // ferie, malattia, corsi, non disponibile: giorni segnati nell'anno, per tipo
+  const markCounts = useMemo(() => {
+    const counts = new Map();
+    for (const mk of state.dayMarks ?? []) {
+      if (mk.date?.startsWith(`${year}-`)) counts.set(mk.kind, (counts.get(mk.kind) || 0) + 1);
+    }
+    return DAY_MARK_KINDS.filter((k) => counts.has(k.id)).map((k) => ({ ...k, days: counts.get(k.id) }));
+  }, [state.dayMarks, year]);
 
   return (
     <>
@@ -54,6 +62,20 @@ export default function HistoryTab({ state, year, yearSelect, onOpenMonth }) {
           </div>
         )}
       </div>
+
+      {markCounts.length > 0 && (
+        <div className="panel">
+          <h2 className="panel-title">Ferie e assenze {year}</h2>
+          <div className="stats-row">
+            {markCounts.map((k) => (
+              <div key={k.id} className="stat">
+                <div className="stat-label">{k.icon} {k.label}</div>
+                <div className="stat-value">{k.days} {k.days === 1 ? 'giorno' : 'giorni'}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {y.months.length > 0 && (
         <div className="panel">
