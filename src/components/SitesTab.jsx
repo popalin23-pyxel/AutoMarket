@@ -1,15 +1,20 @@
 import React, { useState } from 'react';
-import { addSite, updateSite, removeSite } from '../lib/store.js';
+import { addSite, updateSite, removeSite, changeSiteRate } from '../lib/store.js';
 import { SITE_COLORS } from '../lib/defaults.js';
 import { useConfirm } from '../lib/ConfirmContext.jsx';
 import NumberInput from './NumberInput.jsx';
 import EmptyState from './EmptyState.jsx';
+import RateChangeDialog from './RateChangeDialog.jsx';
+
+const fmtRate = (n) => (Number(n) || 0).toLocaleString('it-IT', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+const fmtDay = (iso) => { const [y, m, d] = iso.split('-'); return `${Number(d)}/${Number(m)}/${y.slice(2)}`; };
 
 export default function SitesTab({ state, setState }) {
   const [name, setName] = useState('');
   const [rate, setRate] = useState('');
   const [color, setColor] = useState(SITE_COLORS[state.sites.length % SITE_COLORS.length]);
   const confirmAction = useConfirm();
+  const [rateSite, setRateSite] = useState(null); // sede di cui si cambia la paga
 
   const add = () => {
     const n = name.trim();
@@ -95,8 +100,14 @@ export default function SitesTab({ state, setState }) {
                     style={{ minWidth: 100, width: '100%' }} />
                 </td>
                 <td>
-                  <NumberInput value={s.rate} onChange={(v) => patch(s.id, { rate: v })}
-                    min={0} max={999} style={{ minWidth: 0, width: 80 }} />
+                  <button type="button" className="rate-btn" onClick={() => setRateSite(s)} title="Cambia paga oraria">
+                    €{fmtRate(s.rate)} ✎
+                  </button>
+                  {(s.pastRates?.length ?? 0) > 0 && (
+                    <div className="rate-history">
+                      dal {fmtDay(s.pastRates[s.pastRates.length - 1].before)} · prima €{fmtRate(s.pastRates[s.pastRates.length - 1].rate)}
+                    </div>
+                  )}
                 </td>
                 <td>
                   <NumberInput value={s.rivalsaPercent} onChange={(v) => patch(s.id, { rivalsaPercent: v })}
@@ -111,6 +122,11 @@ export default function SitesTab({ state, setState }) {
           </tbody>
         </table>
       </div>
+      )}
+
+      {rateSite && (
+        <RateChangeDialog site={rateSite} onClose={() => setRateSite(null)}
+          onSave={(rate, from) => { setState((s) => changeSiteRate(s, rateSite.id, rate, from)); setRateSite(null); }} />
       )}
     </div>
   );

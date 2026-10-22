@@ -208,7 +208,7 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
         const newDate = addDaysISO(sh.date, 7);
         const exists = next.shifts.some((x) => x.date === newDate && x.siteId === sh.siteId && x.start === sh.start && x.end === sh.end);
         if (exists) continue;
-        next = addShift(next, { date: newDate, siteId: sh.siteId, start: sh.start, end: sh.end, note: sh.note || '' });
+        next = addShift(next, { date: newDate, siteId: sh.siteId, start: sh.start, end: sh.end, note: sh.note || '', ...(sh.rate != null ? { rate: sh.rate } : {}) });
       }
       return next;
     });

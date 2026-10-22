@@ -4,8 +4,9 @@ import {
   holidaysOfYear, isHoliday, dayKind,
   shiftsInMonth, shiftsOnDay, shiftsInRange, shiftsToday, nextShiftAfter,
   computeMonthSummary, computeYearSummary, compareMonths, compareWeeks,
-  computeMonthProgress, shiftsToConfirm, isShiftDone, shiftEndDate,
+  computeMonthProgress, shiftsToConfirm, isShiftDone, shiftEndDate, siteRateOn, shiftRate,
 } from './calc.js';
+import { changeSiteRate } from './store.js';
 
 describe('prestazioni occasionali — tassate separatamente dal regime forfettario', () => {
   const sites = [{ id: 1, name: 'CDS', color: '#000', rate: 20, rivalsaPercent: 4 }];
@@ -356,5 +357,54 @@ describe('turni svolti, in programma, annullati e da confermare', () => {
       sh(7, '2026-10-14', '08:00', '12:00'),                                  // dati vecchi senza data di modifica
     ];
     expect(shiftsToConfirm(shifts, now).map((s) => s.id)).toEqual([1]);
+  });
+});
+
+describe('tariffe: nuova paga "a partire dal…" e tariffa del singolo turno', () => {
+  const settings = { taxPercent: 0, rivalsaPercent: 0 };
+  const site0 = { id: 1, name: 'CDS', rate: 25, rivalsaPercent: 0 };
+  const shifts = [
+    { id: 1, date: '2026-10-10', siteId: 1, start: '08:00', end: '12:00' }, // prima del cambio
+    { id: 2, date: '2026-11-05', siteId: 1, start: '08:00', end: '12:00' }, // dopo
+  ];
+
+  it('cambio dal 1° novembre: i turni di ottobre restano a 25 €/h, quelli di novembre a 30', () => {
+    const st = changeSiteRate({ sites: [site0] }, 1, 30, '2026-11-01');
+    const site = st.sites[0];
+    expect(site.rate).toBe(30);
+    expect(siteRateOn(site, '2026-10-31')).toBe(25);
+    expect(siteRateOn(site, '2026-11-01')).toBe(30);
+    expect(computeMonthSummary(shifts, st.sites, settings, 2026, 10).totalRevenue).toBe(100);
+    expect(computeMonthSummary(shifts, st.sites, settings, 2026, 11).totalRevenue).toBe(120);
+  });
+
+  it('più cambi uno dopo l\'altro: ogni periodo tiene la sua tariffa', () => {
+    let st = changeSiteRate({ sites: [site0] }, 1, 30, '2026-11-01');
+    st = changeSiteRate(st, 1, 32, '2027-01-01');
+    const site = st.sites[0];
+    expect([siteRateOn(site, '2026-10-01'), siteRateOn(site, '2026-12-01'), siteRateOn(site, '2027-02-01')]).toEqual([25, 30, 32]);
+  });
+
+  it('una correzione senza data vale per tutti i turni e cancella lo storico', () => {
+    let st = changeSiteRate({ sites: [site0] }, 1, 30, '2026-11-01');
+    st = changeSiteRate(st, 1, 28);
+    expect(siteRateOn(st.sites[0], '2026-10-01')).toBe(28);
+    expect(st.sites[0].pastRates).toEqual([]);
+  });
+
+  it('una data precedente a un cambio già fatto lo sostituisce', () => {
+    let st = changeSiteRate({ sites: [site0] }, 1, 30, '2026-11-01');
+    st = changeSiteRate(st, 1, 27, '2026-09-01');
+    const site = st.sites[0];
+    expect([siteRateOn(site, '2026-08-31'), siteRateOn(site, '2026-10-01'), siteRateOn(site, '2026-12-01')]).toEqual([25, 27, 27]);
+  });
+
+  it('tariffa speciale di un turno e media nel riepilogo quando le tariffe sono diverse', () => {
+    const special = [...shifts.slice(0, 1), { id: 3, date: '2026-10-11', siteId: 1, start: '08:00', end: '12:00', rate: 40 }];
+    expect(shiftRate(special[1], site0)).toBe(40);
+    const m = computeMonthSummary(special, [site0], settings, 2026, 10);
+    expect(m.totalRevenue).toBe(260);
+    expect(m.perSite[0].mixedRate).toBe(true);
+    expect(m.perSite[0].rate).toBe(32.5);
   });
 });

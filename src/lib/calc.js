@@ -174,6 +174,22 @@ export function dayKind(year, month, day, holidaySet) {
   return 'weekday';
 }
 
+// ── Paga oraria ──────────────────────────────────────────────────────────
+// Quando una sede cambia tariffa "a partire dal…", la vecchia resta in `pastRates`
+// ([{ before: 'YYYY-MM-DD', rate }], in ordine di data): vale per i turni prima di quella
+// data, così storico, grafici e confronti restano uguali alle fatture già fatte.
+export function siteRateOn(site, dateISO) {
+  if (!site) return 0;
+  for (const r of site.pastRates ?? []) if (dateISO && dateISO < r.before) return Number(r.rate) || 0;
+  return Number(site.rate) || 0;
+}
+
+// Tariffa di un turno: quella speciale del turno, se impostata, altrimenti quella della sede in quella data.
+export function shiftRate(shift, site) {
+  if (shift?.rate != null && shift.rate !== '' && !Number.isNaN(Number(shift.rate))) return Number(shift.rate);
+  return siteRateOn(site, shift?.date);
+}
+
 // ── Aggregazione (nucleo condiviso da riepilogo mese/settimana) ─────────
 const rivalsaFor = (site, settings) =>
   (site?.rivalsaPercent != null ? Number(site.rivalsaPercent) : Number(settings.rivalsaPercent) || 0);
@@ -187,19 +203,25 @@ function aggregate(shiftsIn, sites, settings) {
     const h = hoursOfShift(sh);
     const site = siteById.get(sh.siteId);
     if (!site) { unknown.hours += h; continue; }
-    const cur = bySite.get(site.id) ?? { hours: 0 };
+    const cur = bySite.get(site.id) ?? { hours: 0, revenue: 0, rates: new Set() };
+    const rate = shiftRate(sh, site);
     cur.hours += h;
+    cur.revenue += h * rate;
+    cur.rates.add(rate);
     bySite.set(site.id, cur);
   }
 
-  const perSite = [...bySite.entries()].map(([id, { hours }]) => {
+  const perSite = [...bySite.entries()].map(([id, { hours, revenue: rawRevenue, rates }]) => {
     const site = siteById.get(id);
     const rivPct = rivalsaFor(site, settings);
-    const revenue = round2(hours * site.rate);
+    const revenue = round2(rawRevenue);
     const rivalsa = round2(revenue * (rivPct / 100));
+    // con tariffe diverse nel periodo (cambio di tariffa, turni speciali) si mostra la media
+    const mixedRate = rates.size > 1;
+    const rate = mixedRate ? (hours > 0 ? round2(rawRevenue / hours) : 0) : [...rates][0] ?? 0;
     return {
       siteId: id, name: site.name, color: site.color,
-      hours: round2(hours), rate: site.rate, rivalsaPercent: rivPct,
+      hours: round2(hours), rate, mixedRate, rivalsaPercent: rivPct,
       revenue, rivalsa, total: round2(revenue + rivalsa),
     };
   }).sort((a, b) => b.total - a.total);

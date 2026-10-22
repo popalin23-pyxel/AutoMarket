@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { hoursOfShift, isShiftDone } from '../lib/calc.js';
+import { hoursOfShift, isShiftDone, siteRateOn } from '../lib/calc.js';
 import { useLockBodyScroll } from '../lib/useLockBodyScroll.js';
 import { useBackClose } from '../lib/backStack.js';
 import Portal from '../lib/Portal.jsx';
 import SiteAvatar from './SiteAvatar.jsx';
+import NumberInput from './NumberInput.jsx';
 
 const fmt = (n) => n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const round2 = (n) => Math.round((n + Number.EPSILON) * 100) / 100;
@@ -19,6 +20,9 @@ export default function ShiftEditor({
   const [repeatWeeks, setRepeatWeeks] = useState(0);
   // turno già passato: svolto (confermato) o non fatto (annullato, non conta nei guadagni)
   const [status, setStatus] = useState(shift?.status ?? null);
+  // tariffa speciale solo per questo turno (es. notte pagata di più); altrimenti quella della sede
+  const [customRateOn, setCustomRateOn] = useState(shift?.rate != null);
+  const [customRate, setCustomRate] = useState(shift?.rate ?? '');
   const [copyOpen, setCopyOpen] = useState(false);
   useLockBodyScroll();
   useBackClose(onClose);
@@ -33,6 +37,8 @@ export default function ShiftEditor({
     if (!canSave) return;
     const data = { date, siteId, start, end, note: note.trim() };
     if (shift) data.status = status ?? undefined;
+    const special = customRateOn && customRate !== '' && customRate != null ? Number(customRate) : undefined;
+    if (shift || special != null) data.rate = special;
     onSave(data, repeatWeeks);
   };
 
@@ -45,15 +51,19 @@ export default function ShiftEditor({
 
   const confirmCopy = () => {
     if (!copyDate) return;
-    onCopy?.({ date: copyDate, siteId, start, end, note });
+    const special = customRateOn && customRate !== '' && customRate != null ? { rate: Number(customRate) } : {};
+    onCopy?.({ date: copyDate, siteId, start, end, note, ...special });
     setCopyOpen(false);
     setCopyDate('');
   };
 
+  const siteRate = siteRateOn(site, date);
+  const rateUsed = customRateOn && customRate !== '' && customRate != null ? Number(customRate) : siteRate;
+
   let breakdown = null;
   if (site && hours > 0) {
     const rivPct = site.rivalsaPercent != null ? Number(site.rivalsaPercent) : (Number(settings?.rivalsaPercent) || 0);
-    const revenue = round2(hours * site.rate);
+    const revenue = round2(hours * rateUsed);
     const rivalsa = round2(revenue * (rivPct / 100));
     const invoice = round2(revenue + rivalsa);
     const taxPercent = Number(settings?.taxPercent) || 0;
@@ -123,6 +133,24 @@ export default function ShiftEditor({
                 ☆ Salva come scorciatoia
               </button>
             </div>
+
+            {site && (
+              <div className="editor-rate-row">
+                <span>
+                  Tariffa: <b className="mono">€{fmt(rateUsed)}/h</b>{' '}
+                  <span className="muted-text">{customRateOn ? '(solo questo turno)' : '(della sede)'}</span>
+                </span>
+                <button type="button" className="fav-save-btn" onClick={() => setCustomRateOn(!customRateOn)}>
+                  {customRateOn ? 'Usa quella della sede' : 'Tariffa diversa per questo turno'}
+                </button>
+              </div>
+            )}
+            {customRateOn && (
+              <div className="field" style={{ maxWidth: 160, marginTop: 6 }}>
+                <label className="field-label">Tariffa di questo turno (€/h)</label>
+                <NumberInput value={customRate} onChange={setCustomRate} min={0} max={999} allowEmpty />
+              </div>
+            )}
 
             {breakdown && (
               <div className="editor-breakdown">

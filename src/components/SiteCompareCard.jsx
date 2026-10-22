@@ -27,7 +27,7 @@ export default function SiteCompareCard({ state, year, yearSelect }) {
                 <SiteAvatar site={{ name: p.name, color: p.color }} size={26} />
                 <div className="site-compare-info">
                   <div className="site-compare-name">{p.name}</div>
-                  <div className="site-compare-sub">{fmt(p.hours)}h · €{p.rate}/h</div>
+                  <div className="site-compare-sub">{fmt(p.hours)}h · €{fmt(p.rate)}/h{p.mixedRate ? ' (media)' : ''}</div>
                   <span className="site-bar-track" style={{ display: 'block', marginTop: 6 }}>
                     <span className="site-bar-fill" style={{ width: `${max > 0 ? Math.max(3, (p.total / max) * 100) : 0}%`, background: p.color }} />
                   </span>

@@ -1,7 +1,7 @@
 // Store persistente su localStorage per Turnio.
 
 import { DEFAULT_SETTINGS, SITE_COLORS } from './defaults.js';
-import { addDaysISO } from './calc.js';
+import { addDaysISO, siteRateOn } from './calc.js';
 import { markFirstUse, markBackupDone } from './backupReminder.js';
 import { saveFile } from './saveFile.js';
 
@@ -147,6 +147,23 @@ export function addSite(state, name, rate, opts = {}) {
 
 export function updateSite(state, id, patch) {
   return { ...state, sites: state.sites.map((s) => (s.id === id ? touch({ ...s, ...patch }) : s)) };
+}
+
+// Nuova paga oraria. Con `fromISO` vale dai turni di quella data in poi: quelli prima
+// mantengono la tariffa di allora. Senza data è una correzione e vale per tutti i turni.
+export function changeSiteRate(state, id, newRate, fromISO = null) {
+  const rate = Number(newRate) || 0;
+  return {
+    ...state,
+    sites: state.sites.map((s) => {
+      if (s.id !== id) return s;
+      if (!fromISO) return touch({ ...s, rate, pastRates: [] });
+      const prevRate = siteRateOn(s, addDaysISO(fromISO, -1));
+      const kept = (s.pastRates ?? []).filter((r) => r.before < fromISO);
+      const pastRates = prevRate === rate ? kept : [...kept, { before: fromISO, rate: prevRate }];
+      return touch({ ...s, rate, pastRates });
+    }),
+  };
 }
 
 export function removeSite(state, id) {
