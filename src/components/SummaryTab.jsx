@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { computeMonthSummary } from '../lib/calc.js';
 import { MONTHS_IT, hexToRgba, professionalHeaderLines } from '../lib/defaults.js';
 
@@ -8,6 +8,7 @@ const loadPdf = () => import('../lib/pdf.js');
 import RingChart from './charts/RingChart.jsx';
 import EmptyState from './EmptyState.jsx';
 import SiteAvatar from './SiteAvatar.jsx';
+import TimesheetDialog from './TimesheetDialog.jsx';
 import CountUpText from './CountUpText.jsx';
 import { useCountUp } from '../lib/useCountUp.js';
 import { useSwipe } from '../lib/useSwipe.js';
@@ -26,6 +27,7 @@ export default function SummaryTab({ state, year, month, setYear, setMonth }) {
   const monthAccent = sum.perSite[0]?.color;
   const swipe = useSwipe(nextMonth, prevMonth);
   const animatedNet = useCountUp(sum.net);
+  const [timesheetSite, setTimesheetSite] = useState(undefined); // undefined = chiuso
 
   // precarica in background: al tocco su "Esporta" il modulo è già pronto e la condivisione
   // su iPhone parte ancora "dentro" il tocco (altrimenti Safari può bloccarla)
@@ -52,6 +54,9 @@ export default function SummaryTab({ state, year, month, setYear, setMonth }) {
           <div className="form-row" style={{ marginBottom: 0 }}>
             <button className="btn" onClick={exportExcel}>⬇ Esporta Excel</button>
             <button className="btn" onClick={exportPdf}>⬇ Esporta PDF</button>
+            {state.sites.length > 0 && (
+              <button className="btn" onClick={() => setTimesheetSite(sum.perSite[0]?.siteId ?? null)}>📄 Foglio ore struttura</button>
+            )}
           </div>
         )}
       </div>
@@ -74,6 +79,9 @@ export default function SummaryTab({ state, year, month, setYear, setMonth }) {
                   <div><span className="ssc-lbl">Fatturato</span><span className="mono">€{fmt(p.revenue)}</span></div>
                   <div><span className="ssc-lbl">Rivalsa {p.rivalsaPercent}%</span><span className="mono">€{fmt(p.rivalsa)}</span></div>
                 </div>
+                {p.siteId != null && (
+                  <button className="link-btn ssc-timesheet" onClick={() => setTimesheetSite(p.siteId)}>📄 Foglio ore da mandare alla struttura</button>
+                )}
               </div>
             ))}
           </div>
@@ -123,6 +131,10 @@ export default function SummaryTab({ state, year, month, setYear, setMonth }) {
         </div>
         <p className="fiscal-footnote">Stima, non sostituisce il calcolo del commercialista.</p>
       </div>
+
+      {timesheetSite !== undefined && (
+        <TimesheetDialog state={state} siteId={timesheetSite} year={year} month={month} onClose={() => setTimesheetSite(undefined)} />
+      )}
     </>
   );
 }

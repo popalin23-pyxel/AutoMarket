@@ -244,6 +244,29 @@ function aggregate(shiftsIn, sites, settings) {
   return { perSite, totalHours, totalRevenue, totalRivalsa, totalInvoice, taxPercent, taxes, net, shiftCount: filteredShifts.length };
 }
 
+/**
+ * Foglio ore di una sola struttura in un periodo [fromISO, toISO]: un rigo per turno
+ * (annullati esclusi) e i totali da fatturare — niente tasse né netto, si manda al cliente.
+ */
+export function computeTimesheet(shifts, site, settings, fromISO, toISO) {
+  const rows = activeShifts(shiftsInRange(shifts, fromISO, toISO))
+    .filter((s) => s.siteId === site.id)
+    .sort(byDateThenStart)
+    .map((s) => {
+      const hours = hoursOfShift(s);
+      const rate = shiftRate(s, site);
+      return { id: s.id, date: s.date, start: s.start, end: s.end, hours, rate, amount: round2(hours * rate), note: s.note || '' };
+    });
+  const totalHours = round2(rows.reduce((a, r) => a + r.hours, 0));
+  const revenue = round2(rows.reduce((a, r) => a + r.hours * r.rate, 0));
+  const rivalsaPercent = rivalsaFor(site, settings);
+  const rivalsa = round2(revenue * (rivalsaPercent / 100));
+  return {
+    site: { id: site.id, name: site.name }, fromISO, toISO, rows,
+    totalHours, revenue, rivalsaPercent, rivalsa, total: round2(revenue + rivalsa),
+  };
+}
+
 // Prestazioni occasionali: reddito diverso dal lavoro nelle sedi — niente
 // rivalsa (non è prevista per questo tipo di reddito), tassazione separata
 // a un'aliquota stimata (IRPEF a scaglioni, non l'aliquota del regime

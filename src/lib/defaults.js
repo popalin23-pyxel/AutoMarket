@@ -32,6 +32,11 @@ export function roleLabel(settings) {
   return PROFESSIONAL_ROLES.find((r) => r.id === settings?.professionalRole)?.label ?? '';
 }
 
+// Come si chiama la maggiorazione del 4% in fattura (vedi Studio → Fiscali).
+export function rivalsaLabel(settings) {
+  return settings?.rivalsaType === 'integrativo' ? 'Contributo integrativo' : 'Rivalsa';
+}
+
 // Righe di intestazione professionale per i report (nome, ruolo, P.IVA), solo quelle compilate.
 export function professionalHeaderLines(settings) {
   const vat = (settings?.vatNumber || '').trim();

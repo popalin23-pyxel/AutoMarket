@@ -4,7 +4,7 @@ import {
   holidaysOfYear, isHoliday, dayKind,
   shiftsInMonth, shiftsOnDay, shiftsInRange, shiftsToday, nextShiftAfter,
   computeMonthSummary, computeYearSummary, compareMonths, compareWeeks,
-  computeMonthProgress, shiftsToConfirm, isShiftDone, shiftEndDate, siteRateOn, shiftRate,
+  computeMonthProgress, shiftsToConfirm, isShiftDone, shiftEndDate, siteRateOn, shiftRate, computeTimesheet,
 } from './calc.js';
 import { changeSiteRate } from './store.js';
 
@@ -406,5 +406,32 @@ describe('tariffe: nuova paga "a partire dal…" e tariffa del singolo turno', (
     expect(m.totalRevenue).toBe(260);
     expect(m.perSite[0].mixedRate).toBe(true);
     expect(m.perSite[0].rate).toBe(32.5);
+  });
+});
+
+describe('foglio ore di una struttura', () => {
+  const site = { id: 1, name: 'CDS', rate: 25, rivalsaPercent: 4 };
+  const shifts = [
+    { id: 3, date: '2026-10-12', siteId: 1, start: '14:00', end: '20:00', note: 'cambio' },
+    { id: 1, date: '2026-10-05', siteId: 1, start: '08:00', end: '14:00' },
+    { id: 2, date: '2026-10-06', siteId: 2, start: '08:00', end: '14:00' },                 // altra sede
+    { id: 4, date: '2026-10-07', siteId: 1, start: '08:00', end: '14:00', status: 'cancelled' },
+    { id: 5, date: '2026-11-02', siteId: 1, start: '08:00', end: '14:00' },                 // fuori periodo
+    { id: 6, date: '2026-10-20', siteId: 1, start: '20:00', end: '08:00', rate: 30 },       // tariffa speciale
+  ];
+
+  it('solo i turni di quella sede nel periodo, in ordine, senza gli annullati', () => {
+    const ts = computeTimesheet(shifts, site, { rivalsaPercent: 0 }, '2026-10-01', '2026-10-31');
+    expect(ts.rows.map((r) => r.id)).toEqual([1, 3, 6]);
+    expect(ts.rows[1].note).toBe('cambio');
+  });
+
+  it('totali: ore × tariffa di ogni turno, più la rivalsa della sede', () => {
+    const ts = computeTimesheet(shifts, site, { rivalsaPercent: 0 }, '2026-10-01', '2026-10-31');
+    expect(ts.totalHours).toBe(24);
+    expect(ts.revenue).toBe(6 * 25 + 6 * 25 + 12 * 30);
+    expect(ts.rivalsaPercent).toBe(4);
+    expect(ts.rivalsa).toBe(26.4);
+    expect(ts.total).toBe(686.4);
   });
 });
