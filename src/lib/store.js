@@ -193,18 +193,22 @@ export function removeShift(state, id) {
   return removeWithTombstone(state, 'shifts', id);
 }
 
-// Ripristina un turno eliminato di recente (stesso id, per l'azione "Annulla").
-export function restoreShift(state, shift) {
-  if (state.shifts.some((s) => s.id === shift.id)) return state;
-  const shiftTombstones = { ...state.tombstones.shifts };
-  delete shiftTombstones[shift.id];
+// Ripristina un elemento eliminato di recente (stesso id, per l'azione "Annulla").
+function restoreItem(state, collection, item) {
+  if ((state[collection] ?? []).some((x) => x.id === item.id)) return state;
+  const tomb = { ...(state.tombstones?.[collection] ?? {}) };
+  delete tomb[item.id];
   return {
     ...state,
     // timestamp nuovo: il ripristino è più recente dell'eliminazione anche per l'altro dispositivo
-    shifts: [...state.shifts, touch(shift)],
-    tombstones: { ...state.tombstones, shifts: shiftTombstones },
+    [collection]: [...(state[collection] ?? []), touch(item)],
+    tombstones: { ...(state.tombstones ?? {}), [collection]: tomb },
   };
 }
+
+export const restoreShift = (state, shift) => restoreItem(state, 'shifts', shift);
+export const restoreOccasionalWork = (state, entry) => restoreItem(state, 'occasionalWork', entry);
+export const restoreDayMark = (state, mark) => restoreItem(state, 'dayMarks', mark);
 
 // ── Scorciatoie turno (preferiti) ──────────────────────────────────────
 export function addFavorite(state, fav) {

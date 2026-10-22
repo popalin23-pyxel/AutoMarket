@@ -105,7 +105,9 @@ export const EXPENSE_CATEGORIES = [
   { id: 'autostrada', label: 'Autostrada', tile: 'indigo' },
   { id: 'parcheggio', label: 'Parcheggio', tile: 'indigo' },
   { id: 'assicurazione', label: 'Assicurazione', tile: 'rose' },
-  { id: 'enpapi', label: 'ENPAPI', tile: 'teal' },
+  // versamenti alla cassa (ENPAPI/ENPAM/INPS): già compresi nelle tasse stimate, quindi non
+  // vengono sottratti una seconda volta dal "Disponibile" (id storico 'enpapi')
+  { id: 'enpapi', label: 'Contributi cassa', tile: 'teal', inTaxes: true },
   { id: 'commercialista', label: 'Commercialista', tile: 'violet' },
   { id: 'ecm', label: 'Corsi ECM', tile: 'lime' },
   { id: 'dispositivi', label: 'Dispositivi', tile: 'teal' },

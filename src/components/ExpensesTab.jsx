@@ -35,6 +35,12 @@ export default function ExpensesTab({ state, setState }) {
     () => periodExpenses.reduce((a, e) => a + (Number(e.amount) || 0), 0),
     [periodExpenses],
   );
+  // i versamenti alla cassa sono già nelle tasse e contributi stimati: non si tolgono due volte
+  const fundPayments = useMemo(
+    () => periodExpenses.filter((e) => catFor(e.category).inTaxes).reduce((a, e) => a + (Number(e.amount) || 0), 0),
+    [periodExpenses],
+  );
+  const otherExpenses = totalExpenses - fundPayments;
 
   const earnings = useMemo(() => {
     return period === 'year'
@@ -46,7 +52,7 @@ export default function ExpensesTab({ state, setState }) {
   const occasionalGross = earnings.occasionalGross || 0;
   const invoice = earnings.totalInvoice + occasionalGross;
   const taxes = (period === 'year' ? earnings.totalTaxes : earnings.taxes) + (earnings.occasionalTaxes || 0);
-  const available = invoice - taxes - totalExpenses;
+  const available = invoice - taxes - otherExpenses;
 
   const addNewExpense = () => {
     const n = Number(amount);
@@ -66,7 +72,10 @@ export default function ExpensesTab({ state, setState }) {
     <>
       <div className="panel">
         <h2 className="panel-title">Spese professionali</h2>
-        <p className="panel-desc">Tieni traccia delle spese deducibili legate al tuo lavoro.</p>
+        <p className="panel-desc">
+          Tieni traccia delle spese del tuo lavoro per sapere quanto ti resta davvero. Nel regime forfettario
+          non si scalano dalle tasse (lo fa già il coefficiente), tranne i contributi versati alla cassa.
+        </p>
 
         <div className="theme-switch" style={{ marginBottom: 14 }}>
           <button className={`theme-opt ${period === 'month' ? 'active' : ''}`} onClick={() => setPeriod('month')}>Mese corrente</button>
@@ -130,10 +139,15 @@ export default function ExpensesTab({ state, setState }) {
 
             <div className="summary-flow" style={{ marginTop: 14 }}>
               <div className="flow-row"><span className="flow-label">Fatturato {period === 'year' ? 'anno' : 'mese'}{occasionalGross > 0 ? ' + prestazioni' : ''}</span><span className="flow-value">€{fmt(invoice)}</span></div>
-              <div className="flow-row taxes"><span className="flow-label">Tasse stimate</span><span className="flow-value red">−€{fmt(taxes)}</span></div>
-              <div className="flow-row taxes"><span className="flow-label">Spese totali</span><span className="flow-value red">−€{fmt(totalExpenses)}</span></div>
+              <div className="flow-row taxes"><span className="flow-label">Tasse e contributi stimati</span><span className="flow-value red">−€{fmt(taxes)}</span></div>
+              <div className="flow-row taxes"><span className="flow-label">Spese{fundPayments > 0 ? ' (esclusi i contributi cassa)' : ' totali'}</span><span className="flow-value red">−€{fmt(otherExpenses)}</span></div>
               <div className="flow-row net"><span className="flow-label">Disponibile stimato</span><span className="flow-value green">€{fmt(available)}</span></div>
             </div>
+            {fundPayments > 0 && (
+              <p className="fiscal-footnote">
+                I €{fmt(fundPayments)} versati alla cassa non vengono tolti di nuovo: sono già compresi nelle tasse e contributi stimati.
+              </p>
+            )}
           </>
         )}
       </div>

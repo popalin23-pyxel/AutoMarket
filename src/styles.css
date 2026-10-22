@@ -565,6 +565,7 @@ td .site-picker { flex-wrap: nowrap; }
 .privacy-body { font-size: 13.5px; line-height: 1.6; color: var(--text-dim); }
 .privacy-body h3 { font-size: 14px; color: var(--text); margin: 18px 0 6px; }
 .privacy-body h3:first-child { margin-top: 0; }
+.privacy-placeholder { background: rgba(var(--gold-rgb), 0.18); color: var(--hint-warn-fg); padding: 0 4px; border-radius: 4px; font-weight: 700; }
 .privacy-body p { margin-bottom: 8px; }
 .privacy-body ul { margin: 0 0 8px 18px; }
 .privacy-body li { margin-bottom: 4px; }

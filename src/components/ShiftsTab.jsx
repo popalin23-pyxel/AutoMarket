@@ -7,10 +7,9 @@ import { MONTHS_IT, WEEKDAYS_IT, DAY_MARK_KINDS, dayMarkKind, hexToRgba } from '
 import {
   addShift, updateShift, removeShift, restoreShift, addFavorite, removeFavorite,
   addOccasionalWork, updateOccasionalWork, removeOccasionalWork,
-  addDayMarks, updateDayMark, removeDayMark,
+  addDayMarks, updateDayMark, removeDayMark, restoreOccasionalWork, restoreDayMark,
 } from '../lib/store.js';
 import { useSwipe } from '../lib/useSwipe.js';
-import { useConfirm } from '../lib/ConfirmContext.jsx';
 import { useLockBodyScroll } from '../lib/useLockBodyScroll.js';
 import { useBackClose } from '../lib/backStack.js';
 import Portal from '../lib/Portal.jsx';
@@ -21,6 +20,7 @@ import SiteAvatar from './SiteAvatar.jsx';
 import StampBar from './StampBar.jsx';
 import MarkEditor from './MarkEditor.jsx';
 import AvailabilityDialog from './AvailabilityDialog.jsx';
+import WeekDuplicateDialog from './WeekDuplicateDialog.jsx';
 
 const fmt = (n) => n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -51,15 +51,16 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
   const [dayPopover, setDayPopover] = useState(null); // dateISO (solo vista calendario)
   const [view, setView] = useState(() => { try { return localStorage.getItem(VIEW_KEY) || 'list'; } catch { return 'list'; } });
   const [toast, setToast] = useState(false);
-  const [undoShift, setUndoShift] = useState(null);
+  // ultimo elemento eliminato, per "Annulla": { kind: 'shift'|'occasional'|'mark', item }
+  const [undoItem, setUndoItem] = useState(null);
   const [filterSite, setFilterSite] = useState(null);
   const undoTimer = useRef(null);
-  const confirmAction = useConfirm();
   // modalità timbro: `stamp` è ciò che ogni tocco su un giorno aggiunge (o toglie)
   const [stampOn, setStampOn] = useState(false);
   const [stamp, setStamp] = useState(null);
   const [stampCount, setStampCount] = useState(0);
   const [availabilityOpen, setAvailabilityOpen] = useState(false);
+  const [dupOpen, setDupOpen] = useState(false);
   useBackClose(() => setStampOn(false), stampOn);
 
   useEffect(() => { try { localStorage.setItem(VIEW_KEY, view); } catch {} }, [view]);
@@ -111,21 +112,27 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
     setState((s) => addShift(s, data));
     flashSaved();
   };
+  const offerUndo = (kind, item) => {
+    if (!item) return;
+    setUndoItem({ kind, item });
+    clearTimeout(undoTimer.current);
+    undoTimer.current = setTimeout(() => setUndoItem(null), 5000);
+  };
+
   const del = (id) => {
     const shift = state.shifts.find((s) => s.id === id);
     setState((s) => removeShift(s, id));
     setEditing(null);
-    if (shift) {
-      setUndoShift(shift);
-      clearTimeout(undoTimer.current);
-      undoTimer.current = setTimeout(() => setUndoShift(null), 5000);
-    }
+    offerUndo('shift', shift);
   };
 
   const undoDelete = () => {
-    if (!undoShift) return;
-    setState((s) => restoreShift(s, undoShift));
-    setUndoShift(null);
+    if (!undoItem) return;
+    const { kind, item } = undoItem;
+    if (kind === 'shift') setState((s) => restoreShift(s, item));
+    else if (kind === 'occasional') setState((s) => restoreOccasionalWork(s, item));
+    else if (kind === 'mark') setState((s) => restoreDayMark(s, item));
+    setUndoItem(null);
     clearTimeout(undoTimer.current);
   };
 
@@ -177,13 +184,20 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
     flashSaved();
   };
   const delOccasional = (id) => {
+    const entry = state.occasionalWork.find((o) => o.id === id);
     setState((s) => removeOccasionalWork(s, id));
     setEditingOccasional(null);
+    offerUndo('occasional', entry);
   };
 
   const saveMarks = (data) => { setState((s) => addDayMarks(s, data)); setEditingMark(null); flashSaved(); };
   const updateMark = (id, patch) => { setState((s) => updateDayMark(s, id, patch)); setEditingMark(null); flashSaved(); };
-  const delMark = (id) => { setState((s) => removeDayMark(s, id)); setEditingMark(null); };
+  const delMark = (id) => {
+    const mark = dayMarks.find((m) => m.id === id);
+    setState((s) => removeDayMark(s, id));
+    setEditingMark(null);
+    offerUndo('mark', mark);
+  };
 
   const weekStart = startOfWeek(today);
   const weekEnd = endOfWeek(today);
@@ -200,16 +214,14 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
       : `${wsD} ${MONTHS_IT[wsM - 1].slice(0, 3)} – ${weD} ${MONTHS_IT[weM - 1].slice(0, 3)}`;
   }, [weekStart, weekEnd]);
 
-  const duplicateWeek = async () => {
-    if (thisWeekShifts.length === 0) return;
-    const ok = await confirmAction(
-      `Copieremo ${thisWeekShifts.length} turni di questa settimana nella settimana prossima (stessi giorni, sede e orario). I turni già presenti non vengono duplicati.`,
-      { title: 'Duplicare questa settimana', confirmLabel: 'Duplica' },
-    );
-    if (!ok) return;
+  // copia i turni della settimana scelta (che inizia il lunedì weekStartISO) in quella dopo
+  const duplicateWeek = (weekStartISO) => {
+    const weekShifts = activeShifts(shiftsInRange(state.shifts, weekStartISO, endOfWeek(weekStartISO)));
+    setDupOpen(false);
+    if (weekShifts.length === 0) return;
     setState((s) => {
       let next = s;
-      for (const sh of thisWeekShifts) {
+      for (const sh of weekShifts) {
         const newDate = addDaysISO(sh.date, 7);
         const exists = next.shifts.some((x) => x.date === newDate && x.siteId === sh.siteId && x.start === sh.start && x.end === sh.end);
         if (exists) continue;
@@ -219,6 +231,11 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
     });
     flashSaved();
   };
+
+  const monthHasShifts = useMemo(
+    () => state.shifts.some((s) => !isCancelled(s) && (s.date || '').startsWith(`${year}-${String(month).padStart(2, '0')}-`)),
+    [state.shifts, year, month],
+  );
 
   const { monthTotalHours, monthAccent } = useMemo(() => {
     let h = 0;
@@ -344,9 +361,9 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
           </div>
         </div>
 
-        {thisWeekShifts.length > 0 && (
-          <button className="btn btn-sm" style={{ marginTop: 10 }} onClick={duplicateWeek}>
-            📋 Duplica questa settimana → prossima
+        {monthHasShifts && (
+          <button className="btn btn-sm" style={{ marginTop: 10 }} onClick={() => setDupOpen(true)}>
+            📋 Duplica una settimana → la successiva
           </button>
         )}
 
@@ -441,6 +458,11 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
           count={stampCount} onDone={() => setStampOn(false)} />
       )}
 
+      {dupOpen && (
+        <WeekDuplicateDialog shifts={state.shifts} year={year} month={month} today={today}
+          onConfirm={duplicateWeek} onClose={() => setDupOpen(false)} />
+      )}
+
       {availabilityOpen && (
         <AvailabilityDialog state={state} year={year} month={month} onClose={() => setAvailabilityOpen(false)} />
       )}
@@ -452,10 +474,10 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
 
       {toast && <Portal><div className="save-toast">✓ Salvato</div></Portal>}
 
-      {undoShift && (
+      {undoItem && (
         <Portal>
         <div className="undo-toast">
-          <span>Turno eliminato</span>
+          <span>{undoItem.kind === 'shift' ? 'Turno eliminato' : undoItem.kind === 'occasional' ? 'Prestazione eliminata' : 'Giorno segnato eliminato'}</span>
           <button className="undo-btn" onClick={undoDelete}>Annulla</button>
         </div>
         </Portal>

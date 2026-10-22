@@ -1,17 +1,21 @@
 import React from 'react';
+import { PRIVACY_OWNER, PRIVACY_EMAIL, PRIVACY_DATA_REGION } from '../lib/legal.js';
+
+// segnaposto ben visibile finché il dato non è compilato in lib/legal.js
+const Fill = ({ value, label }) => (value ? <>{value}</> : <span className="privacy-placeholder">[{label} — da completare]</span>);
 
 export default function PrivacyPolicyTab({ onBack }) {
   return (
     <div className="panel privacy-page">
       {onBack && <button className="btn btn-sm" style={{ marginBottom: 12 }} onClick={onBack}>‹ Indietro</button>}
       <h2 className="panel-title">Privacy Policy di Turnio</h2>
-      <p className="panel-desc">Ultimo aggiornamento: 15 ottobre 2026</p>
+      <p className="panel-desc">Ultimo aggiornamento: 22 ottobre 2026</p>
 
       <div className="privacy-body">
         <h3>1. Titolare del trattamento</h3>
         <p>
-          [Nome e Cognome / Ragione Sociale], contattabile all'indirizzo email [inserisci email di contatto].
-          <em> — questa sezione va completata con i tuoi dati prima di rendere l'app pubblica.</em>
+          <Fill value={PRIVACY_OWNER} label="Nome e cognome / ragione sociale" />, contattabile all'indirizzo
+          email <Fill value={PRIVACY_EMAIL} label="email di contatto" />.
         </p>
 
         <h3>2. Che dati raccoglie Turnio</h3>
@@ -20,10 +24,12 @@ export default function PrivacyPolicyTab({ onBack }) {
           <li><b>Dati account</b>: email, password (mai salvata in chiaro: viene cifrata dal nostro fornitore di autenticazione), data di creazione dell'account.</li>
           <li><b>Anagrafica</b> (facoltativa): nome e cognome, ruolo professionale, Partita IVA o numero di iscrizione all'albo — solo se scegli di inserirli in Studio → Anagrafica.</li>
           <li><b>Sedi di lavoro</b>: nomi delle strutture/datori di lavoro inseriti e la relativa paga oraria.</li>
-          <li><b>Turni</b>: data, orario, sede e note personali inserite per ciascun turno.</li>
+          <li><b>Turni</b>: data, orario, sede, note personali, eventuale tariffa speciale e se il turno è stato svolto o annullato.</li>
+          <li><b>Schede delle strutture</b> (facoltative): ragione sociale e Partita IVA della struttura, nome, telefono ed email del referente, indirizzo, date del contratto e note che decidi di inserire.</li>
+          <li><b>Ferie e assenze</b> (facoltative): i giorni che segni come ferie, malattia, corso o non disponibile, con eventuali note. Segnare la malattia è un dato relativo alla salute: è del tutto facoltativo (puoi usare "Non disponibile") e resta visibile solo a te.</li>
           <li><b>Prestazioni occasionali</b>: data, descrizione, importo e note inserite per ciascuna prestazione.</li>
           <li><b>Spese</b>: importi, categorie, date e note inserite nella sezione Spese.</li>
-          <li><b>Impostazioni fiscali</b>: regime, aliquote, contributi, rivalsa e obiettivo di guadagno mensile impostati.</li>
+          <li><b>Impostazioni fiscali</b>: regime, cassa previdenziale, modalità di calcolo, aliquote, contributi, rivalsa o contributo integrativo e obiettivo di guadagno mensile impostati.</li>
           <li><b>Dati tecnici minimi</b> raccolti automaticamente dai fornitori di infrastruttura (Supabase, Vercel) per far funzionare il servizio: indirizzo IP e log di accesso ai server.</li>
         </ul>
         <p>
@@ -45,7 +51,7 @@ export default function PrivacyPolicyTab({ onBack }) {
           responsabili del trattamento per nostro conto:
         </p>
         <ul>
-          <li><b>Supabase</b> (database e autenticazione) — [regione del progetto da confermare, es. UE/Francoforte].</li>
+          <li><b>Supabase</b> (database e autenticazione) — dati conservati in: <Fill value={PRIVACY_DATA_REGION} label="regione del progetto" />.</li>
           <li><b>Vercel</b> (hosting dell'applicazione web).</li>
         </ul>
         <p>Nessun altro fornitore terzo riceve i tuoi dati: l'app non usa servizi di analytics o pubblicità.</p>
@@ -53,7 +59,7 @@ export default function PrivacyPolicyTab({ onBack }) {
         <h3>5. Per quanto tempo conserviamo i dati</h3>
         <p>
           Finché il tuo account resta attivo. Se cancelli il tuo account dal Profilo, i tuoi dati
-          (turni, prestazioni, sedi, spese, anagrafica, impostazioni) vengono <b>eliminati definitivamente e immediatamente</b> dai nostri
+          (turni, prestazioni, sedi, spese, ferie e assenze, anagrafica, impostazioni) vengono <b>eliminati definitivamente e immediatamente</b> dai nostri
           server, senza bisogno di richiederlo a nessuno.
         </p>
 
@@ -64,7 +70,7 @@ export default function PrivacyPolicyTab({ onBack }) {
           <li><b>Rettifica</b>: puoi modificare o correggere in ogni momento i tuoi dati direttamente nell'app.</li>
           <li><b>Reclamo</b>: hai sempre diritto a presentare reclamo al Garante per la protezione dei dati personali (garanteprivacy.it).</li>
         </ul>
-        <p>Per qualunque altra richiesta relativa ai tuoi dati, scrivi a [inserisci email di contatto].</p>
+        <p>Per qualunque altra richiesta relativa ai tuoi dati, scrivi a <Fill value={PRIVACY_EMAIL} label="email di contatto" />.</p>
 
         <h3>7. Sicurezza</h3>
         <p>
