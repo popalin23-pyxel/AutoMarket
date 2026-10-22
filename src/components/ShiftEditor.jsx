@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { hoursOfShift } from '../lib/calc.js';
+import { hoursOfShift, isShiftDone } from '../lib/calc.js';
 import { useLockBodyScroll } from '../lib/useLockBodyScroll.js';
 import { useBackClose } from '../lib/backStack.js';
 import Portal from '../lib/Portal.jsx';
@@ -17,6 +17,8 @@ export default function ShiftEditor({
   const [end, setEnd] = useState(shift?.end ?? '14:00');
   const [note, setNote] = useState(shift?.note ?? '');
   const [repeatWeeks, setRepeatWeeks] = useState(0);
+  // turno già passato: svolto (confermato) o non fatto (annullato, non conta nei guadagni)
+  const [status, setStatus] = useState(shift?.status ?? null);
   const [copyOpen, setCopyOpen] = useState(false);
   useLockBodyScroll();
   useBackClose(onClose);
@@ -24,11 +26,14 @@ export default function ShiftEditor({
 
   const hours = hoursOfShift({ date, start, end });
   const canSave = siteId != null && start && end;
+  const showStatus = !!shift && (isShiftDone({ date, start, end }) || shift.status === 'cancelled');
   const site = sites.find((s) => s.id === siteId);
 
   const save = () => {
     if (!canSave) return;
-    onSave({ date, siteId, start, end, note: note.trim() }, repeatWeeks);
+    const data = { date, siteId, start, end, note: note.trim() };
+    if (shift) data.status = status ?? undefined;
+    onSave(data, repeatWeeks);
   };
 
   const applyFavorite = (fav) => { setSiteId(fav.siteId); setStart(fav.start); setEnd(fav.end); };
@@ -127,6 +132,19 @@ export default function ShiftEditor({
                 <div className="editor-breakdown-row muted"><span>Tasse ({breakdown.taxPercent}%)</span><span>−€{fmt(breakdown.taxes)}</span></div>
                 <div className="editor-breakdown-row total"><span>Netto stimato</span><span>€{fmt(breakdown.net)}</span></div>
               </div>
+            )}
+
+            {showStatus && (
+              <>
+                <div className="editor-label">Com'è andato</div>
+                <div className="theme-switch">
+                  <button type="button" className={`theme-opt ${status !== 'cancelled' ? 'active' : ''}`} onClick={() => setStatus('done')}>✓ Svolto</button>
+                  <button type="button" className={`theme-opt ${status === 'cancelled' ? 'active' : ''}`} onClick={() => setStatus('cancelled')}>✗ Non fatto</button>
+                </div>
+                {status === 'cancelled' && (
+                  <p className="panel-desc" style={{ marginTop: 6, marginBottom: 0 }}>Resta nel calendario barrato ma non conta in ore e guadagni.</p>
+                )}
+              </>
             )}
 
             <div className="editor-label">Nota (opzionale)</div>

@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  todayISO, monthDays, weekdayOf, shiftsToday, nextShiftAfter, computeMonthSummary,
+  todayISO, monthDays, weekdayOf, shiftsToday, nextShiftAfter, computeMonthProgress, shiftsToConfirm, activeShifts,
 } from '../lib/calc.js';
 import { MONTHS_IT, WEEKDAYS_IT_LONG } from '../lib/defaults.js';
 import Icon from './icons/Icon.jsx';
@@ -26,11 +26,18 @@ export default function NotificheTab({ state, onBack }) {
 
   const todays = shiftsToday(state.shifts, today);
   const upcoming = !todays.length ? nextShiftAfter(state.shifts, today) : null;
-  const month = computeMonthSummary(state.shifts, state.sites, state.settings, y, m, state.occasionalWork);
+  const progress = computeMonthProgress(state.shifts, state.sites, state.settings, y, m, state.occasionalWork);
+  const month = progress.done; // netto già guadagnato (turni finiti)
+  const toConfirm = shiftsToConfirm(state.shifts);
   const goal = Number(state.settings.monthlyGoal) || 0;
 
   const items = [];
   const now = new Date();
+
+  if (toConfirm.length > 0) {
+    items.push({ id: 'confirm', icon: 'checkCircle', tile: 'teal', title: toConfirm.length === 1 ? 'Un turno da confermare' : `${toConfirm.length} turni da confermare`,
+      text: 'In Home puoi segnare se sono andati come previsto, se è cambiato l\'orario o se non li hai fatti.' });
+  }
 
   for (const sh of todays) {
     const [h, mn] = sh.start.split(':').map(Number);
@@ -62,8 +69,9 @@ export default function NotificheTab({ state, onBack }) {
     }
   }
 
-  if (state.shifts.length > 0) {
-    const lastDate = state.shifts.reduce((max, s) => (s.date > max ? s.date : max), state.shifts[0].date);
+  const active = activeShifts(state.shifts);
+  if (active.length > 0) {
+    const lastDate = active.reduce((max, s) => (s.date > max ? s.date : max), active[0].date);
     const daysSince = Math.round((new Date(today) - new Date(lastDate)) / 86400000);
     if (daysSince >= 7) {
       items.push({ id: 'stale', icon: 'hourglass', tile: 'violet', title: 'Turni da aggiornare',

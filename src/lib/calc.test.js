@@ -4,6 +4,7 @@ import {
   holidaysOfYear, isHoliday, dayKind,
   shiftsInMonth, shiftsOnDay, shiftsInRange, shiftsToday, nextShiftAfter,
   computeMonthSummary, computeYearSummary, compareMonths, compareWeeks,
+  computeMonthProgress, shiftsToConfirm, isShiftDone, shiftEndDate,
 } from './calc.js';
 
 describe('prestazioni occasionali — tassate separatamente dal regime forfettario', () => {
@@ -307,5 +308,53 @@ describe('hoursOfShift: notti del cambio d\'ora (fuso italiano)', () => {
     const settings = { taxRatePercent: 0, contributionsPercent: 0, rivalsaPercent: 0 };
     const sum = computeMonthSummary([{ id: 1, date: '2026-10-24', siteId: 1, start: '20:00', end: '08:00' }], sites, settings, 2026, 10, []);
     expect(sum.totalHours ?? sum.hours).toBe(13);
+  });
+});
+
+describe('turni svolti, in programma, annullati e da confermare', () => {
+  const sites = [{ id: 1, name: 'CDS', rate: 20, rivalsaPercent: 0 }];
+  const settings = { taxPercent: 0, rivalsaPercent: 0 };
+  const now = new Date(2026, 9, 15, 12, 0); // 15 ottobre 2026, ore 12
+  const sh = (id, date, start, end, extra = {}) => ({ id, date, siteId: 1, start, end, ...extra });
+
+  it('fine del turno: stesso giorno o mattina dopo per le notti', () => {
+    expect(shiftEndDate(sh(1, '2026-10-15', '07:00', '14:00'))).toEqual(new Date(2026, 9, 15, 14, 0));
+    expect(shiftEndDate(sh(1, '2026-10-14', '20:00', '08:00'))).toEqual(new Date(2026, 9, 15, 8, 0));
+  });
+
+  it('un turno è "svolto" solo quando è finito', () => {
+    expect(isShiftDone(sh(1, '2026-10-15', '07:00', '11:00'), now)).toBe(true);
+    expect(isShiftDone(sh(1, '2026-10-15', '07:00', '14:00'), now)).toBe(false); // in corso
+    expect(isShiftDone(sh(1, '2026-10-14', '20:00', '08:00'), now)).toBe(true);
+  });
+
+  it('il mese si divide tra già lavorato e in programma; il totale è la previsione', () => {
+    const shifts = [sh(1, '2026-10-01', '08:00', '12:00'), sh(2, '2026-10-15', '07:00', '14:00'), sh(3, '2026-10-20', '08:00', '12:00')];
+    const p = computeMonthProgress(shifts, sites, settings, 2026, 10, [], now);
+    expect(p.done.totalHours).toBe(4);
+    expect(p.planned.totalHours).toBe(11);
+    expect(p.total.totalHours).toBe(15);
+    expect(p.done.net + p.planned.net).toBeCloseTo(p.total.net);
+  });
+
+  it('un turno annullato resta salvato ma non conta in ore e guadagni', () => {
+    const shifts = [sh(1, '2026-10-01', '08:00', '12:00'), sh(2, '2026-10-02', '08:00', '12:00', { status: 'cancelled' })];
+    const m = computeMonthSummary(shifts, sites, settings, 2026, 10, []);
+    expect(m.totalHours).toBe(4);
+    expect(m.shiftCount).toBe(1);
+  });
+
+  it('da confermare: solo turni finiti da poco, segnati prima della fine e senza risposta', () => {
+    const before = new Date(2026, 9, 1).getTime();
+    const shifts = [
+      sh(1, '2026-10-14', '08:00', '12:00', { _u: before }),                  // sì
+      sh(2, '2026-10-14', '14:00', '20:00', { _u: before, status: 'done' }),  // già confermato
+      sh(3, '2026-10-13', '08:00', '12:00', { _u: before, status: 'cancelled' }),
+      sh(4, '2026-10-20', '08:00', '12:00', { _u: before }),                  // futuro
+      sh(5, '2026-09-01', '08:00', '12:00', { _u: before - 40 * 86400000 }),  // troppo vecchio
+      sh(6, '2026-10-14', '08:00', '12:00', { _u: now.getTime() }),           // inserito a cose fatte
+      sh(7, '2026-10-14', '08:00', '12:00'),                                  // dati vecchi senza data di modifica
+    ];
+    expect(shiftsToConfirm(shifts, now).map((s) => s.id)).toEqual([1]);
   });
 });

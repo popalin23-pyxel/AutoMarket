@@ -42,6 +42,42 @@ export function hoursOfShift(shift) {
   return Math.round((mins / 60) * 100) / 100;
 }
 
+// Turno annullato ("non l'ho fatto"): resta nel calendario, barrato, ma non conta
+// in ore e guadagni. `status`: assente = normale, 'done' = confermato, 'cancelled' = annullato.
+export const isCancelled = (shift) => shift?.status === 'cancelled';
+export const activeShifts = (shifts) => shifts.filter((s) => !isCancelled(s));
+
+// Quando finisce il turno (data e ora locali), anche se passa la mezzanotte.
+export function shiftEndDate(shift) {
+  const [y, mo, d] = (shift?.date || '').split('-').map(Number);
+  const [sh, sm] = (shift?.start || '').split(':').map(Number);
+  const [eh, em] = (shift?.end || '').split(':').map(Number);
+  if (!y || !mo || !d || [sh, sm, eh, em].some((n) => Number.isNaN(n))) return null;
+  const overnight = eh * 60 + em <= sh * 60 + sm;
+  return new Date(y, mo - 1, d + (overnight ? 1 : 0), eh, em);
+}
+
+// Turno già svolto (finito) rispetto a `now`.
+export function isShiftDone(shift, now = new Date()) {
+  const end = shiftEndDate(shift);
+  return end != null && end <= now;
+}
+
+// Turni finiti di recente da confermare ("fatto così?"): solo quelli segnati in anticipo
+// (registrati o modificati prima della fine) e finiti negli ultimi `maxDays` giorni, così
+// non vengono chiesti i turni vecchi o quelli inseriti a cose fatte.
+export function shiftsToConfirm(shifts, now = new Date(), maxDays = 14) {
+  const nowMs = now.getTime();
+  return shifts.filter((s) => {
+    if (s.status) return false;
+    const end = shiftEndDate(s);
+    if (!end) return false;
+    const endMs = end.getTime();
+    const u = Number(s._u) || 0;
+    return endMs <= nowMs && nowMs - endMs <= maxDays * 86400000 && u > 0 && u < endMs;
+  }).sort((a, b) => (a.date === b.date ? (a.start || '').localeCompare(b.start || '') : a.date.localeCompare(b.date)));
+}
+
 export function shiftYearMonth(shift) {
   const [y, m] = (shift.date || '').split('-').map(Number);
   return { year: y, month: m };
@@ -66,14 +102,14 @@ function byDateThenStart(a, b) {
   return a.date === b.date ? (a.start || '').localeCompare(b.start || '') : a.date.localeCompare(b.date);
 }
 
-/** Turni di oggi, ordinati per orario di inizio. */
+/** Turni di oggi (non annullati), ordinati per orario di inizio. */
 export function shiftsToday(shifts, todayDateISO = todayISO()) {
-  return shiftsOnDay(shifts, todayDateISO).slice().sort(byDateThenStart);
+  return activeShifts(shiftsOnDay(shifts, todayDateISO)).sort(byDateThenStart);
 }
 
 /** Il primo turno futuro (data successiva a quella data), utile per "prossimo turno". */
 export function nextShiftAfter(shifts, dateISO) {
-  const future = shifts.filter((s) => s.date > dateISO);
+  const future = shifts.filter((s) => s.date > dateISO && !isCancelled(s));
   if (!future.length) return null;
   return future.slice().sort(byDateThenStart)[0];
 }
@@ -142,7 +178,8 @@ export function dayKind(year, month, day, holidaySet) {
 const rivalsaFor = (site, settings) =>
   (site?.rivalsaPercent != null ? Number(site.rivalsaPercent) : Number(settings.rivalsaPercent) || 0);
 
-function aggregate(filteredShifts, sites, settings) {
+function aggregate(shiftsIn, sites, settings) {
+  const filteredShifts = activeShifts(shiftsIn); // gli annullati non contano
   const siteById = new Map(sites.map((s) => [s.id, s]));
   const bySite = new Map();
   const unknown = { hours: 0 };
@@ -214,6 +251,25 @@ export function computeRangeSummary(shifts, sites, settings, startISO, endISO, o
 /** Riepilogo della settimana (lun–dom) che contiene dateISO. */
 export function computeWeekSummary(shifts, sites, settings, dateISO = todayISO(), occasionalWork = []) {
   return computeRangeSummary(shifts, sites, settings, startOfWeek(dateISO), endOfWeek(dateISO), occasionalWork);
+}
+
+/**
+ * Il mese diviso tra "già lavorato" (turni finiti, prestazioni fino a oggi) e "in programma"
+ * (il resto): `done`, `planned` e `total` sono riepiloghi come computeMonthSummary.
+ */
+export function computeMonthProgress(shifts, sites, settings, year, month, occasionalWork = [], now = new Date()) {
+  const monthShifts = shiftsInMonth(shifts, year, month);
+  const monthOcc = shiftsInMonth(occasionalWork, year, month);
+  const todayStr = toISO(now);
+  const doneShifts = monthShifts.filter((s) => isShiftDone(s, now));
+  const plannedShifts = monthShifts.filter((s) => !isShiftDone(s, now));
+  const doneOcc = monthOcc.filter((o) => (o.date || '') <= todayStr);
+  const plannedOcc = monthOcc.filter((o) => (o.date || '') > todayStr);
+  return {
+    done: computeMonthSummary(doneShifts, sites, settings, year, month, doneOcc),
+    planned: computeMonthSummary(plannedShifts, sites, settings, year, month, plannedOcc),
+    total: computeMonthSummary(monthShifts, sites, settings, year, month, monthOcc),
+  };
 }
 
 export function computeYearSummary(shifts, sites, settings, year, occasionalWork = []) {

@@ -40,7 +40,8 @@ export default function CalendarGridView({ year, month, shifts, occasionalWork =
               {(dayShifts.length > 0 || dayOccasional.length > 0) && (
                 <span className="cal-cell-dots">
                   {dayShifts.slice(0, 4).map((sh, k) => (
-                    <span key={k} className="cal-dot" style={{ background: siteById.get(sh.siteId)?.color ?? '#6b7280' }} />
+                    <span key={k} className={`cal-dot ${sh.status === 'cancelled' ? 'cancelled' : ''}`}
+                      style={{ background: siteById.get(sh.siteId)?.color ?? '#6b7280' }} />
                   ))}
                   {dayOccasional.slice(0, 4 - dayShifts.length).map((o, k) => (
                     <span key={`o${k}`} className="cal-dot" style={{ background: 'var(--gold)' }} />

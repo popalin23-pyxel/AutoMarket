@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { loadState, saveState, resetState } from './lib/store.js';
-import { computeMonthSummary, todayISO } from './lib/calc.js';
+import { computeMonthProgress } from './lib/calc.js';
+import { useNow } from './lib/useNow.js';
 import { loadTheme, applyTheme } from './lib/theme.js';
 import { loadAccent, applyAccent } from './lib/accentColor.js';
 import { loadDensity, applyDensity } from './lib/density.js';
@@ -59,17 +60,11 @@ function Shell() {
   const [subTab, setSubTab] = useState(null);
   const [year, setYear] = useState(() => new Date().getFullYear());
   const [month, setMonth] = useState(() => new Date().getMonth() + 1);
-  // data di oggi, aggiornata quando l'app torna in primo piano: le app restano aperte in
-  // memoria anche per giorni, e "questo mese" deve cambiare quando cambia il mese
-  const [today, setToday] = useState(todayISO);
-  useEffect(() => {
-    const refresh = () => { if (document.visibilityState === 'visible') setToday(todayISO()); };
-    document.addEventListener('visibilitychange', refresh);
-    const timer = setInterval(refresh, 60000);
-    return () => { document.removeEventListener('visibilitychange', refresh); clearInterval(timer); };
-  }, []);
-  const curYear = Number(today.slice(0, 4));
-  const curMonth = Number(today.slice(5, 7));
+  // ora corrente, aggiornata ogni minuto e al ritorno in primo piano: le app restano aperte
+  // in memoria anche per giorni, e "questo mese" deve cambiare quando cambia il mese
+  const now = useNow();
+  const curYear = now.getFullYear();
+  const curMonth = now.getMonth() + 1;
   const [showOnboarding, setShowOnboarding] = useState(needsOnboarding);
   const [syncNotice, setSyncNotice] = useState(false);
 
@@ -115,10 +110,12 @@ function Shell() {
     setState(resetState()); // non lasciare i dati dell'account sul dispositivo condiviso
   };
 
-  const monthSummary = useMemo(
-    () => computeMonthSummary(state.shifts, state.sites, state.settings, curYear, curMonth, state.occasionalWork),
-    [state.shifts, state.sites, state.settings, state.occasionalWork, curYear, curMonth],
+  // intestazione: netto già guadagnato nel mese (turni finiti), non quello previsto
+  const monthProgress = useMemo(
+    () => computeMonthProgress(state.shifts, state.sites, state.settings, curYear, curMonth, state.occasionalWork, now),
+    [state.shifts, state.sites, state.settings, state.occasionalWork, curYear, curMonth, now],
   );
+  const monthSummary = monthProgress.total;
 
   // Il Profilo (account, aspetto, backup) si apre dall'avatar in alto a destra.
   const TABS = [
@@ -138,7 +135,7 @@ function Shell() {
           <span className="brand-logo">Turn<span className="accent">io</span></span>
           {(monthSummary.shiftCount > 0 || monthSummary.occasionalCount > 0) && (
             <span className="brand-sub">
-              Questo mese: €{monthSummary.netTotal.toLocaleString('it-IT', { maximumFractionDigits: 0 })} netto
+              Questo mese: €{monthProgress.done.netTotal.toLocaleString('it-IT', { maximumFractionDigits: 0 })} netto finora
             </span>
           )}
         </div>
@@ -164,7 +161,7 @@ function Shell() {
       <div className="app-body">
         <div key={`${active}:${subTab ?? ''}`} className="tab-fade">
           {active === 'dashboard' && (
-            <DashboardTab state={state} userEmail={user?.email} isAdmin={isAdmin} onNavigate={navigate}
+            <DashboardTab state={state} setState={setState} userEmail={user?.email} isAdmin={isAdmin} onNavigate={navigate}
               onOpenCurrentMonth={openCurrentMonth} />
           )}
           {active === 'calendar' && (

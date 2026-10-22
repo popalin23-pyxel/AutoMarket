@@ -1,7 +1,9 @@
 import React, { useMemo } from 'react';
 import {
-  compareWeeks, compareMonths, todayISO, tomorrowISO, shiftsToday, nextShiftAfter, weekdayOf, shiftsOnDay,
+  compareWeeks, compareMonths, computeMonthProgress, tomorrowISO, shiftsToday, nextShiftAfter, weekdayOf, shiftsOnDay,
 } from '../lib/calc.js';
+import { useNow } from '../lib/useNow.js';
+import ConfirmShiftsCard from './ConfirmShiftsCard.jsx';
 import { MONTHS_IT, WEEKDAYS_IT_LONG, roleLabel, dayMarkKind } from '../lib/defaults.js';
 import Icon from './icons/Icon.jsx';
 import SiteAvatar from './SiteAvatar.jsx';
@@ -57,33 +59,33 @@ function SetupCard({ state, onNavigate }) {
   );
 }
 
-function MonthCard({ month, monthLabel, prevMonthLabel, goal }) {
-  const cur = month.current;
-  const hourlyNet = cur.totalHours > 0 ? cur.net / cur.totalHours : 0;
-  const hasData = cur.shiftCount > 0 || cur.occasionalCount > 0;
-  const goalPct = goal > 0 ? Math.round((cur.netTotal / goal) * 100) : null;
-  const reached = goal > 0 && cur.netTotal >= goal;
+// Il mese in Home: in grande ciò che è già stato lavorato (turni finiti), sotto ciò che è
+// in programma e la previsione a fine mese. Prima i turni futuri contavano come già fatti.
+function MonthCard({ progress, deltaPct, monthLabel, prevMonthLabel, goal }) {
+  const { done, planned, total } = progress;
+  const hourlyNet = done.totalHours > 0 ? done.net / done.totalHours : 0;
+  const hasPlanned = planned.shiftCount > 0 || planned.occasionalCount > 0;
+  const goalPct = goal > 0 ? Math.round((done.netTotal / goal) * 100) : null;
+  const forecastPct = goal > 0 ? Math.round((total.netTotal / goal) * 100) : null;
+  const reached = goal > 0 && done.netTotal >= goal;
 
   return (
     <div className="panel month-hero">
       <div className="month-hero-top">
         <span className="month-hero-label">{monthLabel}</span>
-        {hasData && (
-          <span className="month-hero-delta"><DeltaBadge pct={month.deltaNetPct} /> <span>vs {prevMonthLabel}</span></span>
-        )}
       </div>
-      <div className="month-hero-net">€<CountUpText value={cur.netTotal} format={fmt} /></div>
+      <div className="month-hero-net">€<CountUpText value={done.netTotal} format={fmt} /></div>
       <div className="month-hero-net-caption">
-        netto stimato{cur.occasionalCount > 0 ? ` · di cui €${fmt(cur.occasionalNet)} da prestazioni occasionali` : ''}
+        netto già guadagnato{done.occasionalCount > 0 ? ` · di cui €${fmt(done.occasionalNet)} da prestazioni occasionali` : ''}
       </div>
 
       <div className="month-hero-grid">
         <div className="mh-stat">
-          <span className="mh-val">€<CountUpText value={cur.totalInvoice} format={fmtInt} /></span>
-          <span className="mh-lbl">fatturato</span>
+          <span className="mh-val">€<CountUpText value={done.totalInvoice} format={fmtInt} /></span>
+          <span className="mh-lbl">fatturato finora</span>
         </div>
         <div className="mh-stat">
-          <span className="mh-val"><CountUpText value={cur.totalHours} format={fmt0} />h</span>
+          <span className="mh-val"><CountUpText value={done.totalHours} format={fmt0} />h</span>
           <span className="mh-lbl">lavorate</span>
         </div>
         <div className="mh-stat">
@@ -92,15 +94,36 @@ function MonthCard({ month, monthLabel, prevMonthLabel, goal }) {
         </div>
       </div>
 
+      {hasPlanned && (
+        <div className="month-hero-plan">
+          <div className="mh-plan-row">
+            <span className="mh-plan-lbl">In programma</span>
+            <span className="mh-plan-val mono">{fmt0(planned.totalHours)}h · €{fmt(planned.netTotal)}</span>
+          </div>
+          <div className="mh-plan-row">
+            <span className="mh-plan-lbl">Previsione a fine mese</span>
+            <span className="mh-plan-val mono"><b>€{fmt(total.netTotal)}</b></span>
+          </div>
+        </div>
+      )}
+      <div className="month-hero-delta-row">
+        <DeltaBadge pct={deltaPct} /> <span>{hasPlanned ? 'previsione' : 'questo mese'} vs {prevMonthLabel}</span>
+      </div>
+
       {goalPct != null && (
         <div className="month-hero-goal-block">
           <div className="goal-bar-track">
+            {hasPlanned && !reached && (
+              <div className="goal-bar-fill planned" style={{ width: `${Math.min(100, forecastPct)}%` }} />
+            )}
             <div className={`goal-bar-fill ${reached ? 'reached' : ''}`} style={{ width: `${Math.min(100, goalPct)}%` }} />
           </div>
           <div className="month-hero-goal-text">
             {reached
-              ? <>Obiettivo raggiunto · €{fmt(cur.netTotal)} su €{fmt(goal)}</>
-              : <><b>{goalPct}%</b> dell'obiettivo · mancano €{fmt(Math.max(0, goal - cur.netTotal))}</>}
+              ? <>Obiettivo raggiunto · €{fmt(done.netTotal)} su €{fmt(goal)}</>
+              : <><b>{goalPct}%</b> dell'obiettivo{hasPlanned
+                ? <> · con i turni in programma arrivi al <b>{forecastPct}%</b></>
+                : <> · mancano €{fmt(Math.max(0, goal - done.netTotal))}</>}</>}
           </div>
         </div>
       )}
@@ -205,8 +228,9 @@ function WeekRow({ week }) {
   );
 }
 
-export default function DashboardTab({ state, userEmail, isAdmin, onNavigate, onOpenCurrentMonth }) {
-  const today = todayISO();
+export default function DashboardTab({ state, setState, userEmail, isAdmin, onNavigate, onOpenCurrentMonth }) {
+  const now = useNow();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   const y = Number(today.slice(0, 4));
   const m = Number(today.slice(5, 7));
   const rawName = (state.settings.displayName || '').trim().split(/\s+/)[0]
@@ -219,6 +243,8 @@ export default function DashboardTab({ state, userEmail, isAdmin, onNavigate, on
     [state.shifts, state.sites, state.settings, today, state.occasionalWork]);
   const month = useMemo(() => compareMonths(state.shifts, state.sites, state.settings, y, m, state.occasionalWork),
     [state.shifts, state.sites, state.settings, y, m, state.occasionalWork]);
+  const progress = useMemo(() => computeMonthProgress(state.shifts, state.sites, state.settings, y, m, state.occasionalWork, now),
+    [state.shifts, state.sites, state.settings, y, m, state.occasionalWork, now]);
 
   const hasAnyData = state.shifts.length > 0 || state.occasionalWork.length > 0;
 
@@ -233,8 +259,10 @@ export default function DashboardTab({ state, userEmail, isAdmin, onNavigate, on
 
       <SetupCard state={state} onNavigate={onNavigate} />
 
+      {setState && <ConfirmShiftsCard state={state} setState={setState} now={now} />}
+
       {hasAnyData && (
-        <MonthCard month={month} monthLabel={`${MONTHS_IT[m - 1]} ${y}`}
+        <MonthCard progress={progress} deltaPct={month.deltaNetPct} monthLabel={`${MONTHS_IT[m - 1]} ${y}`}
           prevMonthLabel={MONTHS_IT[month.previous.month - 1].toLowerCase()}
           goal={Number(state.settings.monthlyGoal) || 0} />
       )}

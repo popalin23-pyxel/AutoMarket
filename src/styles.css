@@ -830,6 +830,26 @@ code { background: rgba(var(--ink), 0.08); padding: 1px 5px; border-radius: 4px;
 .mh-val { font-size: 14px; font-weight: 700; font-family: var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mh-lbl { font-size: 10.5px; color: var(--text-mut); }
 .month-hero-goal-block { margin-top: 16px; }
+.month-hero-plan { margin-top: 14px; padding: 10px 12px; border-radius: var(--radius-sm); background: rgba(var(--ink), 0.03); border: 1px solid var(--border); display: flex; flex-direction: column; gap: 4px; }
+.mh-plan-row { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font-size: 13px; }
+.mh-plan-lbl { color: var(--text-dim); }
+.month-hero-delta-row { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-mut); margin-top: 10px; }
+
+/* ── Turni da confermare (Home) ───────────────────────── */
+.confirm-shifts-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.confirm-shifts-list { display: flex; flex-direction: column; gap: 10px; }
+.confirm-shift-row { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: rgba(var(--ink), 0.025); }
+.confirm-shift-info { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 13px; }
+.confirm-shift-site { font-weight: 700; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.confirm-shift-when { font-family: var(--mono); font-size: 12px; color: var(--text-dim); }
+.confirm-shift-actions, .confirm-shift-edit { display: flex; gap: 6px; flex-wrap: wrap; }
+.confirm-shift-edit input[type=time] { width: 100px; min-width: 0; }
+
+/* turno annullato: resta visibile ma barrato */
+.shift-chip.cancelled { opacity: 0.55; }
+.shift-chip.cancelled .shift-site, .shift-chip.cancelled .shift-time { text-decoration: line-through; }
+.shift-cancel-tag { font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--red); }
+.cal-dot.cancelled { background: transparent !important; border: 1px solid var(--text-mut); }
 .month-hero-goal-text { font-size: 12.5px; color: var(--text-dim); margin-top: 8px; }
 
 .hero-today { padding: 16px; }
@@ -856,8 +876,9 @@ code { background: rgba(var(--ink), 0.08); padding: 1px 5px; border-radius: 4px;
 .tomorrow-banner-title { font-size: 12px; font-weight: 700; color: var(--hint-warn-fg); margin-bottom: 4px; }
 .tomorrow-banner-row { display: flex; align-items: center; gap: 6px; font-size: 13px; padding: 2px 0; }
 
-.goal-bar-track { height: 8px; border-radius: 5px; background: rgba(var(--ink), 0.08); overflow: hidden; }
-.goal-bar-fill { height: 100%; border-radius: 5px; background: var(--accent); transition: width 0.5s ease; }
+.goal-bar-track { position: relative; height: 8px; border-radius: 5px; background: rgba(var(--ink), 0.08); overflow: hidden; }
+.goal-bar-fill { position: absolute; left: 0; top: 0; height: 100%; border-radius: 5px; background: var(--accent); transition: width 0.5s ease; }
+.goal-bar-fill.planned { background: rgba(var(--accent-rgb), 0.28); }
 .goal-bar-fill.reached { background: var(--green); }
 
 .week-row { display: flex; flex-direction: column; gap: 8px; padding: 14px 18px; }

@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   monthDays, weekdayOf, shiftsOnDay, hoursOfShift, todayISO, holidaysOfYear, isHoliday,
-  startOfWeek, endOfWeek, shiftsInRange, addDaysISO, computeWeekSummary,
+  startOfWeek, endOfWeek, shiftsInRange, addDaysISO, computeWeekSummary, isCancelled, activeShifts,
 } from '../lib/calc.js';
 import { MONTHS_IT, WEEKDAYS_IT, DAY_MARK_KINDS, dayMarkKind, hexToRgba } from '../lib/defaults.js';
 import {
@@ -186,7 +186,7 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
     () => computeWeekSummary(state.shifts, state.sites, state.settings, today, state.occasionalWork),
     [state.shifts, state.sites, state.settings, today, state.occasionalWork],
   );
-  const thisWeekShifts = useMemo(() => shiftsInRange(state.shifts, weekStart, weekEnd), [state.shifts, weekStart, weekEnd]);
+  const thisWeekShifts = useMemo(() => activeShifts(shiftsInRange(state.shifts, weekStart, weekEnd)), [state.shifts, weekStart, weekEnd]);
   const weekLabel = useMemo(() => {
     const wsD = Number(weekStart.slice(8)), wsM = Number(weekStart.slice(5, 7));
     const weD = Number(weekEnd.slice(8)), weM = Number(weekEnd.slice(5, 7));
@@ -220,7 +220,7 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
     const bySite = new Map();
     for (let d = 1; d <= days; d++) {
       const dateISO = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-      for (const sh of shiftsOnDay(state.shifts, dateISO)) {
+      for (const sh of activeShifts(shiftsOnDay(state.shifts, dateISO))) {
         const sh2 = hoursOfShift(sh);
         h += sh2;
         if (sh.siteId != null) bySite.set(sh.siteId, (bySite.get(sh.siteId) || 0) + sh2);
@@ -265,14 +265,15 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
         {dayShifts.map((sh) => {
           const site = siteById.get(sh.siteId);
           const color = site?.color ?? '#6b7280';
+          const cancelled = isCancelled(sh);
           return (
-            <div key={sh.id} className="shift-chip" style={{ borderLeftColor: color, background: color + '14' }}
+            <div key={sh.id} className={`shift-chip ${cancelled ? 'cancelled' : ''}`} style={{ borderLeftColor: color, background: color + '14' }}
               onClick={() => openEdit(dateISO, sh)}>
               <div className="shift-chip-row">
                 <SiteAvatar site={site} size={18} />
                 <span className="shift-site">{site?.name ?? 'Sede eliminata'}</span>
                 <span className="shift-time">{sh.start}–{sh.end}</span>
-                <span className="shift-hours">{hoursOfShift(sh)}h</span>
+                {cancelled ? <span className="shift-cancel-tag">non fatto</span> : <span className="shift-hours">{hoursOfShift(sh)}h</span>}
               </div>
               {sh.note && <div className="shift-note">📝 {sh.note}</div>}
             </div>

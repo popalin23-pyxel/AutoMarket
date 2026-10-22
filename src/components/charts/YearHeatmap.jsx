@@ -10,7 +10,7 @@ export default function YearHeatmap({ year, shifts }) {
   const hoursByDate = useMemo(() => {
     const map = new Map();
     for (const sh of shifts) {
-      if (!sh.date?.startsWith(String(year))) continue;
+      if (!sh.date?.startsWith(String(year)) || sh.status === 'cancelled') continue;
       map.set(sh.date, (map.get(sh.date) || 0) + hoursOfShift(sh));
     }
     return map;
