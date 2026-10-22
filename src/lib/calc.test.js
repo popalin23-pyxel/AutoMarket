@@ -5,7 +5,7 @@ import {
   shiftsInMonth, shiftsOnDay, shiftsInRange, shiftsToday, nextShiftAfter,
   computeMonthSummary, computeYearSummary, compareMonths, compareWeeks,
   computeMonthProgress, shiftsToConfirm, isShiftDone, shiftEndDate, siteRateOn, shiftRate, computeTimesheet,
-  computeTaxes,
+  computeTaxes, freeDays, availabilityText,
 } from './calc.js';
 import { changeSiteRate } from './store.js';
 
@@ -481,5 +481,34 @@ describe('tasse: modalità semplice (com\'era) e forfettario esatto', () => {
     const y = computeYearSummary(shifts, sites, settings, 2026);
     expect(y.totalIntegrativo).toBe(8);
     expect(y.totalContributions).toBe(m.contributions);
+  });
+});
+
+describe('disponibilità', () => {
+  const sh = (date, start, end, extra = {}) => ({ id: date + start, date, siteId: 1, start, end, ...extra });
+  const opts = { today: '2026-11-01' };
+
+  it('giorni senza turni né assenze, esclusi il passato e lo smonto dopo una notte', () => {
+    const shifts = [sh('2026-11-03', '08:00', '14:00'), sh('2026-11-05', '20:00', '08:00'), sh('2026-11-04', '08:00', '14:00', { status: 'cancelled' })];
+    const marks = [{ id: 1, date: '2026-11-07', kind: 'ferie' }];
+    const days = freeDays(shifts, marks, '2026-10-28', '2026-11-08', opts).map((d) => d.date);
+    expect(days).toEqual(['2026-11-01', '2026-11-02', '2026-11-04', '2026-11-08']); // 3 turno, 5 notte, 6 smonto, 7 ferie
+  });
+
+  it('con i giorni parziali: dopo un turno di mattina o prima di uno di pomeriggio', () => {
+    const shifts = [sh('2026-11-03', '07:00', '14:00'), sh('2026-11-04', '14:00', '21:00'), sh('2026-11-05', '10:00', '18:00')];
+    const days = freeDays(shifts, [], '2026-11-03', '2026-11-05', { ...opts, includePartial: true });
+    expect(days).toEqual([{ date: '2026-11-03', from: '14:00' }, { date: '2026-11-04', to: '14:00' }]);
+  });
+
+  it('testo: per mese, tre o più giorni di fila come intervallo', () => {
+    const days = [
+      { date: '2026-11-02' }, { date: '2026-11-03', from: '14:00' }, { date: '2026-11-10' }, { date: '2026-11-11' }, { date: '2026-11-12' },
+      { date: '2026-11-20' }, { date: '2026-11-21' }, { date: '2026-12-01' },
+    ];
+    const text = availabilityText(days, { name: 'Maria Rossi' });
+    expect(text).toContain('Novembre: lun 2, mar 3 (dalle 14:00), dal 10 al 12, ven 20, sab 21');
+    expect(text).toContain('Dicembre: mar 1');
+    expect(text.endsWith('Maria Rossi')).toBe(true);
   });
 });

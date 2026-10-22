@@ -20,6 +20,7 @@ import CalendarGridView from './charts/CalendarGridView.jsx';
 import SiteAvatar from './SiteAvatar.jsx';
 import StampBar from './StampBar.jsx';
 import MarkEditor from './MarkEditor.jsx';
+import AvailabilityDialog from './AvailabilityDialog.jsx';
 
 const fmt = (n) => n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -58,6 +59,7 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
   const [stampOn, setStampOn] = useState(false);
   const [stamp, setStamp] = useState(null);
   const [stampCount, setStampCount] = useState(0);
+  const [availabilityOpen, setAvailabilityOpen] = useState(false);
   useBackClose(() => setStampOn(false), stampOn);
 
   useEffect(() => { try { localStorage.setItem(VIEW_KEY, view); } catch {} }, [view]);
@@ -332,6 +334,9 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
                 ✋ Timbro
               </button>
             )}
+            <button className="btn btn-sm" onClick={() => setAvailabilityOpen(true)} title="Messaggio con i giorni liberi da mandare alle strutture">
+              📤 Disponibilità
+            </button>
           </div>
           <div className="view-toggle">
             <button className={view === 'list' ? 'active' : ''} onClick={() => setView('list')}>☰ Lista</button>
@@ -434,6 +439,10 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
       {stampOn && (
         <StampBar sites={activeSites} favorites={activeFavorites} markKinds={DAY_MARK_KINDS} stamp={stamp} setStamp={setStamp}
           count={stampCount} onDone={() => setStampOn(false)} />
+      )}
+
+      {availabilityOpen && (
+        <AvailabilityDialog state={state} year={year} month={month} onClose={() => setAvailabilityOpen(false)} />
       )}
 
       {editingMark && (

@@ -499,6 +499,9 @@ td .site-picker { flex-wrap: nowrap; }
 .rate-btn:hover { border-color: var(--accent); }
 .rate-history { font-size: 10.5px; color: var(--text-mut); margin-top: 3px; white-space: nowrap; }
 .rate-mode { display: flex; flex-direction: column; gap: 8px; }
+.check-row { display: flex; gap: 8px; align-items: flex-start; font-size: 12.5px; color: var(--text-dim); margin: 6px 0 4px; cursor: pointer; }
+.check-row input { margin-top: 2px; }
+.availability-text { width: 100%; min-width: 0; font-family: inherit; line-height: 1.45; }
 .site-links { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 4px; }
 .site-links a { text-decoration: none; font-size: 12.5px; }
 .archived-list { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; }

@@ -140,6 +140,76 @@ function shortRangeLabel(startISO, endISO) {
   return `${Number(sd)}–${Number(ed)} ${MONTHS_IT[Number(em) - 1].slice(0, 3)}`;
 }
 
+// ── Disponibilità ────────────────────────────────────────────────────────
+const WD_SHORT = ['lun', 'mar', 'mer', 'gio', 'ven', 'sab', 'dom'];
+const toMin = (hhmm) => { const [h, m] = (hhmm || '').split(':').map(Number); return h * 60 + m; };
+const fromMin = (min) => `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`;
+
+/**
+ * Giorni liberi in [fromISO, toISO] (da oggi in poi): senza turni, senza ferie/assenze e non
+ * di smonto da una notte. Con includePartial anche i giorni liberi solo in parte: dopo un turno
+ * che finisce entro le 15 ("dalle …") o prima di uno che inizia dalle 13 ("fino alle …").
+ * Ritorna [{ date, from?, to? }].
+ */
+export function freeDays(shifts, dayMarks, fromISO, toISO, { includePartial = false, today = todayISO() } = {}) {
+  const active = activeShifts(shifts);
+  const marked = new Set((dayMarks || []).map((m) => m.date));
+  const out = [];
+  const start = fromISO > today ? fromISO : today;
+  for (let d = start, i = 0; d <= toISO && i < 400; d = addDaysISO(d, 1), i++) {
+    if (marked.has(d)) continue;
+    const prev = addDaysISO(d, -1);
+    const smonto = active.some((s) => s.date === prev && toMin(s.end) <= toMin(s.start));
+    if (smonto) continue;
+    const dayShifts = active.filter((s) => s.date === d && s.start && s.end);
+    if (dayShifts.length === 0) { out.push({ date: d }); continue; }
+    if (!includePartial) continue;
+    const latestEnd = Math.max(...dayShifts.map((s) => (toMin(s.end) <= toMin(s.start) ? 24 * 60 : toMin(s.end))));
+    const earliestStart = Math.min(...dayShifts.map((s) => toMin(s.start)));
+    if (latestEnd <= 15 * 60) out.push({ date: d, from: fromMin(latestEnd) });
+    else if (earliestStart >= 13 * 60) out.push({ date: d, to: fromMin(earliestStart) });
+  }
+  return out;
+}
+
+/** Testo da mandare alle strutture: giorni raggruppati per mese, i consecutivi come intervallo. */
+export function availabilityText(days, { name = '' } = {}) {
+  if (!days.length) return 'Al momento non ho giorni liberi nel periodo indicato.';
+  const byMonth = new Map();
+  for (const d of days) {
+    const key = d.date.slice(0, 7);
+    if (!byMonth.has(key)) byMonth.set(key, []);
+    byMonth.get(key).push(d);
+  }
+  const lines = [];
+  for (const [key, list] of byMonth) {
+    const parts = [];
+    let i = 0;
+    while (i < list.length) {
+      const cur = list[i];
+      const day = Number(cur.date.slice(8));
+      if (cur.from || cur.to) {
+        const [y, m] = key.split('-').map(Number);
+        parts.push(`${WD_SHORT[weekdayOf(y, m, day)]} ${day} (${cur.from ? `dalle ${cur.from}` : `fino alle ${cur.to}`})`);
+        i++;
+        continue;
+      }
+      let j = i;
+      while (j + 1 < list.length && !list[j + 1].from && !list[j + 1].to && list[j + 1].date === addDaysISO(list[j].date, 1)) j++;
+      const [y, m] = key.split('-').map(Number);
+      if (j - i >= 2) parts.push(`dal ${day} al ${Number(list[j].date.slice(8))}`);
+      else for (let k = i; k <= j; k++) {
+        const dd = Number(list[k].date.slice(8));
+        parts.push(`${WD_SHORT[weekdayOf(y, m, dd)]} ${dd}`);
+      }
+      i = j + 1;
+    }
+    const [, mm] = key.split('-').map(Number);
+    lines.push(`${MONTHS_IT[mm - 1]}: ${parts.join(', ')}`);
+  }
+  return `Ciao! Queste sono le mie disponibilità:\n${lines.join('\n')}${name ? `\n\n${name}` : ''}`;
+}
+
 // ── Festività italiane ───────────────────────────────────────────────────
 function easterSunday(year) {
   const a = year % 19, b = Math.floor(year / 100), c = year % 100;
