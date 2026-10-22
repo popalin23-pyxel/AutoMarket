@@ -1,8 +1,10 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { computeMonthSummary } from '../lib/calc.js';
 import { MONTHS_IT, hexToRgba, professionalHeaderLines } from '../lib/defaults.js';
-import { exportMonthExcel } from '../lib/excel.js';
-import { exportMonthPdf } from '../lib/pdf.js';
+
+// Excel e PDF (~675 KB) si caricano solo quando si apre il riepilogo, non a ogni avvio dell'app.
+const loadExcel = () => import('../lib/excel.js');
+const loadPdf = () => import('../lib/pdf.js');
 import RingChart from './charts/RingChart.jsx';
 import EmptyState from './EmptyState.jsx';
 import SiteAvatar from './SiteAvatar.jsx';
@@ -25,6 +27,13 @@ export default function SummaryTab({ state, year, month, setYear, setMonth }) {
   const swipe = useSwipe(nextMonth, prevMonth);
   const animatedNet = useCountUp(sum.net);
 
+  // precarica in background: al tocco su "Esporta" il modulo è già pronto e la condivisione
+  // su iPhone parte ancora "dentro" il tocco (altrimenti Safari può bloccarla)
+  useEffect(() => { loadExcel().catch(() => {}); loadPdf().catch(() => {}); }, []);
+  const exportOpts = { headerLines: professionalHeaderLines(state.settings) };
+  const exportExcel = async () => (await loadExcel()).exportMonthExcel(sum, exportOpts);
+  const exportPdf = async () => (await loadPdf()).exportMonthPdf(sum, exportOpts);
+
   return (
     <>
       <div className="panel" onTouchStart={swipe.onTouchStart} onTouchEnd={swipe.onTouchEnd} style={monthAccent ? {
@@ -41,8 +50,8 @@ export default function SummaryTab({ state, year, month, setYear, setMonth }) {
           <EmptyState icon="euro" title="Nessun turno questo mese" hint="Il riepilogo comparirà qui appena registri un turno." />
         ) : (
           <div className="form-row" style={{ marginBottom: 0 }}>
-            <button className="btn" onClick={() => exportMonthExcel(sum, { headerLines: professionalHeaderLines(state.settings) })}>⬇ Esporta Excel</button>
-            <button className="btn" onClick={() => exportMonthPdf(sum, { headerLines: professionalHeaderLines(state.settings) })}>⬇ Esporta PDF</button>
+            <button className="btn" onClick={exportExcel}>⬇ Esporta Excel</button>
+            <button className="btn" onClick={exportPdf}>⬇ Esporta PDF</button>
           </div>
         )}
       </div>

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useLockBodyScroll } from '../lib/useLockBodyScroll.js';
+import { useBackClose } from '../lib/backStack.js';
 import Portal from '../lib/Portal.jsx';
 import Icon from './icons/Icon.jsx';
 
@@ -26,6 +27,7 @@ export default function OnboardingTour({ onDone }) {
     try { localStorage.setItem(KEY, '1'); } catch {}
     onDone();
   };
+  useBackClose(finish); // Indietro = "Salta"
 
   return (
     <Portal>

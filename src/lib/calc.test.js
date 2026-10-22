@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import {
   hoursOfShift, monthDays, weekdayOf, startOfWeek, endOfWeek, addDaysISO,
   holidaysOfYear, isHoliday, dayKind,
@@ -280,5 +280,32 @@ describe('confronti periodo su periodo', () => {
     const withoutOcc = compareMonths([], sites, settingsWithOcc, 2026, 9);
     expect(withOcc.current.netTotal).toBe(1000);
     expect(withoutOcc.current.netTotal).toBe(0);
+  });
+});
+
+describe('hoursOfShift: notti del cambio d\'ora (fuso italiano)', () => {
+  const prevTZ = process.env.TZ;
+  beforeAll(() => { process.env.TZ = 'Europe/Rome'; });
+  afterAll(() => { process.env.TZ = prevTZ; });
+
+  it('notte tra 24 e 25 ottobre 2026 (torna l\'ora solare): 20:00-08:00 sono 13 ore lavorate', () => {
+    expect(hoursOfShift({ date: '2026-10-24', start: '20:00', end: '08:00' })).toBe(13);
+  });
+
+  it('notte tra 27 e 28 marzo 2027 (ora legale): 20:00-08:00 sono 11 ore lavorate', () => {
+    expect(hoursOfShift({ date: '2027-03-27', start: '20:00', end: '08:00' })).toBe(11);
+  });
+
+  it('le altre notti e i turni di giorno non cambiano', () => {
+    expect(hoursOfShift({ date: '2026-10-17', start: '20:00', end: '08:00' })).toBe(12);
+    expect(hoursOfShift({ date: '2026-10-25', start: '07:00', end: '14:00' })).toBe(7);
+    expect(hoursOfShift({ date: '2026-10-25', start: '20:00', end: '08:00' })).toBe(12);
+  });
+
+  it('il compenso del mese conta l\'ora in più', () => {
+    const sites = [{ id: 1, name: 'CDS', rate: 30, rivalsaPercent: 0 }];
+    const settings = { taxRatePercent: 0, contributionsPercent: 0, rivalsaPercent: 0 };
+    const sum = computeMonthSummary([{ id: 1, date: '2026-10-24', siteId: 1, start: '20:00', end: '08:00' }], sites, settings, 2026, 10, []);
+    expect(sum.totalHours ?? sum.hours).toBe(13);
   });
 });

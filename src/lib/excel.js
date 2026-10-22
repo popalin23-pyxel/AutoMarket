@@ -2,6 +2,7 @@
 
 import * as XLSX from 'xlsx';
 import { MONTHS_IT } from './defaults.js';
+import { saveFile } from './saveFile.js';
 
 // Protezione da "formula injection": un nome sede come "=cmd|'/c calc'!A0"
 // o "=HYPERLINK(...)" diventerebbe una formula eseguibile se aperto in Excel.
@@ -44,5 +45,7 @@ export function exportMonthExcel(sum, opts = {}) {
   ws['!cols'] = [{ wch: 20 }, { wch: 9 }, { wch: 9 }, { wch: 12 }, { wch: 10 }, { wch: 11 }, { wch: 12 }];
   XLSX.utils.book_append_sheet(wb, ws, title.slice(0, 31));
 
-  XLSX.writeFile(wb, `turnio_${sum.year}_${String(sum.month).padStart(2, '0')}.xlsx`);
+  const data = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+  const blob = new Blob([data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  return saveFile(blob, `turnio_${sum.year}_${String(sum.month).padStart(2, '0')}.xlsx`);
 }

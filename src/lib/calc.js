@@ -30,8 +30,15 @@ export function hoursOfShift(shift) {
   const [sh, sm] = shift.start.split(':').map(Number);
   const [eh, em] = shift.end.split(':').map(Number);
   if ([sh, sm, eh, em].some((n) => Number.isNaN(n))) return 0;
-  let mins = (eh * 60 + em) - (sh * 60 + sm);
-  if (mins <= 0) mins += 24 * 60; // turno notturno che sfora la mezzanotte
+  const overnight = eh * 60 + em <= sh * 60 + sm; // turno notturno che sfora la mezzanotte
+  let mins = (eh * 60 + em) - (sh * 60 + sm) + (overnight ? 24 * 60 : 0);
+  // Con la data si conta la durata reale, che tiene conto del cambio d'ora: nella notte
+  // in cui torna l'ora solare (fine ottobre) un 20:00-08:00 dura 13 ore, a fine marzo 11.
+  const [y, mo, d] = (shift.date || '').split('-').map(Number);
+  if (y && mo && d) {
+    const real = Math.round((new Date(y, mo - 1, d + (overnight ? 1 : 0), eh, em) - new Date(y, mo - 1, d, sh, sm)) / 60000);
+    if (real > 0) mins = real;
+  }
   return Math.round((mins / 60) * 100) / 100;
 }
 

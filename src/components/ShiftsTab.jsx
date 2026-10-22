@@ -11,6 +11,7 @@ import {
 import { useSwipe } from '../lib/useSwipe.js';
 import { useConfirm } from '../lib/ConfirmContext.jsx';
 import { useLockBodyScroll } from '../lib/useLockBodyScroll.js';
+import { useBackClose } from '../lib/backStack.js';
 import Portal from '../lib/Portal.jsx';
 import ShiftEditor from './ShiftEditor.jsx';
 import OccasionalEditor from './OccasionalEditor.jsx';
@@ -23,6 +24,7 @@ const VIEW_KEY = 'turnio_view_pref';
 
 function DayPopoverOverlay({ dateISO, onClose, children }) {
   useLockBodyScroll();
+  useBackClose(onClose);
   return (
     <Portal>
     <div className="editor-overlay" onClick={onClose}>

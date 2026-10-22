@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import SiteAvatar from './SiteAvatar.jsx';
 import EmptyState from './EmptyState.jsx';
+import NumberInput from './NumberInput.jsx';
 
 const fmt = (n) => n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const round2 = (n) => Math.round((n + Number.EPSILON) * 100) / 100;
@@ -55,8 +56,7 @@ export default function EarningsSimulator({ state, onNavigate }) {
 
         <div className="field" style={{ marginBottom: 14, maxWidth: 160 }}>
           <label className="field-label">Ore medie per turno</label>
-          <input type="number" min={1} max={24} step="0.5" value={hoursPerShift}
-            onChange={(e) => setHoursPerShift(Math.max(1, Number(e.target.value) || 8))} />
+          <NumberInput value={hoursPerShift} onChange={setHoursPerShift} min={0} max={24} />
         </div>
 
         <div className="sim-site-list">

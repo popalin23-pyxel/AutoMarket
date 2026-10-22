@@ -23,7 +23,7 @@ export default defineConfig(() => ({
         icons: [
           { src: 'pwa-192.png', sizes: '192x192', type: 'image/png' },
           { src: 'pwa-512.png', sizes: '512x512', type: 'image/png' },
-          { src: 'pwa-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          { src: 'pwa-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
       workbox: {
@@ -41,6 +41,9 @@ export default defineConfig(() => ({
       output: {
         manualChunks: (id) => {
           if (id.includes('node_modules/react') || id.includes('node_modules/react-dom')) return 'react';
+          // helper di Vite per gli import dinamici: va in un chunk caricato comunque all'avvio,
+          // altrimenti finisce in quello di jsPDF e lo fa scaricare a ogni apertura dell'app
+          if (id.includes('vite/preload-helper')) return 'react';
           if (id.includes('node_modules/xlsx')) return 'xlsx';
           if (id.includes('node_modules/jspdf')) return 'jspdf';
           // dipendenze opzionali di jsPDF (usate solo dal metodo .html(), che non usiamo):

@@ -1,12 +1,13 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { loadState, saveState, resetState, sanitizeState } from './lib/store.js';
-import { computeMonthSummary } from './lib/calc.js';
+import React, { useState, useEffect, useMemo } from 'react';
+import { loadState, saveState, resetState } from './lib/store.js';
+import { computeMonthSummary, todayISO } from './lib/calc.js';
 import { loadTheme, applyTheme } from './lib/theme.js';
 import { loadAccent, applyAccent } from './lib/accentColor.js';
 import { loadDensity, applyDensity } from './lib/density.js';
 import { AuthProvider, useAuth } from './lib/AuthContext.jsx';
-import { ConfirmProvider } from './lib/ConfirmContext.jsx';
-import { fetchCloudState, saveCloudState, saveCloudStateSafely } from './lib/cloudState.js';
+import { ConfirmProvider, useConfirm } from './lib/ConfirmContext.jsx';
+import { useCloudSync, clearSyncPending } from './lib/useCloudSync.js';
+import { useBackClose } from './lib/backStack.js';
 import AuthScreen from './components/AuthScreen.jsx';
 import ResetPasswordForm from './components/ResetPasswordForm.jsx';
 import PendingApproval from './components/PendingApproval.jsx';
@@ -27,7 +28,6 @@ applyTheme(loadTheme()); // applicato subito al caricamento del modulo, prima de
 applyAccent(loadAccent());
 applyDensity(loadDensity());
 
-const now = new Date();
 const AVATAR_PALETTE = ['#2dd4bf', '#f59e0b', '#818cf8', '#fb7185', '#a3e635', '#22d3ee', '#c084fc', '#fbbf24'];
 
 function avatarColor(email) {
@@ -57,88 +57,32 @@ function Shell() {
   // sotto-scheda con cui aprire Guadagni/Analisi/Studio da un collegamento (es. "Studio → Sedi").
   // Fa parte della key del contenitore: cambiarla rimonta la scheda sulla sotto-scheda richiesta.
   const [subTab, setSubTab] = useState(null);
-  const [year, setYear] = useState(now.getFullYear());
-  const [month, setMonth] = useState(now.getMonth() + 1);
-  const [syncStatus, setSyncStatus] = useState('idle'); // idle | syncing | ok | error
+  const [year, setYear] = useState(() => new Date().getFullYear());
+  const [month, setMonth] = useState(() => new Date().getMonth() + 1);
+  // data di oggi, aggiornata quando l'app torna in primo piano: le app restano aperte in
+  // memoria anche per giorni, e "questo mese" deve cambiare quando cambia il mese
+  const [today, setToday] = useState(todayISO);
+  useEffect(() => {
+    const refresh = () => { if (document.visibilityState === 'visible') setToday(todayISO()); };
+    document.addEventListener('visibilitychange', refresh);
+    const timer = setInterval(refresh, 60000);
+    return () => { document.removeEventListener('visibilitychange', refresh); clearInterval(timer); };
+  }, []);
+  const curYear = Number(today.slice(0, 4));
+  const curMonth = Number(today.slice(5, 7));
   const [showOnboarding, setShowOnboarding] = useState(needsOnboarding);
-  const [mergeNotice, setMergeNotice] = useState(false);
   const [syncNotice, setSyncNotice] = useState(false);
-  const saveTimer = useRef(null);
-  const syncOkTimer = useRef(null);
-  const cloudReady = useRef(false);
-  const loadedUserId = useRef(null);
-  const lastKnownUpdatedAt = useRef(null);
-  const skipNextSave = useRef(false);
 
   // cache locale sempre aggiornata (funziona anche offline)
   useEffect(() => { saveState(state); }, [state]);
 
-  // al login: carica lo stato cloud, oppure — se è il primo accesso di questo
-  // utente e su questo dispositivo ci sono già dati locali — li adotta come suoi.
-  // Va eseguito una sola volta per utente: Supabase genera un nuovo oggetto
-  // `session`/`user` a ogni refresh del token (es. quando il telefono torna in
-  // foreground dopo aver aperto il selettore file), e senza questa guardia
-  // l'effetto ripartiva ogni volta sovrascrivendo con i vecchi dati cloud
-  // qualunque modifica locale (incluso un backup appena importato).
-  useEffect(() => {
-    if (!user || !isApproved) { cloudReady.current = false; loadedUserId.current = null; return; }
-    if (loadedUserId.current === user.id) return;
-    loadedUserId.current = user.id;
-    let alive = true;
-    (async () => {
-      try {
-        const cloud = await fetchCloudState(user.id);
-        if (!alive) return;
-        if (cloud) {
-          // i dati nel cloud possono essere stati salvati da una versione più
-          // vecchia dell'app (es. prima dei campi "spese" o "tombstones"):
-          // sanitizeState riempie quello che manca, altrimenti un'azione che
-          // si aspetta quei campi (es. eliminare un turno) va in errore.
-          setState(sanitizeState(cloud.state));
-          lastKnownUpdatedAt.current = cloud.updatedAt;
-        } else {
-          lastKnownUpdatedAt.current = await saveCloudState(user.id, state); // prima volta: pubblica lo stato locale attuale
-        }
-        cloudReady.current = true;
-      } catch (e) {
-        console.warn('Turnio: sync cloud iniziale fallita', e);
-        setSyncStatus('error');
-      }
-    })();
-    return () => { alive = false; };
-  }, [user, isApproved]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // a ogni modifica, sincronizza sul cloud (con un piccolo debounce)
-  useEffect(() => {
-    if (!user || !isApproved || !cloudReady.current) return;
-    // questo cambio di stato arriva da un'unione appena ricevuta (vedi sotto),
-    // non da una modifica dell'utente: i dati sono già salvati sul cloud, non
-    // serve rifare subito un altro giro di salvataggio. Senza questo controllo,
-    // con due dispositivi aperti insieme ognuno rimanda indietro all'altro il
-    // "cambiamento" appena unito, in un ping-pong che non si ferma mai.
-    if (skipNextSave.current) { skipNextSave.current = false; return; }
-    clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(async () => {
-      setSyncStatus('syncing');
-      try {
-        const result = await saveCloudStateSafely(user.id, state, lastKnownUpdatedAt.current);
-        lastKnownUpdatedAt.current = result.updatedAt;
-        if (result.merged) {
-          skipNextSave.current = true;
-          setState(result.state); // un altro dispositivo aveva scritto nel frattempo: uniti i dati
-          setMergeNotice(true);
-          setTimeout(() => setMergeNotice(false), 4000);
-        }
-        setSyncStatus('ok');
-        clearTimeout(syncOkTimer.current);
-        syncOkTimer.current = setTimeout(() => setSyncStatus('idle'), 1800);
-      } catch (e) {
-        console.warn('Turnio: sync cloud fallita', e);
-        setSyncStatus('error');
-      }
-    }, 600);
-    return () => clearTimeout(saveTimer.current);
-  }, [state, user, isApproved]);
+  // sincronizzazione cloud (vedi lib/useCloudSync.js). Dipende dall'id utente, non
+  // dall'oggetto user: Supabase ne crea uno nuovo a ogni rinnovo del token (es. quando
+  // l'iPhone riapre l'app) e non deve far ripartire caricamenti o salvataggi.
+  const confirmAction = useConfirm();
+  const { status: syncStatus, notice: syncMessage, flush: flushSync } = useCloudSync({
+    userId: user?.id ?? null, enabled: !!isApproved, state, setState,
+  });
 
   const navigate = (tab, sub = null) => {
     // ritoccare la scheda già aperta (senza sotto-scheda esplicita) non la rimonta:
@@ -146,6 +90,12 @@ function Shell() {
     if (!(tab === active && sub == null)) { setSubTab(sub); setActive(tab); }
     window.scrollTo(0, 0);
   };
+  // Indietro (Android): dalle schermate aperte dal Profilo torna al Profilo, dalle altre
+  // schede torna alla Home; solo dalla Home esce dall'app.
+  const goBackTo = (tab) => { setSubTab(null); setActive(tab); window.scrollTo(0, 0); };
+  // (ordine voluto: la voce più interna viene chiusa per prima)
+  useBackClose(() => goBackTo('settings'), active === 'admin' || active === 'privacy');
+  useBackClose(() => goBackTo('dashboard'), active !== 'dashboard');
   const openMonthSummary = (y, m) => { setYear(y); setMonth(m); navigate('earnings', 'summary'); };
   // azioni della Home: aprono sempre il mese corrente, non l'ultimo mese consultato
   const openCurrentMonth = (tab, sub = null) => {
@@ -155,13 +105,19 @@ function Shell() {
   };
 
   const doLogout = async () => {
+    // prima di uscire invia le ultime modifiche: dopo l'uscita i dati vengono tolti dal telefono
+    if (!(await flushSync()) && !(await confirmAction(
+      'Alcune modifiche non sono ancora salvate sul cloud (connessione assente?). Se esci ora andranno perse.',
+      { title: 'Modifiche non salvate', danger: true, confirmLabel: 'Esci comunque', cancelLabel: 'Resta' },
+    ))) return;
     await signOut();
+    clearSyncPending();
     setState(resetState()); // non lasciare i dati dell'account sul dispositivo condiviso
   };
 
   const monthSummary = useMemo(
-    () => computeMonthSummary(state.shifts, state.sites, state.settings, now.getFullYear(), now.getMonth() + 1, state.occasionalWork),
-    [state.shifts, state.sites, state.settings, state.occasionalWork],
+    () => computeMonthSummary(state.shifts, state.sites, state.settings, curYear, curMonth, state.occasionalWork),
+    [state.shifts, state.sites, state.settings, state.occasionalWork, curYear, curMonth],
   );
 
   // Il Profilo (account, aspetto, backup) si apre dall'avatar in alto a destra.
@@ -249,9 +205,7 @@ function Shell() {
 
       {showOnboarding && <OnboardingTour onDone={() => setShowOnboarding(false)} />}
 
-      {mergeNotice && (
-        <div className="save-toast">🔗 Dati uniti da un altro dispositivo</div>
-      )}
+      {syncMessage && <div className="save-toast">{syncMessage}</div>}
 
       {syncNotice && (
         <div className="save-toast">
@@ -264,13 +218,14 @@ function Shell() {
 }
 
 function Gate({ onShowPrivacy }) {
-  const { configured, loading, session, recovery, isApproved, profileLoading } = useAuth();
+  const { configured, loading, session, recovery, isApproved, profile, profileLoading } = useAuth();
 
   if (!configured) return <NotConfigured />;
   if (loading) return <Splash />;
   if (recovery) return <ResetPasswordForm />;
   if (!session) return <AuthScreen onShowPrivacy={onShowPrivacy} />;
-  if (profileLoading) return <Splash />;
+  // lo Splash solo al primo caricamento: se il profilo è già noto l'app resta montata
+  if (profileLoading && !profile) return <Splash />;
   if (!isApproved) return <PendingApproval />;
   return <Shell />;
 }

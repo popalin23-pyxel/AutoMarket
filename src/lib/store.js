@@ -2,6 +2,7 @@
 
 import { DEFAULT_SETTINGS, SITE_COLORS } from './defaults.js';
 import { markFirstUse, markBackupDone } from './backupReminder.js';
+import { saveFile } from './saveFile.js';
 
 const KEY = 'turnio_state_v1';
 
@@ -17,10 +18,21 @@ function freshState() {
     lastSiteId: null, // ultima sede usata, per pre-selezionarla nel prossimo turno
     settings: { ...DEFAULT_SETTINGS },
     seq: { site: 1, shift: 1, favorite: 1, expense: 1, occasionalWork: 1 },
+    settingsUpdatedAt: 0, // ultima modifica alle impostazioni (per l'unione tra dispositivi)
     // id eliminati (con timestamp): evita che riappaiano dopo un'unione multi-dispositivo (vedi mergeState.js)
     tombstones: { sites: {}, shifts: {}, favorites: {}, expenses: {}, occasionalWork: {} },
   };
 }
+
+// Id univoci anche tra dispositivi diversi: due telefoni che aggiungono un turno nello
+// stesso momento non devono generare lo stesso id (con id progressivi uno sovrascriveva l'altro).
+// Restano numeri interi crescenti, sempre maggiori di quelli già esistenti.
+function nextId(state, key) {
+  return Math.max(Number(state.seq?.[key]) || 1, Date.now() * 100 + Math.floor(Math.random() * 100));
+}
+// `_u` = quando l'elemento è stato creato/modificato l'ultima volta: nell'unione tra
+// dispositivi vince la modifica più recente (vedi mergeState.js).
+const touch = (item) => ({ ...item, _u: Date.now() });
 
 function removeWithTombstone(state, collection, id) {
   return {
@@ -60,6 +72,7 @@ export function sanitizeState(parsed) {
     lastSiteId: parsed.lastSiteId ?? null,
     settings: sanitizeSettings(parsed.settings),
     seq: { site: 1, shift: 1, favorite: 1, expense: 1, occasionalWork: 1, ...(parsed.seq ?? {}) },
+    settingsUpdatedAt: Number(parsed.settingsUpdatedAt) || 0,
     tombstones: {
       sites: {}, shifts: {}, favorites: {}, expenses: {}, occasionalWork: {},
       ...(parsed.tombstones ?? {}),
@@ -88,23 +101,48 @@ export function resetState() {
   return s;
 }
 
+const COLLECTIONS = ['sites', 'shifts', 'favorites', 'expenses', 'occasionalWork'];
+
+// Sostituisce tutti i dati di `current` con quelli di `next` (ripristino da backup,
+// "Azzera tutti i dati") in modo che la sostituzione arrivi anche agli altri dispositivi:
+// ciò che sparisce diventa un'eliminazione, ciò che resta o arriva diventa la versione più
+// recente, e così le impostazioni. Senza questo l'unione con il cloud rimetteva tutto com'era.
+export function replaceAllData(current, next) {
+  const now = Date.now();
+  const out = { ...next, settingsUpdatedAt: now, tombstones: {}, seq: { ...next.seq } };
+  for (const [k, v] of Object.entries(current.seq ?? {})) out.seq[k] = Math.max(Number(out.seq[k]) || 1, Number(v) || 1);
+  for (const key of COLLECTIONS) {
+    const items = next[key] ?? [];
+    const keep = new Set(items.map((x) => String(x.id)));
+    const tomb = { ...(current.tombstones?.[key] ?? {}), ...(next.tombstones?.[key] ?? {}) };
+    for (const item of current[key] ?? []) if (!keep.has(String(item.id))) tomb[item.id] = now;
+    for (const id of keep) delete tomb[id];
+    out.tombstones[key] = tomb;
+    out[key] = items.map((item) => ({ ...item, _u: now }));
+  }
+  return out;
+}
+
+// "Azzera tutti i dati": come un ripristino da un backup vuoto.
+export const clearAllData = (current) => replaceAllData(current, freshState());
+
 // ── Sedi ──────────────────────────────────────────────────────────────
 export function addSite(state, name, rate, opts = {}) {
-  const id = state.seq.site;
+  const id = nextId(state, 'site');
   const color = opts.color || SITE_COLORS[(state.sites.length) % SITE_COLORS.length];
   return {
     ...state,
-    sites: [...state.sites, {
+    sites: [...state.sites, touch({
       id, name: name.trim(), color,
       rate: Number(rate) || 0,
       rivalsaPercent: opts.rivalsaPercent === '' || opts.rivalsaPercent == null ? null : Number(opts.rivalsaPercent),
-    }],
+    })],
     seq: { ...state.seq, site: id + 1 },
   };
 }
 
 export function updateSite(state, id, patch) {
-  return { ...state, sites: state.sites.map((s) => (s.id === id ? { ...s, ...patch } : s)) };
+  return { ...state, sites: state.sites.map((s) => (s.id === id ? touch({ ...s, ...patch }) : s)) };
 }
 
 export function removeSite(state, id) {
@@ -113,10 +151,10 @@ export function removeSite(state, id) {
 
 // ── Turni ─────────────────────────────────────────────────────────────
 export function addShift(state, shift) {
-  const id = state.seq.shift;
+  const id = nextId(state, 'shift');
   return {
     ...state,
-    shifts: [...state.shifts, { id, ...shift }],
+    shifts: [...state.shifts, touch({ ...shift, id })],
     lastSiteId: shift.siteId ?? state.lastSiteId,
     seq: { ...state.seq, shift: id + 1 },
   };
@@ -125,7 +163,7 @@ export function addShift(state, shift) {
 export function updateShift(state, id, patch) {
   return {
     ...state,
-    shifts: state.shifts.map((s) => (s.id === id ? { ...s, ...patch } : s)),
+    shifts: state.shifts.map((s) => (s.id === id ? touch({ ...s, ...patch }) : s)),
     lastSiteId: patch.siteId ?? state.lastSiteId,
   };
 }
@@ -141,17 +179,18 @@ export function restoreShift(state, shift) {
   delete shiftTombstones[shift.id];
   return {
     ...state,
-    shifts: [...state.shifts, shift],
+    // timestamp nuovo: il ripristino è più recente dell'eliminazione anche per l'altro dispositivo
+    shifts: [...state.shifts, touch(shift)],
     tombstones: { ...state.tombstones, shifts: shiftTombstones },
   };
 }
 
 // ── Scorciatoie turno (preferiti) ──────────────────────────────────────
 export function addFavorite(state, fav) {
-  const id = state.seq.favorite;
+  const id = nextId(state, 'favorite');
   return {
     ...state,
-    favorites: [...state.favorites, { id, ...fav }],
+    favorites: [...state.favorites, touch({ ...fav, id })],
     seq: { ...state.seq, favorite: id + 1 },
   };
 }
@@ -162,10 +201,10 @@ export function removeFavorite(state, id) {
 
 // ── Spese professionali ──────────────────────────────────────────────
 export function addExpense(state, expense) {
-  const id = state.seq.expense;
+  const id = nextId(state, 'expense');
   return {
     ...state,
-    expenses: [...state.expenses, { id, ...expense }],
+    expenses: [...state.expenses, touch({ ...expense, id })],
     seq: { ...state.seq, expense: id + 1 },
   };
 }
@@ -178,16 +217,16 @@ export function removeExpense(state, id) {
 // Reddito diverso dal lavoro nelle sedi: niente sede/orario, importo libero
 // inserito al momento, tassato separatamente (vedi calc.js).
 export function addOccasionalWork(state, entry) {
-  const id = state.seq.occasionalWork;
+  const id = nextId(state, 'occasionalWork');
   return {
     ...state,
-    occasionalWork: [...state.occasionalWork, { id, ...entry }],
+    occasionalWork: [...state.occasionalWork, touch({ ...entry, id })],
     seq: { ...state.seq, occasionalWork: id + 1 },
   };
 }
 
 export function updateOccasionalWork(state, id, patch) {
-  return { ...state, occasionalWork: state.occasionalWork.map((o) => (o.id === id ? { ...o, ...patch } : o)) };
+  return { ...state, occasionalWork: state.occasionalWork.map((o) => (o.id === id ? touch({ ...o, ...patch }) : o)) };
 }
 
 export function removeOccasionalWork(state, id) {
@@ -196,29 +235,26 @@ export function removeOccasionalWork(state, id) {
 
 // ── Impostazioni ─────────────────────────────────────────────────────
 export function updateSettings(state, patch) {
-  return { ...state, settings: { ...state.settings, ...patch } };
+  return { ...state, settings: { ...state.settings, ...patch }, settingsUpdatedAt: Date.now() };
 }
 
 // Aggiorna aliquota/contributi/regime e ricalcola il taxPercent totale usato dal motore di calcolo.
 export function updateFiscalSettings(state, patch) {
   const settings = { ...state.settings, ...patch };
   settings.taxPercent = (Number(settings.taxRatePercent) || 0) + (Number(settings.contributionsPercent) || 0);
-  return { ...state, settings };
+  return { ...state, settings, settingsUpdatedAt: Date.now() };
 }
 
 // ── Backup / Ripristino ─────────────────────────────────────────────
 const BACKUP_VERSION = 1;
 
-export function exportBackup(state) {
+// Ritorna true se il file è stato salvato (false = condivisione annullata dall'utente).
+export async function exportBackup(state) {
   const payload = { app: 'turnio', version: BACKUP_VERSION, exportedAt: new Date().toISOString(), state };
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `turnio-backup-${new Date().toISOString().slice(0, 10)}.json`;
-  document.body.appendChild(a); a.click(); a.remove();
-  URL.revokeObjectURL(url);
-  markBackupDone();
+  const saved = await saveFile(blob, `turnio-backup-${new Date().toISOString().slice(0, 10)}.json`);
+  if (saved) markBackupDone(); // il promemoria si sposta solo se il backup è stato fatto davvero
+  return saved;
 }
 
 export function importBackupFromText(text) {

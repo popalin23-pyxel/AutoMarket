@@ -1,46 +1,82 @@
 // Stato dell'app salvato su Supabase, una riga per utente (protetta da RLS).
 
 import { supabase } from './supabaseClient.js';
-import { mergeStates } from './mergeState.js';
+import { mergeStates, sameData } from './mergeState.js';
+import { sanitizeState } from './store.js';
 
 const TABLE = 'turnio_states';
 
-// Carica lo stato salvato per l'utente. null = nessuna riga ancora (primo accesso).
-export async function fetchCloudState(userId) {
-  const { data, error } = await supabase.from(TABLE).select('data, updated_at').eq('user_id', userId).maybeSingle();
-  if (error) throw error;
-  return data ? { state: data.data, updatedAt: data.updated_at } : null;
+// Limite di tempo per ogni richiesta: con una rete "connessa ma morta" (Wi-Fi dell'ospedale,
+// campo debole) una richiesta senza risposta bloccherebbe tutti i salvataggi successivi.
+const TIMEOUT_MS = 20000;
+function timeoutSignal() {
+  if (typeof AbortController === 'undefined') return undefined;
+  if (typeof AbortSignal !== 'undefined' && AbortSignal.timeout) return AbortSignal.timeout(TIMEOUT_MS);
+  const c = new AbortController();
+  setTimeout(() => c.abort(), TIMEOUT_MS);
+  return c.signal;
+}
+const withTimeout = (query) => {
+  const signal = timeoutSignal();
+  return signal && query.abortSignal ? query.abortSignal(signal) : query;
+};
+
+// updated_at → millisecondi. Va confrontato come istante, NON come testo: l'app lo
+// scrive come "…824Z" ma il server (PostgREST) lo restituisce come "…824+00:00".
+// Confrontando le stringhe ogni salvataggio sembrava un conflitto con "un altro
+// dispositivo" (unione + avviso a ogni modifica). Parser manuale perché Safari meno
+// recente non legge i timestamp con più di 3 decimali.
+export function toMillis(ts) {
+  if (ts == null || ts === '') return null;
+  if (typeof ts === 'number') return ts;
+  const m = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?(Z|[+-]\d{2}(?::?\d{2})?)?$/.exec(String(ts).trim());
+  if (!m) { const t = Date.parse(ts); return Number.isNaN(t) ? null : t; }
+  const ms = m[7] ? Number(m[7].slice(0, 3).padEnd(3, '0')) : 0;
+  let t = Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6], ms);
+  const tz = m[8];
+  if (tz && tz !== 'Z') {
+    const digits = tz.slice(1).replace(':', '');
+    const minutes = Number(digits.slice(0, 2)) * 60 + (digits.length > 2 ? Number(digits.slice(2, 4)) : 0);
+    t -= (tz[0] === '-' ? -1 : 1) * minutes * 60000;
+  }
+  return t;
 }
 
-// Salva (crea o aggiorna) lo stato dell'utente. Ritorna il nuovo updated_at.
+// Carica lo stato salvato per l'utente. null = nessuna riga ancora (primo accesso).
+export async function fetchCloudState(userId) {
+  const { data, error } = await withTimeout(supabase.from(TABLE).select('data, updated_at').eq('user_id', userId)).maybeSingle();
+  if (error) throw error;
+  return data ? { state: data.data, updatedAt: data.updated_at, version: toMillis(data.updated_at) } : null;
+}
+
+// Salva (crea o aggiorna) lo stato dell'utente. Ritorna la versione salvata (updated_at in ms),
+// presa dalla risposta del server quando disponibile.
 export async function saveCloudState(userId, state) {
   const updatedAt = new Date().toISOString();
-  const { error } = await supabase.from(TABLE).upsert(
-    { user_id: userId, data: state, updated_at: updatedAt },
-    { onConflict: 'user_id' },
-  );
+  const { data, error } = await withTimeout(supabase.from(TABLE)
+    .upsert({ user_id: userId, data: state, updated_at: updatedAt }, { onConflict: 'user_id' })
+    .select('updated_at'))
+    .single();
   if (error) throw error;
-  return updatedAt;
+  return toMillis(data?.updated_at ?? updatedAt);
 }
 
 // Salva controllando prima se un altro dispositivo ha scritto nel frattempo
-// (confrontando updated_at con l'ultimo valore conosciuto su questo
-// dispositivo). In quel caso unisce i dati invece di sovrascriverli alla
-// cieca — vedi mergeState.js per i dettagli e i limiti dell'unione.
-// Ritorna { state, merged, updatedAt }: se merged è true, il chiamante deve
-// aggiornare lo stato locale con `state` (contiene elementi arrivati da un
-// altro dispositivo).
-export async function saveCloudStateSafely(userId, localState, lastKnownUpdatedAt) {
-  if (lastKnownUpdatedAt) {
-    const remote = await fetchCloudState(userId);
-    if (remote && remote.updatedAt !== lastKnownUpdatedAt) {
-      const merged = mergeStates(localState, remote.state);
-      const updatedAt = await saveCloudState(userId, merged);
-      return { state: merged, merged: true, updatedAt };
-    }
+// (versione sul server diversa dall'ultima nota su questo dispositivo). In quel caso
+// unisce i dati invece di sovrascriverli; se l'unione coincide già con quanto c'è sul
+// server, non riscrive nulla.
+// Ritorna { state, merged, version }: con merged=true `state` è il risultato dell'unione.
+export async function saveCloudStateSafely(userId, localState, lastKnownVersion) {
+  const remote = await fetchCloudState(userId);
+  if (remote && remote.version !== lastKnownVersion) {
+    const remoteState = sanitizeState(remote.state);
+    const merged = mergeStates(localState, remoteState);
+    if (sameData(merged, remoteState)) return { state: merged, merged: true, version: remote.version };
+    const version = await saveCloudState(userId, merged);
+    return { state: merged, merged: true, version };
   }
-  const updatedAt = await saveCloudState(userId, localState);
-  return { state: localState, merged: false, updatedAt };
+  const version = await saveCloudState(userId, localState);
+  return { state: localState, merged: false, version };
 }
 
 // Script SQL da eseguire una volta sola nel progetto Supabase (SQL Editor).

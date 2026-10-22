@@ -1,7 +1,23 @@
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { supabase, isSupabaseConfigured } from './supabaseClient.js';
 
 const AuthContext = createContext(null);
+
+// Ultimo profilo letto dal server: permette di usare l'app anche senza rete
+// (invece di mostrare "account in attesa di approvazione").
+const PROFILE_CACHE_KEY = 'turnio_profile_cache';
+function readCachedProfile(userId) {
+  try {
+    const p = JSON.parse(localStorage.getItem(PROFILE_CACHE_KEY));
+    return p && p.id === userId ? p : null;
+  } catch { return null; }
+}
+function writeCachedProfile(profile) {
+  try {
+    if (profile) localStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(profile));
+    else localStorage.removeItem(PROFILE_CACHE_KEY);
+  } catch {}
+}
 
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(null);
@@ -9,19 +25,31 @@ export function AuthProvider({ children }) {
   const [recovery, setRecovery] = useState(false); // true = arrivato dal link "reimposta password"
   const [profile, setProfile] = useState(null);
   const [profileLoading, setProfileLoading] = useState(false);
+  const [profileError, setProfileError] = useState(false); // profilo non verificabile (es. senza rete)
+  const profileFor = useRef(null); // id utente il cui profilo è già caricato (o in caricamento)
 
-  const loadProfile = useCallback(async (userId) => {
-    if (!userId) { setProfile(null); return; }
+  // Supabase emette SIGNED_IN / TOKEN_REFRESHED a ogni ritorno in primo piano: il profilo
+  // si ricarica solo se cambia utente (o su richiesta, force), altrimenti l'app verrebbe
+  // smontata e rimontata ogni volta (moduli aperti persi, ritorno alla Home).
+  const loadProfile = useCallback(async (userId, { force = false } = {}) => {
+    if (!userId) { profileFor.current = null; setProfile(null); setProfileError(false); return; }
+    if (!force && profileFor.current === userId) return;
+    profileFor.current = userId;
+    setProfile((cur) => (cur?.id === userId ? cur : readCachedProfile(userId)));
     setProfileLoading(true);
     try {
       const { data, error } = await supabase.from('profiles').select('id, email, role, approved').eq('id', userId).maybeSingle();
       if (error) throw error;
+      if (profileFor.current !== userId) return;
       setProfile(data);
+      setProfileError(false);
+      writeCachedProfile(data);
     } catch (e) {
+      // errore di rete: si tiene il profilo già noto, se c'è
       console.warn('Turnio: impossibile caricare il profilo', e);
-      setProfile(null);
+      if (profileFor.current === userId) setProfileError(true);
     } finally {
-      setProfileLoading(false);
+      if (profileFor.current === userId) setProfileLoading(false);
     }
   }, []);
 
@@ -42,12 +70,19 @@ export function AuthProvider({ children }) {
       if (event === 'PASSWORD_RECOVERY') setRecovery(true);
       setSession(sess);
       setLoading(false);
-      if (sess?.user) loadProfile(sess.user.id);
-      else setProfile(null);
+      loadProfile(sess?.user?.id ?? null);
     });
 
     return () => sub.subscription.unsubscribe();
   }, [loadProfile]);
+
+  // rete tornata dopo un profilo non verificabile: riprova da solo
+  useEffect(() => {
+    if (!profileError) return undefined;
+    const retry = () => { if (profileFor.current) loadProfile(profileFor.current, { force: true }); };
+    window.addEventListener('online', retry);
+    return () => window.removeEventListener('online', retry);
+  }, [profileError, loadProfile]);
 
   const signUp = useCallback(async (email, password) => {
     const { data, error } = await supabase.auth.signUp({ email, password });
@@ -61,8 +96,12 @@ export function AuthProvider({ children }) {
     return data;
   }, []);
 
+  // Esce solo da questo dispositivo: senza scope 'local' Supabase chiude la sessione
+  // su tutti i telefoni collegati allo stesso account.
   const signOut = useCallback(async () => {
-    await supabase.auth.signOut();
+    await supabase.auth.signOut({ scope: 'local' });
+    profileFor.current = null;
+    writeCachedProfile(null);
     setSession(null);
     setProfile(null);
   }, []);
@@ -84,20 +123,23 @@ export function AuthProvider({ children }) {
   const deleteAccount = useCallback(async () => {
     const { error } = await supabase.rpc('delete_own_account');
     if (error) throw friendlyAuthError(error);
-    await supabase.auth.signOut();
+    await supabase.auth.signOut({ scope: 'local' });
+    profileFor.current = null;
+    writeCachedProfile(null);
     setSession(null);
     setProfile(null);
   }, []);
 
+  const userId = session?.user?.id;
   const refreshProfile = useCallback(() => {
-    if (session?.user) return loadProfile(session.user.id);
-  }, [session, loadProfile]);
+    if (userId) return loadProfile(userId, { force: true });
+  }, [userId, loadProfile]);
 
   const value = {
     configured: isSupabaseConfigured,
     session, user: session?.user ?? null,
     loading, recovery, setRecovery,
-    profile, profileLoading, refreshProfile,
+    profile, profileLoading, profileError, refreshProfile,
     isAdmin: profile?.role === 'admin',
     isApproved: !!profile?.approved || profile?.role === 'admin',
     signUp, signIn, signOut, sendPasswordReset, updatePassword, deleteAccount,

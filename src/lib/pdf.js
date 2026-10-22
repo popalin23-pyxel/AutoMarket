@@ -3,6 +3,7 @@
 import { jsPDF } from 'jspdf';
 import { MONTHS_IT } from './defaults.js';
 import { pdfSafe } from './pdfText.js';
+import { saveFile } from './saveFile.js';
 
 const fmt = (n) => (n ?? 0).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -117,5 +118,5 @@ export function exportMonthPdf(sum, opts = {}) {
   doc.setFontSize(8);
   doc.text(`Generato da Turnio il ${new Date().toLocaleDateString('it-IT')}`, marginX, 287);
 
-  doc.save(`turnio_${sum.year}_${String(sum.month).padStart(2, '0')}.pdf`);
+  return saveFile(doc.output('blob'), `turnio_${sum.year}_${String(sum.month).padStart(2, '0')}.pdf`);
 }

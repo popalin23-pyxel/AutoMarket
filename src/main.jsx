@@ -4,18 +4,27 @@ import App from './App.jsx';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
 import './styles.css';
 
-// Senza questo, quando pubblichiamo un aggiornamento il service worker lo
-// scarica in background ma la pagina già aperta continua a usare il
-// JavaScript vecchio finché non la chiudi e riapri del tutto — a chi tiene
-// Turnio sempre aperto come app, un "ho corretto il bug" poteva sembrare
-// non funzionare. Ora, appena il nuovo service worker prende il controllo,
-// la pagina si ricarica da sola una volta sola.
+// Quando pubblichiamo un aggiornamento il service worker lo scarica in background, ma la
+// pagina già aperta continua a usare il JavaScript vecchio: per applicarlo serve ricaricare.
+// - Solo se è davvero un aggiornamento: al primo avvio (nessun service worker ancora attivo)
+//   il nuovo service worker prende il controllo e basta, senza ricaricare la pagina
+//   (prima svuotava il modulo di accesso mentre lo si compilava).
+// - Non mentre si usa l'app: si ricarica la prossima volta che va in background, dopo un
+//   attimo per lasciar finire il salvataggio sul cloud, così non si perde ciò che si scrive.
 if ('serviceWorker' in navigator) {
-  let reloaded = false;
+  const hadController = !!navigator.serviceWorker.controller;
+  let scheduled = false;
+  // ricarica solo se l'app è ancora in background (se si è già tornati, alla prossima volta)
+  const reloadIfHidden = () => setTimeout(() => {
+    if (document.visibilityState === 'hidden') window.location.reload();
+  }, 1000);
   navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (reloaded) return;
-    reloaded = true;
-    window.location.reload();
+    if (!hadController || scheduled) return;
+    scheduled = true;
+    if (document.visibilityState === 'hidden') reloadIfHidden();
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') reloadIfHidden();
+    });
   });
 }
 

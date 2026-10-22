@@ -1,11 +1,13 @@
 import React, { createContext, useCallback, useContext, useRef, useState } from 'react';
 import { useLockBodyScroll } from './useLockBodyScroll.js';
+import { useBackClose } from './backStack.js';
 import Portal from './Portal.jsx';
 
 const ConfirmContext = createContext(null);
 
 function ConfirmDialog({ dialog, onClose }) {
   useLockBodyScroll();
+  useBackClose(() => onClose(false));
   return (
     <Portal>
     <div className="editor-overlay" onClick={() => onClose(false)}>

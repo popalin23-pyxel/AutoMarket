@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { hoursOfShift } from '../lib/calc.js';
 import { useLockBodyScroll } from '../lib/useLockBodyScroll.js';
+import { useBackClose } from '../lib/backStack.js';
 import Portal from '../lib/Portal.jsx';
 import SiteAvatar from './SiteAvatar.jsx';
 
@@ -18,9 +19,10 @@ export default function ShiftEditor({
   const [repeatWeeks, setRepeatWeeks] = useState(0);
   const [copyOpen, setCopyOpen] = useState(false);
   useLockBodyScroll();
+  useBackClose(onClose);
   const [copyDate, setCopyDate] = useState('');
 
-  const hours = hoursOfShift({ start, end });
+  const hours = hoursOfShift({ date, start, end });
   const canSave = siteId != null && start && end;
   const site = sites.find((s) => s.id === siteId);
 

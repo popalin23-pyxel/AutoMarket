@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { exportBackup, importBackup, importBackupFromText, resetState } from '../lib/store.js';
+import { exportBackup, importBackup, importBackupFromText, resetState, replaceAllData, clearAllData } from '../lib/store.js';
 import { roleLabel } from '../lib/defaults.js';
 import { loadTheme, applyTheme } from '../lib/theme.js';
 import { loadAccent, applyAccent, ACCENT_COLORS } from '../lib/accentColor.js';
@@ -34,7 +34,7 @@ export default function SettingsTab({ state, setState, onLogout, isAdmin, onOpen
     if (!file) return;
     try {
       const imported = await importBackup(file);
-      setState(imported);
+      setState((cur) => replaceAllData(cur, imported));
       setMsg({ type: 'info', text: `Backup importato: ${imported.sites.length} sedi, ${imported.shifts.length} turni.` });
     } catch (err) {
       setMsg({ type: 'warn', text: err.message });
@@ -44,7 +44,7 @@ export default function SettingsTab({ state, setState, onLogout, isAdmin, onOpen
   const doImportText = () => {
     try {
       const imported = importBackupFromText(pasteText);
-      setState(imported);
+      setState((cur) => replaceAllData(cur, imported));
       setMsg({ type: 'info', text: `Backup importato: ${imported.sites.length} sedi, ${imported.shifts.length} turni.` });
       setPasteText('');
       setPasteOpen(false);
@@ -57,7 +57,7 @@ export default function SettingsTab({ state, setState, onLogout, isAdmin, onOpen
     const ok = await confirmAction('Sicuro di voler cancellare TUTTI i dati (sedi, turni, impostazioni)? Operazione irreversibile.',
       { title: 'Azzerare tutti i dati', danger: true, confirmLabel: 'Azzera tutto' });
     if (!ok) return;
-    setState(resetState());
+    setState(clearAllData); // azzeramento propagato anche agli altri dispositivi
     setMsg({ type: 'info', text: 'Tutti i dati sono stati azzerati.' });
   };
 
@@ -185,7 +185,8 @@ export default function SettingsTab({ state, setState, onLogout, isAdmin, onOpen
               onChange={(e) => setPasteText(e.target.value)}
               placeholder='{"app":"turnio", ...}'
               rows={6}
-              style={{ width: '100%', minWidth: 0, fontFamily: 'monospace', fontSize: 12 }}
+              className="paste-textarea"
+              style={{ width: '100%', minWidth: 0, fontFamily: 'monospace' }}
             />
             <button className="btn btn-primary" style={{ marginTop: 10 }} onClick={doImportText} disabled={!pasteText.trim()}>
               Importa testo incollato

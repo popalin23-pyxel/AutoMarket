@@ -7,7 +7,7 @@ export default function BackupReminder({ state }) {
   const [visible, setVisible] = useState(shouldShowBackupReminder);
   if (!visible) return null;
 
-  const doExport = () => { exportBackup(state); setVisible(false); };
+  const doExport = async () => { if (await exportBackup(state)) setVisible(false); };
   const dismiss = () => { snoozeBackupReminder(7); setVisible(false); };
 
   return (

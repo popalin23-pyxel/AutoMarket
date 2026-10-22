@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { todayISO } from '../lib/calc.js';
 import { useLockBodyScroll } from '../lib/useLockBodyScroll.js';
+import { useBackClose } from '../lib/backStack.js';
 import Portal from '../lib/Portal.jsx';
 import NumberInput from './NumberInput.jsx';
 
@@ -17,6 +18,7 @@ export default function OccasionalEditor({ date, entry, settings, occasionalWork
   const [amount, setAmount] = useState(entry?.grossAmount ?? '');
   const [note, setNote] = useState(entry?.note ?? '');
   useLockBodyScroll();
+  useBackClose(onClose);
 
   const gross = Number(amount) || 0;
   const taxPercent = Number(settings?.occasionalTaxRatePercent) || 0;

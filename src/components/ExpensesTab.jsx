@@ -38,17 +38,19 @@ export default function ExpensesTab({ state, setState }) {
 
   const earnings = useMemo(() => {
     return period === 'year'
-      ? computeYearSummary(state.shifts, state.sites, state.settings, y)
-      : computeMonthSummary(state.shifts, state.sites, state.settings, y, m);
-  }, [state.shifts, state.sites, state.settings, period, y, m]);
+      ? computeYearSummary(state.shifts, state.sites, state.settings, y, state.occasionalWork)
+      : computeMonthSummary(state.shifts, state.sites, state.settings, y, m, state.occasionalWork);
+  }, [state.shifts, state.sites, state.settings, state.occasionalWork, period, y, m]);
 
-  const invoice = period === 'year' ? earnings.totalInvoice : earnings.totalInvoice;
-  const taxes = period === 'year' ? earnings.totalTaxes : earnings.taxes;
+  // entrate di sedi e prestazioni occasionali, ciascuna con la sua tassazione
+  const occasionalGross = earnings.occasionalGross || 0;
+  const invoice = earnings.totalInvoice + occasionalGross;
+  const taxes = (period === 'year' ? earnings.totalTaxes : earnings.taxes) + (earnings.occasionalTaxes || 0);
   const available = invoice - taxes - totalExpenses;
 
   const addNewExpense = () => {
     const n = Number(amount);
-    if (!n || n <= 0) return;
+    if (!n || n <= 0 || !date) return; // senza data la spesa non comparirebbe in nessun elenco
     setState((s) => addExpense(s, { date, category, amount: n, note: note.trim() }));
     setAmount(''); setNote(''); setFormOpen(false);
   };
@@ -98,7 +100,7 @@ export default function ExpensesTab({ state, setState }) {
             <div className="editor-label">Nota (opzionale)</div>
             <input type="text" value={note} placeholder="es. pieno diesel"
               onChange={(e) => setNote(e.target.value)} style={{ width: '100%', minWidth: 0, marginBottom: 12 }} />
-            <button className="btn btn-primary btn-block" onClick={addNewExpense} disabled={!amount || Number(amount) <= 0}>Salva spesa</button>
+            <button className="btn btn-primary btn-block" onClick={addNewExpense} disabled={!amount || Number(amount) <= 0 || !date}>Salva spesa</button>
           </div>
         )}
       </div>
@@ -127,7 +129,7 @@ export default function ExpensesTab({ state, setState }) {
             </div>
 
             <div className="summary-flow" style={{ marginTop: 14 }}>
-              <div className="flow-row"><span className="flow-label">Fatturato {period === 'year' ? 'anno' : 'mese'}</span><span className="flow-value">€{fmt(invoice)}</span></div>
+              <div className="flow-row"><span className="flow-label">Fatturato {period === 'year' ? 'anno' : 'mese'}{occasionalGross > 0 ? ' + prestazioni' : ''}</span><span className="flow-value">€{fmt(invoice)}</span></div>
               <div className="flow-row taxes"><span className="flow-label">Tasse stimate</span><span className="flow-value red">−€{fmt(taxes)}</span></div>
               <div className="flow-row taxes"><span className="flow-label">Spese totali</span><span className="flow-value red">−€{fmt(totalExpenses)}</span></div>
               <div className="flow-row net"><span className="flow-label">Disponibile stimato</span><span className="flow-value green">€{fmt(available)}</span></div>
