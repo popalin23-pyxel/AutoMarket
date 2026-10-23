@@ -5,7 +5,7 @@ import {
   shiftsInMonth, shiftsOnDay, shiftsInRange, shiftsToday, nextShiftAfter,
   computeMonthSummary, computeYearSummary, compareMonths, compareWeeks,
   computeMonthProgress, shiftsToConfirm, isShiftDone, shiftEndDate, siteRateOn, shiftRate, computeTimesheet,
-  computeTaxes, freeDays, availabilityText,
+  computeTaxes, freeDays, availabilityText, countMarks,
 } from './calc.js';
 import { changeSiteRate } from './store.js';
 
@@ -510,5 +510,34 @@ describe('disponibilità', () => {
     expect(text).toContain('Novembre: lun 2, mar 3 (dalle 14:00), dal 10 al 12, ven 20, sab 21');
     expect(text).toContain('Dicembre: mar 1');
     expect(text.endsWith('Maria Rossi')).toBe(true);
+  });
+});
+
+describe('correzioni dalla revisione', () => {
+  it('disponibilità: un turno 16–24 non rende il giorno dopo di smonto', () => {
+    const shifts = [{ id: 1, date: '2026-11-03', siteId: 1, start: '16:00', end: '00:00' }];
+    expect(freeDays(shifts, [], '2026-11-03', '2026-11-05', { today: '2026-10-22' }).map((d) => d.date)).toEqual(['2026-11-04', '2026-11-05']);
+  });
+
+  it('foglio ore: il compenso è la somma degli importi dei righi', () => {
+    const site = { id: 1, name: 'CDS', rate: 22.5, rivalsaPercent: 0 };
+    const shifts = [1, 2].map((d) => ({ id: d, date: `2026-11-0${d}`, siteId: 1, start: '07:00', end: '14:20' }));
+    const ts = computeTimesheet(shifts, site, {}, '2026-11-01', '2026-11-30');
+    expect(ts.revenue).toBeCloseTo(ts.rows.reduce((a, r) => a + r.amount, 0), 2);
+  });
+
+  it('turno rimesso in attesa con "Annulla" dopo "Non fatto": viene chiesto di nuovo', () => {
+    const now = new Date(2026, 9, 15, 12, 0);
+    const s = { id: 1, date: '2026-10-14', siteId: 1, start: '08:00', end: '12:00', _u: now.getTime(), askConfirm: true };
+    expect(shiftsToConfirm([s], now).map((x) => x.id)).toEqual([1]);
+  });
+
+  it('ferie contate per giorno, anche se un\'unione ha lasciato due segni nello stesso giorno', () => {
+    const marks = [
+      { id: 'a', date: '2026-08-10', kind: 'ferie', _u: 1 },
+      { id: 'b', date: '2026-08-10', kind: 'malattia', _u: 2 },
+      { id: 'c', date: '2026-08-11', kind: 'ferie', _u: 1 },
+    ];
+    expect(countMarks(marks, '2026-')).toEqual({ malattia: 1, ferie: 1 });
   });
 });

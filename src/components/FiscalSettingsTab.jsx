@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { computeMonthSummary, computeYearSummary, todayISO } from '../lib/calc.js';
+import { computeMonthSummary, computeYearSummary, todayISO, isShiftDone } from '../lib/calc.js';
 import { updateFiscalSettings, updateSettings } from '../lib/store.js';
 import { PENSION_FUNDS, suggestedFund, rivalsaLabel } from '../lib/defaults.js';
 import NumberInput from './NumberInput.jsx';
@@ -34,10 +34,11 @@ export default function FiscalSettingsTab({ state, setState }) {
     () => computeMonthSummary(state.shifts, state.sites, state.settings, y, m),
     [state.shifts, state.sites, state.settings, y, m],
   );
-  const yearSum = useMemo(
-    () => computeYearSummary(state.shifts, state.sites, state.settings, y),
-    [state.shifts, state.sites, state.settings, y],
-  );
+  // "nell'anno, finora": solo i turni già svolti (non quelli in programma)
+  const yearSum = useMemo(() => {
+    const now = new Date();
+    return computeYearSummary(state.shifts.filter((s) => isShiftDone(s, now)), state.sites, state.settings, y);
+  }, [state.shifts, state.sites, state.settings, y]);
 
   const patch = (p) => setState((s) => updateFiscalSettings(s, p));
   const patchSettings = (p) => setState((s) => updateSettings(s, p));

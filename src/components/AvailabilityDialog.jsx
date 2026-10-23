@@ -23,6 +23,7 @@ export default function AvailabilityDialog({ state, year, month, onClose }) {
   useLockBodyScroll();
   useBackClose(onClose);
 
+  const validRange = !!from && !!to && from <= to;
   const days = useMemo(() => (from && to && from <= to
     ? freeDays(state.shifts, state.dayMarks, from, to, { includePartial: partial, today }) : []),
   [state.shifts, state.dayMarks, from, to, partial, today]);
@@ -51,7 +52,12 @@ export default function AvailabilityDialog({ state, year, month, onClose }) {
         </p>
         <div className="form-row" style={{ marginBottom: 6 }}>
           <div className="field"><label className="field-label">Dal</label>
-            <input type="date" value={from} min={today} onChange={(e) => setFrom(e.target.value)} /></div>
+            <input type="date" value={from} min={today} onChange={(e) => {
+              const v = e.target.value;
+              setFrom(v);
+              // spostando l'inizio dopo la fine, la fine va alla fine di quel mese
+              if (v && to && v > to) { const [yy, mm] = v.split('-').map(Number); setTo(`${yy}-${pad(mm)}-${pad(monthDays(yy, mm))}`); }
+            }} /></div>
           <div className="field"><label className="field-label">Al</label>
             <input type="date" value={to} min={from} onChange={(e) => setTo(e.target.value)} /></div>
         </div>
@@ -60,12 +66,18 @@ export default function AvailabilityDialog({ state, year, month, onClose }) {
           Anche i giorni liberi solo in parte (dopo un turno di mattina o prima di uno di pomeriggio)
         </label>
 
-        <div className="editor-label">Messaggio ({days.length} {days.length === 1 ? 'giorno' : 'giorni'})</div>
-        <textarea className="availability-text" rows={7} value={text} onChange={(e) => setText(e.target.value)} />
+        {!validRange ? (
+          <p className="hint hint-warn" style={{ marginTop: 10 }}>Scegli le due date: la fine non può venire prima dell'inizio.</p>
+        ) : (
+          <>
+            <div className="editor-label">Messaggio ({days.length} {days.length === 1 ? 'giorno' : 'giorni'})</div>
+            <textarea className="availability-text" rows={7} value={text} onChange={(e) => setText(e.target.value)} />
+          </>
+        )}
 
         <div className="editor-actions">
-          {canShare && <button className="btn btn-primary btn-block" onClick={share}>📤 Condividi</button>}
-          <button className={`btn btn-block ${canShare ? '' : 'btn-primary'}`} onClick={copy}>{copied ? '✓ Copiato' : '📋 Copia'}</button>
+          {canShare && <button className="btn btn-primary btn-block" onClick={share} disabled={!validRange}>📤 Condividi</button>}
+          <button className={`btn btn-block ${canShare ? '' : 'btn-primary'}`} onClick={copy} disabled={!validRange}>{copied ? '✓ Copiato' : '📋 Copia'}</button>
         </div>
       </div>
     </div>

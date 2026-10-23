@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { computeMonthSummary, computeTaxes, todayISO } from '../lib/calc.js';
+import { computeMonthProgress, computeTaxes, siteRateOn, todayISO } from '../lib/calc.js';
 import EmptyState from './EmptyState.jsx';
 
 const fmt = (n) => n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -13,24 +13,27 @@ export default function GoalTimeCalculator({ state }) {
   const y = Number(today.slice(0, 4));
   const m = Number(today.slice(5, 7));
 
-  const sum = useMemo(
-    () => computeMonthSummary(state.shifts, state.sites, state.settings, y, m, state.occasionalWork),
+  // come in Home: già guadagnato (turni finiti) e previsione con i turni in programma;
+  // le ore da aggiungere si contano oltre ai turni già in calendario
+  const progress = useMemo(
+    () => computeMonthProgress(state.shifts, state.sites, state.settings, y, m, state.occasionalWork),
     [state.shifts, state.sites, state.settings, y, m, state.occasionalWork],
   );
-  // l'obiettivo si misura sul netto totale (sedi + prestazioni occasionali), come in Home;
-  // la stima delle ore resta sulla resa oraria delle sedi (le prestazioni non sono a ore)
-  const net = sum.netTotal;
+  const sum = progress.total;
+  const done = progress.done.netTotal;
+  const net = sum.netTotal; // con i turni in programma
+  const hasPlanned = progress.planned.shiftCount > 0 || progress.planned.occasionalCount > 0;
 
   const goal = Number(settings.monthlyGoal) || 0;
 
   const netHourlyRate = useMemo(() => {
     if (sum.totalHours > 0) return sum.net / sum.totalHours;
     if (sites.length === 0) return 0;
-    const avgRate = sites.reduce((a, s) => a + (Number(s.rate) || 0), 0) / sites.length;
+    const avgRate = sites.reduce((a, s) => a + siteRateOn(s, today), 0) / sites.length;
     const avgRivalsa = sites.reduce((a, s) => a + (s.rivalsaPercent != null ? s.rivalsaPercent : (Number(settings.rivalsaPercent) || 0)), 0) / sites.length;
     // netto di un'ora "media", con lo stesso calcolo delle tasse usato nel resto dell'app
     return computeTaxes(avgRate, avgRate * (avgRivalsa / 100), settings).net;
-  }, [sum, sites, settings]);
+  }, [sum, sites, settings, today]);
 
   if (goal <= 0) {
     return (
@@ -43,8 +46,9 @@ export default function GoalTimeCalculator({ state }) {
   }
 
   const remaining = Math.max(0, round2(goal - net));
-  const reached = net >= goal;
-  const hoursNeeded = !reached && netHourlyRate > 0 ? remaining / netHourlyRate : 0;
+  const reached = done >= goal;          // raggiunto davvero
+  const covered = !reached && net >= goal; // raggiunto con i turni in programma
+  const hoursNeeded = !reached && !covered && netHourlyRate > 0 ? remaining / netHourlyRate : 0;
   const fullShifts = Math.floor(hoursNeeded / 8);
   const restHours = round2(hoursNeeded - fullShifts * 8);
 
@@ -60,21 +64,31 @@ export default function GoalTimeCalculator({ state }) {
 
       <div className="stats-row">
         <div className="stat"><div className="stat-label">Obiettivo netto</div><div className="stat-value">€{fmt(goal)}</div></div>
-        <div className="stat"><div className="stat-label">Netto attuale</div><div className="stat-value gold">€{fmt(net)}</div></div>
+        <div className="stat"><div className="stat-label">Già guadagnato</div><div className="stat-value gold">€{fmt(done)}</div></div>
+        {hasPlanned && (
+          <div className="stat"><div className="stat-label">Con i turni in programma</div><div className="stat-value">€{fmt(net)}</div></div>
+        )}
       </div>
 
       <div className="goal-bar-track" style={{ marginBottom: 14 }}>
-        <div className={`goal-bar-fill ${reached ? 'reached' : ''}`} style={{ width: `${Math.min(100, Math.round((net / goal) * 100))}%` }} />
+        {hasPlanned && !reached && (
+          <div className="goal-bar-fill planned" style={{ width: `${Math.min(100, Math.round((net / goal) * 100))}%` }} />
+        )}
+        <div className={`goal-bar-fill ${reached ? 'reached' : ''}`} style={{ width: `${Math.min(100, Math.round((done / goal) * 100))}%` }} />
       </div>
 
       {reached ? (
         <div className="hint hint-info" style={{ marginBottom: 0 }}>
-          🎯 Obiettivo raggiunto! Sei a €{fmt(net - goal)} oltre il tuo obiettivo.
+          🎯 Obiettivo raggiunto! Sei a €{fmt(done - goal)} oltre il tuo obiettivo.
+        </div>
+      ) : covered ? (
+        <div className="hint hint-info" style={{ marginBottom: 0 }}>
+          🎯 Con i turni già in programma arrivi a €{fmt(net)}: l'obiettivo è coperto, non servono altri turni.
         </div>
       ) : (
         <>
           <div className="summary-flow">
-            <div className="flow-row taxes"><span className="flow-label">Mancano</span><span className="flow-value red">€{fmt(remaining)}</span></div>
+            <div className="flow-row taxes"><span className="flow-label">{hasPlanned ? 'Mancano, oltre ai turni in programma' : 'Mancano'}</span><span className="flow-value red">€{fmt(remaining)}</span></div>
             {netHourlyRate > 0 && (
               <div className="flow-row"><span className="flow-label">Ore necessarie (a €{fmt1(netHourlyRate)}/h netti)</span><span className="flow-value">≈ {fmt1(hoursNeeded)} h</span></div>
             )}

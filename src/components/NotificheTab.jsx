@@ -59,13 +59,18 @@ export default function NotificheTab({ state, onBack }) {
       text: `${formatDateLong(upcoming.date)} · ${site.name} ${upcoming.start}–${upcoming.end}`, site });
   }
 
+  // obiettivo: come in Home e in "Quanto devo ancora lavorare?" (già guadagnato + turni in programma)
   if (goal > 0) {
+    const forecast = progress.total.netTotal;
     if (month.netTotal >= goal) {
       items.push({ id: 'goal-done', icon: 'checkCircle', tile: 'lime', title: 'Obiettivo raggiunto 🎯',
         text: `Netto di ${MONTHS_IT[m - 1]}: €${fmt(month.netTotal)} su €${fmt(goal)}` });
+    } else if (forecast >= goal) {
+      items.push({ id: 'goal-covered', icon: 'checkCircle', tile: 'teal', title: 'Obiettivo coperto',
+        text: `Con i turni in programma arrivi a €${fmt(forecast)} su €${fmt(goal)}.` });
     } else {
       items.push({ id: 'goal-todo', icon: 'euro', tile: 'gold', title: 'Obiettivo del mese',
-        text: `Mancano €${fmt(goal - month.netTotal)} per arrivare a €${fmt(goal)}` });
+        text: `Mancano €${fmt(goal - forecast)} per arrivare a €${fmt(goal)}, contando anche i turni in programma.` });
     }
   }
 

@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   monthDays, weekdayOf, shiftsOnDay, hoursOfShift, todayISO, holidaysOfYear, isHoliday,
   startOfWeek, endOfWeek, shiftsInRange, addDaysISO, computeWeekSummary, isCancelled, activeShifts,
+  countMarks, latestMarkByDate,
 } from '../lib/calc.js';
 import { MONTHS_IT, WEEKDAYS_IT, DAY_MARK_KINDS, dayMarkKind, hexToRgba } from '../lib/defaults.js';
 import {
@@ -59,9 +60,16 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
   const [stampOn, setStampOn] = useState(false);
   const [stamp, setStamp] = useState(null);
   const [stampCount, setStampCount] = useState(0);
+  // cosa è stato timbrato in questa sessione: solo questo si toglie con un secondo tocco
+  const stampAdded = useRef(new Set());
   const [availabilityOpen, setAvailabilityOpen] = useState(false);
   const [dupOpen, setDupOpen] = useState(false);
   useBackClose(() => setStampOn(false), stampOn);
+  // spazio in fondo alla pagina per la barra del timbro (vedi html.stamping in styles.css)
+  useEffect(() => {
+    document.documentElement.classList.toggle('stamping', stampOn);
+    return () => document.documentElement.classList.remove('stamping');
+  }, [stampOn]);
 
   useEffect(() => { try { localStorage.setItem(VIEW_KEY, view); } catch {} }, [view]);
 
@@ -137,38 +145,52 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
   };
 
   const startStamp = () => {
-    const fav = activeFavorites[0];
+    const fav = activeFavorites.find((f) => f.siteId === filterSite) ?? activeFavorites[0];
+    stampAdded.current = new Set();
     setStamp(fav ? { type: 'shift', siteId: fav.siteId, start: fav.start, end: fav.end } : null);
     setStampCount(0);
     setDayPopover(null);
     setStampOn(true);
   };
 
-  // un tocco aggiunge il turno (o il giorno di ferie/assenza) timbrato su quel giorno, un secondo tocco lo toglie
+  // Un tocco aggiunge il turno (o il giorno di ferie/assenza) timbrato su quel giorno; un secondo
+  // tocco lo toglie, ma solo se è stato timbrato in questa sessione (con "Annulla"): ciò che c'era
+  // già (magari con note, tariffa o conferma) non si tocca.
   const applyStamp = (dateISO) => {
+    const buzz = (ms = 12) => { try { navigator.vibrate?.(ms); } catch {} };
     if (stamp?.type === 'mark') {
+      const key = `${dateISO}|mark|${stamp.kind}`;
       const existingMark = dayMarks.find((m) => m.date === dateISO && m.kind === stamp.kind);
       if (existingMark) {
+        if (!stampAdded.current.has(key)) { buzz(30); return; } // già segnato prima: resta
+        stampAdded.current.delete(key);
         setState((s) => removeDayMark(s, existingMark.id));
         setStampCount((c) => c - 1);
+        offerUndo('mark', existingMark);
       } else {
+        stampAdded.current.add(key);
         setState((s) => addDayMarks(s, { kind: stamp.kind, from: dateISO }));
         setStampCount((c) => c + 1);
       }
-      try { navigator.vibrate?.(12); } catch {}
+      buzz();
       return;
     }
     if (!stamp || stamp.type !== 'shift' || stamp.siteId == null || !stamp.start || !stamp.end || stamp.start === stamp.end) return;
-    const existing = state.shifts.find((x) => x.date === dateISO && x.siteId === stamp.siteId
+    const key = `${dateISO}|${stamp.siteId}|${stamp.start}|${stamp.end}`;
+    const existing = state.shifts.find((x) => !isCancelled(x) && x.date === dateISO && x.siteId === stamp.siteId
       && x.start === stamp.start && x.end === stamp.end);
     if (existing) {
+      if (!stampAdded.current.has(key)) { buzz(30); return; } // turno che c'era già: resta
+      stampAdded.current.delete(key);
       setState((s) => removeShift(s, existing.id));
       setStampCount((c) => c - 1);
+      offerUndo('shift', existing);
     } else {
+      stampAdded.current.add(key);
       setState((s) => addShift(s, { date: dateISO, siteId: stamp.siteId, start: stamp.start, end: stamp.end, note: '' }));
       setStampCount((c) => c + 1);
     }
-    try { navigator.vibrate?.(12); } catch {}
+    buzz();
   };
 
   const saveFavorite = (fav) => setState((s) => addFavorite(s, fav));
@@ -258,14 +280,15 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
 
   const monthPrefix = `${year}-${String(month).padStart(2, '0')}-`;
   const monthMarksLabel = useMemo(() => {
-    const counts = new Map();
-    for (const mk of dayMarks) if (mk.date.startsWith(monthPrefix)) counts.set(mk.kind, (counts.get(mk.kind) || 0) + 1);
-    return DAY_MARK_KINDS.filter((k) => counts.has(k.id))
-      .map((k) => `${counts.get(k.id)} ${counts.get(k.id) === 1 ? 'giorno' : 'giorni'} ${k.label.toLowerCase()}`).join(' · ');
+    const counts = countMarks(dayMarks, monthPrefix);
+    return DAY_MARK_KINDS.filter((k) => counts[k.id])
+      .map((k) => `${counts[k.id]} ${counts[k.id] === 1 ? 'giorno' : 'giorni'} ${k.label.toLowerCase()}`).join(' · ');
   }, [dayMarks, monthPrefix]);
+  // in modalità timbro il filtro per sede si ignora: si vede tutto ciò che si aggiunge
+  const shownFilter = stampOn ? null : filterSite;
 
   const DayShiftsBlock = ({ dateISO }) => {
-    const dayShifts = shiftsOnDay(state.shifts, dateISO).filter((sh) => !filterSite || sh.siteId === filterSite);
+    const dayShifts = shiftsOnDay(state.shifts, dateISO).filter((sh) => !shownFilter || sh.siteId === shownFilter);
     const dayOccasional = shiftsOnDay(state.occasionalWork, dateISO);
     const marks = shiftsOnDay(dayMarks, dateISO);
     return (
@@ -367,7 +390,7 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
           </button>
         )}
 
-        {activeSites.length > 1 && (
+        {activeSites.length > 1 && !stampOn && (
           <div className="filter-row">
             <button className={`filter-chip ${filterSite == null ? 'active' : ''}`} onClick={() => setFilterSite(null)}>
               Tutte le sedi
@@ -416,8 +439,8 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
         </div>
       ) : (
         <CalendarGridView year={year} month={month}
-          shifts={filterSite ? state.shifts.filter((sh) => sh.siteId === filterSite) : state.shifts}
-          occasionalWork={state.occasionalWork} dayMarks={dayMarks}
+          shifts={shownFilter ? state.shifts.filter((sh) => sh.siteId === shownFilter) : state.shifts}
+          occasionalWork={state.occasionalWork} latestMarks={latestMarkByDate(dayMarks)}
           siteById={siteById} holidaySet={holidaySet} today={today} stamping={stampOn}
           onDayClick={(dateISO) => (stampOn ? applyStamp(dateISO) : setDayPopover(dateISO))} />
       )}

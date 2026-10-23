@@ -19,3 +19,17 @@ describe('pdfSafe: testo leggibile nel PDF con il font standard', () => {
     expect(pdfSafe(undefined)).toBe('');
   });
 });
+
+describe('pdfSafe: emoji e segno meno', () => {
+  it('toglie le emoji (anche con tono della pelle o composte) invece di metterci "?"', () => {
+    expect(pdfSafe('Notte ok 👍🏻')).toBe('Notte ok');
+    expect(pdfSafe('Reparto 🚑 PS')).toBe('Reparto PS');
+    expect(pdfSafe('❤️ grazie 👩‍⚕️')).toBe('grazie');
+  });
+  it('il segno meno tipografico diventa un trattino (il font del PDF non lo ha)', () => {
+    expect(pdfSafe('−€1.234,56')).toBe('-€1.234,56');
+  });
+  it('lascia © ® ™ e le lettere accentate', () => {
+    expect(pdfSafe('Società © ® ™ è')).toBe('Società © ® ™ è');
+  });
+});

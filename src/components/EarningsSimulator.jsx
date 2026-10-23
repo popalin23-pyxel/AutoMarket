@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import SiteAvatar from './SiteAvatar.jsx';
 import EmptyState from './EmptyState.jsx';
 import NumberInput from './NumberInput.jsx';
-import { computeTaxes } from '../lib/calc.js';
+import { computeTaxes, siteRateOn, todayISO } from '../lib/calc.js';
 
 const fmt = (n) => n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const round2 = (n) => Math.round((n + Number.EPSILON) * 100) / 100;
@@ -11,6 +11,7 @@ export default function EarningsSimulator({ state, onNavigate }) {
   const { settings } = state;
   const sites = useMemo(() => state.sites.filter((s) => !s.archived), [state.sites]);
   const [hoursPerShift, setHoursPerShift] = useState(8);
+  const today = todayISO();
   const [counts, setCounts] = useState({}); // { [siteId]: number }
 
   const bump = (siteId, delta) => {
@@ -21,7 +22,7 @@ export default function EarningsSimulator({ state, onNavigate }) {
     const perSite = sites.map((s) => {
       const n = counts[s.id] || 0;
       const hours = round2(n * hoursPerShift);
-      const revenue = round2(hours * s.rate);
+      const revenue = round2(hours * siteRateOn(s, today));
       const rivPct = s.rivalsaPercent != null ? s.rivalsaPercent : (Number(settings.rivalsaPercent) || 0);
       const rivalsa = round2(revenue * (rivPct / 100));
       return { site: s, count: n, hours, revenue, rivalsa, total: round2(revenue + rivalsa) };
@@ -30,8 +31,8 @@ export default function EarningsSimulator({ state, onNavigate }) {
     const totalRevenue = round2(perSite.reduce((a, p) => a + p.revenue, 0));
     const totalRivalsa = round2(perSite.reduce((a, p) => a + p.rivalsa, 0));
     const t = computeTaxes(totalRevenue, totalRivalsa, settings);
-    return { perSite, totalHours, totalRevenue, totalRivalsa, totalInvoice: t.invoice, taxes: t.taxes, net: t.net };
-  }, [sites, counts, hoursPerShift, settings]);
+    return { perSite, totalHours, totalRevenue, totalRivalsa, totalInvoice: t.invoice, taxes: t.taxes, net: t.net, taxPercent: t.taxPercent, exact: t.taxMode === 'forfettario' };
+  }, [sites, counts, hoursPerShift, settings, today]);
 
   const goal = Number(settings.monthlyGoal) || 0;
   const hasAnyShift = result.totalHours > 0;
@@ -65,7 +66,7 @@ export default function EarningsSimulator({ state, onNavigate }) {
               <SiteAvatar site={s} size={26} />
               <div className="sim-site-info">
                 <div className="sim-site-name">{s.name}</div>
-                <div className="sim-site-rate">€{s.rate}/h</div>
+                <div className="sim-site-rate">€{siteRateOn(s, today)}/h</div>
               </div>
               <div className="sim-stepper">
                 <button type="button" onClick={() => bump(s.id, -1)} disabled={!counts[s.id]}>−</button>
@@ -90,7 +91,7 @@ export default function EarningsSimulator({ state, onNavigate }) {
             </div>
             <div className="summary-flow">
               <div className="flow-row total"><span className="flow-label">Fatturato</span><span className="flow-value">€{fmt(result.totalInvoice)}</span></div>
-              <div className="flow-row taxes"><span className="flow-label">Tasse stimate ({settings.taxPercent}%)</span><span className="flow-value red">−€{fmt(result.taxes)}</span></div>
+              <div className="flow-row taxes"><span className="flow-label">{result.exact ? 'Tasse e contributi stimati' : `Tasse stimate (${result.taxPercent}%)`}</span><span className="flow-value red">−€{fmt(result.taxes)}</span></div>
               <div className="flow-row net"><span className="flow-label">Netto stimato</span><span className="flow-value green">€{fmt(result.net)}</span></div>
             </div>
             {goal > 0 && (

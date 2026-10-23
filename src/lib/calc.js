@@ -65,7 +65,8 @@ export function isShiftDone(shift, now = new Date()) {
 
 // Turni finiti di recente da confermare ("fatto così?"): solo quelli segnati in anticipo
 // (registrati o modificati prima della fine) e finiti negli ultimi `maxDays` giorni, così
-// non vengono chiesti i turni vecchi o quelli inseriti a cose fatte.
+// non vengono chiesti i turni vecchi o quelli inseriti a cose fatte. `askConfirm` li rimette
+// in attesa di risposta (es. "Annulla" dopo "Non fatto").
 export function shiftsToConfirm(shifts, now = new Date(), maxDays = 14) {
   const nowMs = now.getTime();
   return shifts.filter((s) => {
@@ -74,7 +75,7 @@ export function shiftsToConfirm(shifts, now = new Date(), maxDays = 14) {
     if (!end) return false;
     const endMs = end.getTime();
     const u = Number(s._u) || 0;
-    return endMs <= nowMs && nowMs - endMs <= maxDays * 86400000 && u > 0 && u < endMs;
+    return endMs <= nowMs && nowMs - endMs <= maxDays * 86400000 && ((u > 0 && u < endMs) || s.askConfirm === true);
   }).sort((a, b) => (a.date === b.date ? (a.start || '').localeCompare(b.start || '') : a.date.localeCompare(b.date)));
 }
 
@@ -140,6 +141,27 @@ function shortRangeLabel(startISO, endISO) {
   return `${Number(sd)}–${Number(ed)} ${MONTHS_IT[Number(em) - 1].slice(0, 3)}`;
 }
 
+// ── Ferie e assenze ──────────────────────────────────────────────────────
+// Un tipo per giorno: se per un'unione tra telefoni ci sono più segni nello stesso giorno,
+// vale il più recente (conteggi, colore in griglia).
+export function latestMarkByDate(dayMarks = []) {
+  const map = new Map();
+  for (const m of dayMarks) {
+    const cur = map.get(m.date);
+    if (!cur || (Number(m._u) || 0) > (Number(cur._u) || 0)) map.set(m.date, m);
+  }
+  return map;
+}
+
+// Giorni segnati per tipo in un periodo (date distinte): { ferie: 3, malattia: 1, … }
+export function countMarks(dayMarks, prefix) {
+  const counts = {};
+  for (const [date, m] of latestMarkByDate(dayMarks)) {
+    if (date.startsWith(prefix)) counts[m.kind] = (counts[m.kind] || 0) + 1;
+  }
+  return counts;
+}
+
 // ── Disponibilità ────────────────────────────────────────────────────────
 const WD_SHORT = ['lun', 'mar', 'mer', 'gio', 'ven', 'sab', 'dom'];
 const toMin = (hhmm) => { const [h, m] = (hhmm || '').split(':').map(Number); return h * 60 + m; };
@@ -159,7 +181,8 @@ export function freeDays(shifts, dayMarks, fromISO, toISO, { includePartial = fa
   for (let d = start, i = 0; d <= toISO && i < 400; d = addDaysISO(d, 1), i++) {
     if (marked.has(d)) continue;
     const prev = addDaysISO(d, -1);
-    const smonto = active.some((s) => s.date === prev && toMin(s.end) <= toMin(s.start));
+    // smonto: una notte del giorno prima che finisce DOPO la mezzanotte (un 16–24 non lo è)
+    const smonto = active.some((s) => s.date === prev && toMin(s.end) > 0 && toMin(s.end) <= toMin(s.start));
     if (smonto) continue;
     const dayShifts = active.filter((s) => s.date === d && s.start && s.end);
     if (dayShifts.length === 0) { out.push({ date: d }); continue; }
@@ -290,6 +313,13 @@ export function siteRateOn(site, dateISO) {
   return Number(site.rate) || 0;
 }
 
+// Cambio di tariffa già fissato per il futuro (dopo `todayStr`): { from, rate } oppure null.
+export function scheduledRateChange(site, todayStr = todayISO()) {
+  const future = (site?.pastRates ?? []).filter((r) => r.before > todayStr);
+  if (!future.length) return null;
+  return { from: future[future.length - 1].before, rate: Number(site.rate) || 0 };
+}
+
 // Tariffa di un turno: quella speciale del turno, se impostata, altrimenti quella della sede in quella data.
 export function shiftRate(shift, site) {
   if (shift?.rate != null && shift.rate !== '' && !Number.isNaN(Number(shift.rate))) return Number(shift.rate);
@@ -367,7 +397,8 @@ export function computeTimesheet(shifts, site, settings, fromISO, toISO) {
       return { id: s.id, date: s.date, start: s.start, end: s.end, hours, rate, amount: round2(hours * rate), note: s.note || '' };
     });
   const totalHours = round2(rows.reduce((a, r) => a + r.hours, 0));
-  const revenue = round2(rows.reduce((a, r) => a + r.hours * r.rate, 0));
+  // il totale è la somma degli importi dei righi: sul documento mandato al cliente devono tornare
+  const revenue = round2(rows.reduce((a, r) => a + r.amount, 0));
   const rivalsaPercent = rivalsaFor(site, settings);
   const rivalsa = round2(revenue * (rivalsaPercent / 100));
   return {

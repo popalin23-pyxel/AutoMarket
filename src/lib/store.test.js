@@ -3,7 +3,7 @@ import {
   removeShift, addShift, updateShift, restoreShift, removeSite, removeFavorite, removeExpense,
   addOccasionalWork, removeOccasionalWork, updateSettings,
   importBackupFromText, replaceAllData, clearAllData, sanitizeState,
-  addDayMarks, removeDayMark,
+  addDayMarks, removeDayMark, updateDayMark,
 } from './store.js';
 import { mergeStates, sameData } from './mergeState.js';
 
@@ -222,5 +222,36 @@ describe('ferie e assenze (giorni segnati)', () => {
   it('una data di fine prima dell\'inizio segna solo il primo giorno', () => {
     const s = addDayMarks(sanitizeState(baseState()), { kind: 'corso', from: '2026-11-10', to: '2026-11-01' });
     expect(s.dayMarks.map((m) => m.date)).toEqual(['2026-11-10']);
+  });
+});
+
+describe('ferie e assenze: un solo tipo per giorno, niente doppioni tra telefoni', () => {
+  it('segnare un giorno con un altro tipo sostituisce il precedente', () => {
+    let s = addDayMarks(sanitizeState(baseState()), { kind: 'nondisp', from: '2026-11-12' });
+    s = addDayMarks(s, { kind: 'ferie', from: '2026-11-12' });
+    expect(s.dayMarks.map((m) => m.kind)).toEqual(['ferie']);
+    expect(s.tombstones.dayMarks['2026-11-12|nondisp']).toBeTypeOf('number');
+  });
+
+  it('cambiare il tipo nel modulo non crea doppioni', () => {
+    let s = addDayMarks(sanitizeState(baseState()), { kind: 'ferie', from: '2026-08-10' });
+    s = addDayMarks(s, { kind: 'corso', from: '2026-08-11' });
+    s = updateDayMark(s, '2026-08-11|corso', { kind: 'ferie' });
+    expect(s.dayMarks.map((m) => `${m.date}:${m.kind}`).sort()).toEqual(['2026-08-10:ferie', '2026-08-11:ferie']);
+  });
+
+  it('due telefoni che segnano lo stesso giorno producono la stessa voce', () => {
+    const a = addDayMarks(sanitizeState(baseState()), { kind: 'ferie', from: '2026-08-10' });
+    const b = addDayMarks(sanitizeState(baseState()), { kind: 'ferie', from: '2026-08-10' });
+    expect(mergeStates(a, b).dayMarks).toHaveLength(1);
+  });
+
+  it('segnato di nuovo dopo un\'eliminazione: resta (anche dopo l\'unione con chi l\'aveva eliminato)', async () => {
+    const s1 = addDayMarks(sanitizeState(baseState()), { kind: 'ferie', from: '2026-08-10' });
+    const deleted = removeDayMark(s1, '2026-08-10|ferie');
+    await new Promise((r) => setTimeout(r, 3)); // un attimo dopo, come quando lo fa una persona
+    const again = addDayMarks({ ...deleted }, { kind: 'ferie', from: '2026-08-10' });
+    expect(again.dayMarks).toHaveLength(1);
+    expect(mergeStates(deleted, again).dayMarks).toHaveLength(1);
   });
 });

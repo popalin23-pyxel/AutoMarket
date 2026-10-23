@@ -35,10 +35,13 @@ export default function ExpensesTab({ state, setState }) {
     () => periodExpenses.reduce((a, e) => a + (Number(e.amount) || 0), 0),
     [periodExpenses],
   );
-  // i versamenti alla cassa sono già nelle tasse e contributi stimati: non si tolgono due volte
+  // i versamenti alla cassa non si tolgono due volte, ma solo se la stima comprende davvero i
+  // contributi (in modalità semplice con contributi a 0% vanno tolti qui, come spesa)
+  const s0 = state.settings;
+  const fundInTaxes = s0.taxMode === 'forfettario' ? Number(s0.forfContributionsPercent) > 0 : Number(s0.contributionsPercent) > 0;
   const fundPayments = useMemo(
-    () => periodExpenses.filter((e) => catFor(e.category).inTaxes).reduce((a, e) => a + (Number(e.amount) || 0), 0),
-    [periodExpenses],
+    () => (fundInTaxes ? periodExpenses.filter((e) => catFor(e.category).inTaxes).reduce((a, e) => a + (Number(e.amount) || 0), 0) : 0),
+    [periodExpenses, fundInTaxes],
   );
   const otherExpenses = totalExpenses - fundPayments;
 

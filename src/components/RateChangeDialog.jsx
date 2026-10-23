@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { todayISO } from '../lib/calc.js';
+import { todayISO, siteRateOn, scheduledRateChange, addDaysISO } from '../lib/calc.js';
 import { useLockBodyScroll } from '../lib/useLockBodyScroll.js';
 import { useBackClose } from '../lib/backStack.js';
 import Portal from '../lib/Portal.jsx';
@@ -10,9 +10,15 @@ const fmt = (n) => (Number(n) || 0).toLocaleString('it-IT', { minimumFractionDig
 // Cambio della paga oraria di una sede: da una certa data in poi (i turni precedenti
 // restano con la tariffa di allora) oppure come correzione su tutti i turni.
 export default function RateChangeDialog({ site, onSave, onClose }) {
-  const [rate, setRate] = useState(site.rate);
+  const today = todayISO();
+  const currentRate = siteRateOn(site, today);
+  // se c'è già un cambio fissato nel futuro, si propone di modificare quello (stessa data):
+  // partire da oggi anticiperebbe la nuova tariffa anche ai turni intermedi
+  const scheduled = scheduledRateChange(site, today);
+  const [rate, setRate] = useState(scheduled ? scheduled.rate : currentRate);
   const [mode, setMode] = useState('from'); // 'from' | 'all'
-  const [from, setFrom] = useState(todayISO());
+  const [from, setFrom] = useState(scheduled ? scheduled.from : today);
+  const rateBefore = from ? siteRateOn(site, addDaysISO(from, -1)) : currentRate;
   useLockBodyScroll();
   useBackClose(onClose);
 
@@ -27,7 +33,10 @@ export default function RateChangeDialog({ site, onSave, onClose }) {
           <span>Paga oraria · {site.name}</span>
           <button className="btn btn-sm" onClick={onClose}>✕</button>
         </div>
-        <p className="panel-desc">Oggi: €{fmt(site.rate)}/h</p>
+        <p className="panel-desc">
+          Oggi: €{fmt(currentRate)}/h
+          {scheduled && <> · già fissato: <b>€{fmt(scheduled.rate)}/h dal {scheduled.from.split('-').reverse().join('/')}</b> (qui puoi modificarlo)</>}
+        </p>
 
         <div className="field" style={{ maxWidth: 160 }}>
           <label className="field-label">Nuova paga oraria (€)</label>
@@ -41,7 +50,7 @@ export default function RateChangeDialog({ site, onSave, onClose }) {
             <span>
               <b>Dai turni del</b>
               <input type="date" value={from} onChange={(e) => { setFrom(e.target.value); setMode('from'); }} />
-              <small>I turni prima di questa data restano a €{fmt(site.rate)}/h, come nelle fatture già fatte.</small>
+              <small>I turni prima di questa data restano a €{fmt(rateBefore)}/h, come nelle fatture già fatte.</small>
             </span>
           </label>
           <label className={`rate-mode-opt ${mode === 'all' ? 'sel' : ''}`}>

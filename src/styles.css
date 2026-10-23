@@ -342,7 +342,9 @@ tbody tr:hover td { background: rgba(var(--accent-rgb), 0.07); }
 .stamping .day-add-row { display: none; }
 .day-row.stamp-target { cursor: pointer; }
 .day-row.stamp-target:active { background: rgba(var(--accent-rgb), 0.14) !important; }
-.stamping.panel { margin-bottom: 190px; }
+/* spazio in fondo per la barra del timbro, qualunque sia la densità (classe su <html>) */
+html.stamping .app-body { padding-bottom: calc(320px + env(safe-area-inset-bottom, 0px)) !important; }
+html.stamping .undo-toast { bottom: calc(330px + env(safe-area-inset-bottom, 0px)); }
 .cal-grid-panel.stamping .cal-cell:not(.empty):active { background: rgba(var(--accent-rgb), 0.18); }
 .stamp-bar {
   position: fixed; z-index: 70; left: 50%; transform: translateX(-50%);
@@ -879,6 +881,7 @@ code { background: rgba(var(--ink), 0.08); padding: 1px 5px; border-radius: 4px;
 .confirm-shift-when { font-family: var(--mono); font-size: 12px; color: var(--text-dim); }
 .confirm-shift-actions, .confirm-shift-edit { display: flex; gap: 6px; flex-wrap: wrap; }
 .confirm-shift-edit input[type=time] { width: 100px; min-width: 0; }
+.confirm-shift-err { flex-basis: 100%; font-size: 11.5px; color: var(--red); }
 
 /* turno annullato: resta visibile ma barrato */
 .shift-chip.cancelled { opacity: 0.55; }

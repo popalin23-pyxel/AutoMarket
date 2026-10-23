@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { computeYearSummary } from '../lib/calc.js';
+import { computeYearSummary, countMarks } from '../lib/calc.js';
 import { MONTHS_IT, DAY_MARK_KINDS } from '../lib/defaults.js';
 import AreaChart from './charts/AreaChart.jsx';
 import YearHeatmap from './charts/YearHeatmap.jsx';
@@ -22,11 +22,8 @@ export default function HistoryTab({ state, year, yearSelect, onOpenMonth }) {
   const avgNetPerMonth = workedMonths > 0 ? y.totalNet / workedMonths : 0;
   // ferie, malattia, corsi, non disponibile: giorni segnati nell'anno, per tipo
   const markCounts = useMemo(() => {
-    const counts = new Map();
-    for (const mk of state.dayMarks ?? []) {
-      if (mk.date?.startsWith(`${year}-`)) counts.set(mk.kind, (counts.get(mk.kind) || 0) + 1);
-    }
-    return DAY_MARK_KINDS.filter((k) => counts.has(k.id)).map((k) => ({ ...k, days: counts.get(k.id) }));
+    const counts = countMarks(state.dayMarks ?? [], `${year}-`);
+    return DAY_MARK_KINDS.filter((k) => counts[k.id]).map((k) => ({ ...k, days: counts[k.id] }));
   }, [state.dayMarks, year]);
 
   return (

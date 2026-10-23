@@ -99,15 +99,22 @@ export function useCloudSync({ userId, enabled, state, setState }) {
         // primo accesso di questo account: pubblica i dati presenti sul dispositivo,
         // ma solo se non appartengono a un altro account
         const owner = readOwner();
-        const local = owner && owner !== uid ? resetState() : stateRef.current;
+        const foreign = !!owner && owner !== uid;
+        const local = foreign ? resetState() : stateRef.current;
+        if (foreign) setState(local); // dati di un altro account: non si pubblicano
         version.current = await saveCloudState(uid, local);
         if (!isCurrent(uid)) return;
         synced.current = local;
-        if (local !== stateRef.current) setState(local);
-        writePending(null);
+        // modifiche fatte mentre si pubblicava: non si toccano, le invia il salvataggio automatico
+        if (stateRef.current === local || foreign) writePending(null);
       }
       writeOwner(uid);
       ready.current = true;
+      // modifiche fatte mentre il caricamento era in corso: si inviano poco dopo
+      if (!sameData(stateRef.current, synced.current)) {
+        clearTimeout(timer.current);
+        timer.current = setTimeout(() => push(uid), 600);
+      }
       initAttempts.current = 0;
       setStatus('idle');
     } catch (e) {

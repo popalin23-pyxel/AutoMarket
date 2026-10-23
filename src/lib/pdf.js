@@ -81,8 +81,9 @@ export function exportMonthPdf(sum, opts = {}) {
     doc.setFont('helvetica', opts2.bold ? 'bold' : 'normal');
     doc.setFontSize(opts2.bold ? 12 : 10);
     doc.setTextColor(...(opts2.color || [60, 70, 80]));
-    doc.text(label, marginX, y);
-    doc.text(value, 210 - marginX, y, { align: 'right' });
+    // pdfSafe: es. il segno meno tipografico "−" non esiste nel font del PDF
+    doc.text(pdfSafe(label), marginX, y);
+    doc.text(pdfSafe(value), 210 - marginX, y, { align: 'right' });
     y += opts2.bold ? 8 : 7;
   };
 

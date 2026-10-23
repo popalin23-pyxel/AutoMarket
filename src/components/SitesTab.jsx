@@ -5,6 +5,7 @@ import { useConfirm } from '../lib/ConfirmContext.jsx';
 import NumberInput from './NumberInput.jsx';
 import EmptyState from './EmptyState.jsx';
 import RateChangeDialog from './RateChangeDialog.jsx';
+import { siteRateOn, scheduledRateChange, todayISO } from '../lib/calc.js';
 import SiteDetailsDialog from './SiteDetailsDialog.jsx';
 
 const fmtRate = (n) => (Number(n) || 0).toLocaleString('it-IT', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
@@ -19,6 +20,7 @@ export default function SitesTab({ state, setState }) {
   const [detailsSite, setDetailsSite] = useState(null); // scheda della struttura
   const [showArchived, setShowArchived] = useState(false);
   const activeSites = state.sites.filter((s) => !s.archived);
+  const today = todayISO();
   const archivedSites = state.sites.filter((s) => s.archived);
 
   const add = () => {
@@ -110,13 +112,14 @@ export default function SitesTab({ state, setState }) {
                 </td>
                 <td>
                   <button type="button" className="rate-btn" onClick={() => setRateSite(s)} title="Cambia paga oraria">
-                    €{fmtRate(s.rate)} ✎
+                    €{fmtRate(siteRateOn(s, today))} ✎
                   </button>
-                  {(s.pastRates?.length ?? 0) > 0 && (
-                    <div className="rate-history">
-                      dal {fmtDay(s.pastRates[s.pastRates.length - 1].before)} · prima €{fmtRate(s.pastRates[s.pastRates.length - 1].rate)}
-                    </div>
-                  )}
+                  {(() => {
+                    const next = scheduledRateChange(s, today);
+                    if (next) return <div className="rate-history">→ €{fmtRate(next.rate)} dal {fmtDay(next.from)}</div>;
+                    const last = s.pastRates?.[s.pastRates.length - 1];
+                    return last ? <div className="rate-history">dal {fmtDay(last.before)} · prima €{fmtRate(last.rate)}</div> : null;
+                  })()}
                 </td>
                 <td>
                   <NumberInput value={s.rivalsaPercent} onChange={(v) => patch(s.id, { rivalsaPercent: v })}

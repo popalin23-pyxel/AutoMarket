@@ -27,19 +27,22 @@ export default function ConfirmShiftsCard({ state, setState, now }) {
     clearTimeout(undoTimer.current);
     undoTimer.current = setTimeout(() => setUndo(null), 5000);
   };
+  // askConfirm: undefined = la risposta è data (vedi shiftsToConfirm)
   const setStatus = (shift, status) => {
-    setState((s) => updateShift(s, shift.id, { status }));
+    setState((s) => updateShift(s, shift.id, { status, askConfirm: undefined }));
     if (status === 'cancelled') showUndo(shift);
   };
-  const confirmAll = () => setState((s) => list.reduce((acc, sh) => updateShift(acc, sh.id, { status: 'done' }), s));
+  const confirmAll = () => setState((s) => list.reduce((acc, sh) => updateShift(acc, sh.id, { status: 'done', askConfirm: undefined }), s));
+  const timesValid = !!editing?.start && !!editing?.end && editing.start !== editing.end;
   const saveTimes = () => {
-    if (!editing?.start || !editing?.end || editing.start === editing.end) return;
-    setState((s) => updateShift(s, editing.id, { start: editing.start, end: editing.end, status: 'done' }));
+    if (!timesValid) return;
+    setState((s) => updateShift(s, editing.id, { start: editing.start, end: editing.end, status: 'done', askConfirm: undefined }));
     setEditing(null);
   };
+  // "Annulla" dopo "Non fatto": il turno torna da confermare (non diventa "fatto" in silenzio)
   const undoCancel = () => {
     if (!undo) return;
-    setState((s) => updateShift(s, undo.id, { status: undefined }));
+    setState((s) => updateShift(s, undo.id, { status: undefined, askConfirm: true }));
     setUndo(null);
     clearTimeout(undoTimer.current);
   };
@@ -58,7 +61,7 @@ export default function ConfirmShiftsCard({ state, setState, now }) {
     <div className="panel confirm-shifts">
       <div className="confirm-shifts-head">
         <h2 className="panel-title">{list.length === 1 ? 'Turno da confermare' : `${list.length} turni da confermare`}</h2>
-        {list.length > 1 && <button className="btn btn-sm" onClick={confirmAll}>✓ Tutti fatti</button>}
+        {list.length > 1 && <button className="btn btn-sm" onClick={confirmAll} disabled={!!editing}>✓ Tutti fatti</button>}
       </div>
       <p className="panel-desc">È andato tutto come previsto? Così i conti del mese sono giusti.</p>
       <div className="confirm-shifts-list">
@@ -76,8 +79,9 @@ export default function ConfirmShiftsCard({ state, setState, now }) {
                 <div className="confirm-shift-edit">
                   <input type="time" value={editing.start} aria-label="Inizio" onChange={(e) => setEditing({ ...editing, start: e.target.value })} />
                   <input type="time" value={editing.end} aria-label="Fine" onChange={(e) => setEditing({ ...editing, end: e.target.value })} />
-                  <button className="btn btn-sm btn-primary" onClick={saveTimes}>Salva</button>
+                  <button className="btn btn-sm btn-primary" onClick={saveTimes} disabled={!timesValid}>Salva</button>
                   <button className="btn btn-sm" onClick={() => setEditing(null)}>✕</button>
+                  {!timesValid && <span className="confirm-shift-err">Inizio e fine devono essere diversi.</span>}
                 </div>
               ) : (
                 <div className="confirm-shift-actions">

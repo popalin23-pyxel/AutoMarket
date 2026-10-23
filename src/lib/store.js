@@ -259,9 +259,13 @@ export function removeOccasionalWork(state, id) {
 }
 
 // ── Giorni segnati (ferie, malattia, corso, non disponibile) ──────────
-// Un giorno per voce; un periodo (es. ferie dal 10 al 20) crea una voce per ogni giorno,
-// saltando quelli già segnati con lo stesso tipo.
+// Un giorno per voce e un solo tipo per giorno: segnare un giorno con un altro tipo sostituisce
+// il precedente. Un periodo (es. ferie dal 10 al 20) crea una voce per ogni giorno.
+// L'id è "data|tipo": due telefoni che segnano lo stesso giorno producono la stessa voce
+// (nessun doppione dopo l'unione).
 const MAX_MARK_DAYS = 366;
+export const dayMarkId = (date, kind) => `${date}|${kind}`;
+
 export function addDayMarks(state, { kind, from, to = from, note = '' }) {
   if (!kind || !from) return state;
   let next = state;
@@ -269,19 +273,30 @@ export function addDayMarks(state, { kind, from, to = from, note = '' }) {
   let d = from;
   for (let i = 0; i < MAX_MARK_DAYS && d <= end; i++, d = addDaysISO(d, 1)) {
     const date = d;
+    for (const other of (next.dayMarks ?? []).filter((m) => m.date === date && m.kind !== kind)) {
+      next = removeWithTombstone(next, 'dayMarks', other.id);
+    }
     if ((next.dayMarks ?? []).some((m) => m.date === date && m.kind === kind)) continue;
-    const id = nextId(next, 'dayMark');
+    const id = dayMarkId(date, kind);
+    const tomb = { ...(next.tombstones?.dayMarks ?? {}) };
+    delete tomb[id]; // segnato di nuovo dopo un'eliminazione
     next = {
       ...next,
       dayMarks: [...(next.dayMarks ?? []), touch({ id, date, kind, note })],
-      seq: { ...next.seq, dayMark: id + 1 },
+      tombstones: { ...(next.tombstones ?? {}), dayMarks: tomb },
     };
   }
   return next;
 }
 
 export function updateDayMark(state, id, patch) {
-  return { ...state, dayMarks: (state.dayMarks ?? []).map((m) => (m.id === id ? touch({ ...m, ...patch }) : m)) };
+  const mark = (state.dayMarks ?? []).find((m) => m.id === id);
+  if (!mark) return state;
+  if (patch.kind && patch.kind !== mark.kind) {
+    // cambio di tipo: la voce vecchia si elimina e se ne crea una del nuovo tipo
+    return addDayMarks(removeWithTombstone(state, 'dayMarks', id), { kind: patch.kind, from: mark.date, note: patch.note ?? mark.note ?? '' });
+  }
+  return { ...state, dayMarks: state.dayMarks.map((m) => (m.id === id ? touch({ ...m, ...patch }) : m)) };
 }
 
 export function removeDayMark(state, id) {

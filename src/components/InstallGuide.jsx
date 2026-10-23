@@ -13,8 +13,8 @@ export function useCanPromptInstall() {
 const STEPS = {
   ios: [
     'Apri Turnio con Safari (o Chrome) sull\'iPhone.',
-    'Tocca il pulsante Condividi: il quadrato con la freccia verso l\'alto (in basso al centro, o in alto a destra).',
-    'Scorri e tocca "Aggiungi alla schermata Home" (se non lo vedi, tocca "Modifica azioni" in fondo).',
+    'Tocca il pulsante Condividi: il quadrato con la freccia verso l\'alto. Con iOS 26 tocca prima ••• in basso a destra, poi Condividi.',
+    'Scorri e tocca "Aggiungi alla schermata Home" (se non lo vedi, cercalo sotto "Altro" o tocca "Modifica azioni" in fondo).',
     'Tocca "Aggiungi": l\'icona di Turnio compare tra le tue app. Da quel momento aprila sempre da lì.',
   ],
   android: [
