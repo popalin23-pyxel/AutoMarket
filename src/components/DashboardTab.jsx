@@ -83,7 +83,9 @@ function MonthCard({ progress, deltaPct, monthLabel, prevMonthLabel, goal }) {
       <div className="month-hero-grid">
         <div className="mh-stat">
           <span className="mh-val">€<CountUpText value={done.totalInvoice} format={fmtInt} /></span>
-          <span className="mh-lbl">fatturato finora</span>
+          <span className="mh-lbl">
+            {hasPlanned ? <>fatturato finora su <b className="mh-lbl-total">€{fmtInt(total.totalInvoice)}</b></> : 'fatturato'}
+          </span>
         </div>
         <div className="mh-stat">
           <span className="mh-val"><CountUpText value={done.totalHours} format={fmt0} />h</span>
