@@ -59,7 +59,7 @@ function SheetBody({ state, setState, onClose, onSaved, onGoSites, onOpenEditor 
   const pickSite = (id) => { setSiteId(id); setSlot(null); };
   const pickKind = (k) => {
     if (k === 'shift') { setKind(k); return; }
-    onOpenEditor(k, date); // prestazione e ferie hanno già la loro scheda completa
+    onOpenEditor(k, date || today); // prestazione e ferie hanno già la loro scheda completa
   };
   const save = () => {
     if (!canSave) return;
@@ -148,7 +148,7 @@ function SheetBody({ state, setState, onClose, onSaved, onGoSites, onOpenEditor 
             </div>
           )}
 
-          <button type="button" className="lrow sheet-more"
+          <button type="button" className="lrow sheet-more" disabled={!date}
             onClick={() => onOpenEditor('shift', date, { siteId, start: time?.start ?? start, end: time?.end ?? end })}>
             <span className="lrow-ic ic-sla"><Icon name="sliders" size={19} /></span>
             <span className="lrow-tx">
@@ -161,7 +161,7 @@ function SheetBody({ state, setState, onClose, onSaved, onGoSites, onOpenEditor 
           <div className="sheet-sum">
             {canSave
               ? <><b><span className="mono">{fmt1(hours)}</span> ore</b> · ti restano circa <b className="g mono">€{fmt0(net)}</b></>
-              : time ? 'Orario non valido' : 'Scegli l’orario'}
+              : !date ? 'Scegli il giorno' : time ? 'Orario non valido' : 'Scegli l’orario'}
           </div>
           <button type="button" className="btn btn-primary btn-block sheet-save" onClick={save} disabled={!canSave}>
             <Icon name="check" size={20} strokeWidth={2.6} /> Salva il turno

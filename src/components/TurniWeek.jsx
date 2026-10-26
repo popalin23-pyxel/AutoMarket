@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import {
   addDaysISO, startOfWeek, shiftsOnDay, hoursOfShift, isCancelled, isShiftDone, shiftsToConfirm,
-  computeRangeSummary, holidaysOfYear, isHoliday,
+  computeRangeProgress, holidaysOfYear, isHoliday,
 } from '../lib/calc.js';
 import { MONTHS_IT, WEEKDAYS_IT, dayMarkKind } from '../lib/defaults.js';
 import Icon from './icons/Icon.jsx';
@@ -28,24 +28,24 @@ function rangeText(start) {
 }
 
 // Turni, vista settimana: un giorno per riga, con lo stato di ogni turno (fatto, da confermare, oggi).
+// Il giorno (a sinistra) apre la finestra del giorno per aggiungere; il resto della riga apre il turno.
 export default function TurniWeek({
-  state, weekStart, setWeekStart, today, onOpenDay, onEditShift, onEditOccasional, onEditMark,
+  state, weekStart, setWeekStart, today, now, onOpenDay, onEditShift, onEditOccasional, onEditMark,
 }) {
   const siteById = useMemo(() => new Map(state.sites.map((s) => [s.id, s])), [state.sites]);
   const weekEnd = addDaysISO(weekStart, 6);
-  const summary = useMemo(
-    () => computeRangeSummary(state.shifts, state.sites, state.settings, weekStart, weekEnd, state.occasionalWork),
-    [state.shifts, state.sites, state.settings, weekStart, weekEnd, state.occasionalWork],
+  const progress = useMemo(
+    () => computeRangeProgress(state.shifts, state.sites, state.settings, weekStart, weekEnd, state.occasionalWork, now),
+    [state.shifts, state.sites, state.settings, weekStart, weekEnd, state.occasionalWork, now],
   );
-  const toConfirm = useMemo(() => new Set(shiftsToConfirm(state.shifts).map((s) => s.id)), [state.shifts]);
+  const toConfirm = useMemo(() => new Set(shiftsToConfirm(state.shifts, now).map((s) => s.id)), [state.shifts, now]);
   const dayMarks = state.dayMarks ?? [];
   const holidays = useMemo(() => {
     const ys = new Set([weekStart.slice(0, 4), weekEnd.slice(0, 4)]);
     return new Map([...ys].map((y) => [y, holidaysOfYear(Number(y))]));
   }, [weekStart, weekEnd]);
 
-  // giorni della settimana; quelli liberi uno dopo l'altro si raggruppano in una riga sola
-  const blocks = useMemo(() => {
+  const days = useMemo(() => {
     const out = [];
     for (let i = 0; i < 7; i++) {
       const date = addDaysISO(weekStart, i);
@@ -55,36 +55,29 @@ export default function TurniWeek({
         ...shiftsOnDay(state.shifts, date).sort((a, b) => (a.start || '').localeCompare(b.start || '')).map((sh) => ({ kind: 'shift', item: sh })),
         ...shiftsOnDay(state.occasionalWork, date).map((o) => ({ kind: 'occ', item: o })),
       ];
-      const day = { date, wd: i, holiday: isHoliday(y, m, d, holidays.get(String(y))) };
-      const last = out[out.length - 1];
-      if (items.length === 0 && date !== today && last?.free && !last.days.some((x) => x.date === today)) last.days.push(day);
-      else out.push(items.length === 0 ? { free: true, days: [day] } : { free: false, day, items });
+      out.push({ date, wd: i, holiday: isHoliday(y, m, d, holidays.get(String(y))), items });
     }
     return out;
-  }, [weekStart, state.shifts, state.occasionalWork, dayMarks, holidays, today]);
+  }, [weekStart, state.shifts, state.occasionalWork, dayMarks, holidays]);
 
+  const thisWeek = weekStart === startOfWeek(today);
   const future = weekStart > startOfWeek(today);
   const prev = () => setWeekStart(addDaysISO(weekStart, -7));
   const next = () => setWeekStart(addDaysISO(weekStart, 7));
+  const { done, planned, total } = progress;
+  const has = (x) => x.shiftCount > 0 || x.occasionalCount > 0;
 
-  const dn = (day) => (
-    <div className={`wk-dn ${day.holiday ? 'holiday' : ''}`}>
+  const dnInner = (day) => (
+    <>
       <span className="wk-wd">{WEEKDAYS_IT[day.wd].toUpperCase()}</span>
       <span className="wk-n">{dayNum(day.date)}</span>
-    </div>
+    </>
   );
 
   const shiftEnd = (sh, date) => {
     if (isCancelled(sh)) return <span className="wk-badge off">Non fatto</span>;
     if (sh.status === 'done') return <span className="wk-badge ok"><Icon name="check" size={15} strokeWidth={3} />Fatto</span>;
-    if (toConfirm.has(sh.id)) {
-      return (
-        <button type="button" className="wk-conf" onClick={(e) => { e.stopPropagation(); onEditShift(date, sh); }}>
-          Conferma<Icon name="chevronRight" size={17} strokeWidth={2.6} />
-        </button>
-      );
-    }
-    if (isShiftDone(sh)) return <span className="wk-badge ok"><Icon name="check" size={15} strokeWidth={3} />Fatto</span>;
+    if (isShiftDone(sh, now)) return <span className="wk-badge ok"><Icon name="check" size={15} strokeWidth={3} />Fatto</span>;
     if (date === today) return <span className="wk-badge today">Oggi</span>;
     return <span className="wk-hours">{fmt1(hoursOfShift(sh))} ore</span>;
   };
@@ -97,11 +90,19 @@ export default function TurniWeek({
           <div className="wk-t1">{weekTitle(weekStart, today)}</div>
           <div className="wk-t2">
             {rangeText(weekStart)}
-            {summary.totalHours > 0 || summary.occasionalCount > 0 ? (
-              <><br /><b>{fmt1(summary.totalHours)} ore</b> · {future ? 'ti resteranno' : 'ti restano'} <span className="wk-money">€{fmt(summary.netTotal)}</span></>
-            ) : <><br />nessun turno</>}
+            <br />
+            {!has(total) ? 'nessun turno'
+              : thisWeek ? (
+                <>
+                  {has(done) && <><b>{fmt1(done.totalHours)} ore</b> fatte · ti restano <span className="wk-money">€{fmt(done.netTotal)}</span></>}
+                  {has(done) && has(planned) && <br />}
+                  {has(planned) && <>{has(done) ? '+ ' : ''}<b>{fmt1(planned.totalHours)} ore</b> in programma · €{fmt(planned.netTotal)}</>}
+                </>
+              ) : (
+                <><b>{fmt1(total.totalHours)} ore</b> · {future ? 'ti resteranno' : 'ti sono rimasti'} <span className="wk-money">€{fmt(total.netTotal)}</span></>
+              )}
           </div>
-          {weekStart !== startOfWeek(today) && (
+          {!thisWeek && (
             <button type="button" className="link-btn wk-today-link" onClick={() => setWeekStart(startOfWeek(today))}>Torna a questa settimana</button>
           )}
         </div>
@@ -109,61 +110,72 @@ export default function TurniWeek({
       </div>
 
       <div className="ncard wk-days">
-        {blocks.map((b) => {
-          if (b.free) {
-            const isToday = b.days[0].date === today;
+        {days.map((day) => {
+          const isToday = day.date === today;
+          if (day.items.length === 0) {
             return (
-              <button type="button" key={b.days[0].date} className={`wk-day free ${isToday ? 'today' : ''}`} onClick={() => onOpenDay(b.days[0].date)}>
-                {b.days.length === 1 ? dn(b.days[0]) : (
-                  <div className="wk-dn multi">
-                    {b.days.map((d) => <span key={d.date} className="wk-wd">{WEEKDAYS_IT[d.wd].toUpperCase()} {dayNum(d.date)}</span>)}
-                  </div>
-                )}
+              <button type="button" key={day.date} className={`wk-day free ${isToday ? 'today' : ''}`} onClick={() => onOpenDay(day.date)}>
+                <span className={`wk-dn ${day.holiday ? 'holiday' : ''}`}>{dnInner(day)}</span>
                 <span className="wk-db"><b>Libero</b> · nessun turno</span>
                 {isToday ? <span className="wk-badge today">Oggi</span> : <span className="wk-add"><Icon name="plus" size={18} strokeWidth={2.4} /></span>}
               </button>
             );
           }
-          const { day, items } = b;
           return (
-            <div key={day.date} className={`wk-group ${day.date === today ? 'today' : ''}`}>
-              {items.map(({ kind, item }, i) => {
-                const first = i === 0;
-                const dnCell = first ? dn(day) : <div className="wk-dn" />;
+            <div key={day.date} className={`wk-group ${isToday ? 'today' : ''}`}>
+              {day.items.map(({ kind, item }, i) => {
+                const dnCell = i === 0 ? (
+                  <button type="button" className={`wk-dn ${day.holiday ? 'holiday' : ''}`} onClick={() => onOpenDay(day.date)}
+                    aria-label={`Aggiungi qualcosa il ${dayNum(day.date)}`}>
+                    {dnInner(day)}
+                  </button>
+                ) : <span className="wk-dn" />;
                 if (kind === 'mark') {
                   const k = dayMarkKind(item.kind);
                   return (
-                    <button type="button" key={`m${item.id}`} className="wk-day" onClick={() => onEditMark(item)}>
+                    <div key={`m${item.id}`} className="wk-day">
                       {dnCell}
-                      <span className="wk-db">
-                        <span className="wk-ds"><span className="wk-emoji">{k.icon}</span>{k.label}</span>
-                        {item.note && <span className="wk-dt h">{item.note}</span>}
-                      </span>
-                    </button>
+                      <button type="button" className="wk-main" onClick={() => onEditMark(item)}>
+                        <span className="wk-db">
+                          <span className="wk-ds"><span className="wk-emoji">{k.icon}</span>{k.label}</span>
+                          {item.note && <span className="wk-dt h">{item.note}</span>}
+                        </span>
+                      </button>
+                    </div>
                   );
                 }
                 if (kind === 'occ') {
                   return (
-                    <button type="button" key={`o${item.id}`} className="wk-day" onClick={() => onEditOccasional(day.date, item)}>
+                    <div key={`o${item.id}`} className="wk-day">
                       {dnCell}
-                      <span className="wk-db">
-                        <span className="wk-ds"><span className="wk-extra"><Icon name="briefcase" size={14} strokeWidth={2.4} /></span>{item.description || 'Prestazione'}</span>
-                        <span className="wk-dt h">Prestazione · €{fmt(item.grossAmount)}</span>
-                      </span>
-                    </button>
+                      <button type="button" className="wk-main" onClick={() => onEditOccasional(day.date, item)}>
+                        <span className="wk-db">
+                          <span className="wk-ds"><span className="wk-extra"><Icon name="briefcase" size={14} strokeWidth={2.4} /></span>{item.description || 'Prestazione'}</span>
+                          <span className="wk-dt h">Prestazione · €{fmt(item.grossAmount)}</span>
+                        </span>
+                      </button>
+                    </div>
                   );
                 }
                 const site = siteById.get(item.siteId);
                 const cancelled = isCancelled(item);
+                const confirm = !cancelled && toConfirm.has(item.id);
                 return (
-                  <button type="button" key={`s${item.id}`} className={`wk-day ${cancelled ? 'cancelled' : ''}`} onClick={() => onEditShift(day.date, item)}>
+                  <div key={`s${item.id}`} className={`wk-day ${cancelled ? 'cancelled' : ''}`}>
                     {dnCell}
-                    <span className="wk-db">
-                      <span className="wk-ds"><span className="wk-dot" style={{ background: site?.color ?? '#6b7280' }} />{site?.name ?? 'Sede eliminata'}</span>
-                      <span className="wk-dt">{item.start} – {item.end}{item.note ? ` · ${item.note}` : ''}</span>
-                    </span>
-                    {shiftEnd(item, day.date)}
-                  </button>
+                    <button type="button" className="wk-main" onClick={() => onEditShift(day.date, item)}>
+                      <span className="wk-db">
+                        <span className="wk-ds"><span className="wk-dot" style={{ background: site?.color ?? '#6b7280' }} />{site?.name ?? 'Sede eliminata'}</span>
+                        <span className="wk-dt">{item.start} – {item.end}{item.note ? ` · ${item.note}` : ''}</span>
+                      </span>
+                      {!confirm && shiftEnd(item, day.date)}
+                    </button>
+                    {confirm && (
+                      <button type="button" className="wk-conf" onClick={() => onEditShift(day.date, item)}>
+                        Conferma<Icon name="chevronRight" size={17} strokeWidth={2.6} />
+                      </button>
+                    )}
+                  </div>
                 );
               })}
             </div>

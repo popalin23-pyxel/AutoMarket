@@ -32,7 +32,12 @@ const MODE_KEY = 'turnio_turni_mode'; // 'week' | 'month'
 
 const pad2 = (n) => String(n).padStart(2, '0');
 // la settimana "appartiene" al mese del suo giovedì (come le settimane ISO)
-const weekMonth = (ws) => { const th = addDaysISO(ws, 3); return [Number(th.slice(0, 4)), Number(th.slice(5, 7))]; };
+// (ma la settimana di oggi appartiene al mese di oggi: domenica 1 novembre la settimana dal
+// 26 ottobre deve aprire novembre, altrimenti nella vista Mese oggi non si vedrebbe)
+const weekMonth = (ws, today = todayISO()) => {
+  const ref = startOfWeek(today) === ws ? today : addDaysISO(ws, 3);
+  return [Number(ref.slice(0, 4)), Number(ref.slice(5, 7))];
+};
 // prima settimana di un mese: quella che contiene il suo primo giovedì
 const firstWeekOf = (y, m) => {
   const ws = startOfWeek(`${y}-${pad2(m)}-01`);
@@ -62,7 +67,7 @@ function DayPopoverOverlay({ dateISO, onClose, children }) {
   );
 }
 
-export default function ShiftsTab({ state, setState, year, month, setYear, setMonth, onNavigate, action, onActionDone }) {
+export default function ShiftsTab({ state, setState, year, month, setYear, setMonth, onNavigate, action, onActionDone, now = new Date() }) {
   const [mode, setModeRaw] = useState(() => { try { return localStorage.getItem(MODE_KEY) || 'week'; } catch { return 'week'; } });
   // settimana mostrata (lunedì): quella di oggi se è aperto il mese corrente, altrimenti la prima del mese
   const [weekStart, setWeekStartRaw] = useState(() => {
@@ -87,7 +92,13 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
   const stampAdded = useRef(new Set());
   const [availabilityOpen, setAvailabilityOpen] = useState(false);
   const [dupOpen, setDupOpen] = useState(false);
-  useBackClose(() => setStampOn(false), stampOn);
+  // vista da cui è partito il timbro: a "Fine" si torna lì
+  const stampFromMode = useRef(null);
+  const stopStamp = () => {
+    setStampOn(false);
+    if (stampFromMode.current) { setModeRaw(stampFromMode.current); stampFromMode.current = null; }
+  };
+  useBackClose(stopStamp, stampOn);
   // spazio in fondo alla pagina per la barra del timbro (vedi html.stamping in styles.css)
   useEffect(() => {
     document.documentElement.classList.toggle('stamping', stampOn);
@@ -104,6 +115,7 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
   };
   const setMode = (m) => {
     if (m === mode) return;
+    if (stampOn) { setStampOn(false); stampFromMode.current = null; } // il timbro è solo per la vista Mese
     if (m === 'week') {
       const t = todayISO();
       setWeekStart(Number(t.slice(0, 4)) === year && Number(t.slice(5, 7)) === month ? startOfWeek(t) : firstWeekOf(year, month));
@@ -189,7 +201,7 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
     setStamp(fav ? { type: 'shift', siteId: fav.siteId, start: fav.start, end: fav.end } : null);
     setStampCount(0);
     setDayPopover(null);
-    setModeRaw('month'); // il timbro si usa sul mese intero
+    if (mode !== 'month') { stampFromMode.current = mode; setModeRaw('month'); } // il timbro si usa sul mese intero
     setStampOn(true);
   };
 
@@ -279,7 +291,8 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
       let next = s;
       for (const sh of weekShifts) {
         const newDate = addDaysISO(sh.date, 7);
-        const exists = next.shifts.some((x) => x.date === newDate && x.siteId === sh.siteId && x.start === sh.start && x.end === sh.end);
+        // un turno uguale ma annullato ("non fatto") non impedisce la copia
+        const exists = next.shifts.some((x) => !isCancelled(x) && x.date === newDate && x.siteId === sh.siteId && x.start === sh.start && x.end === sh.end);
         if (exists) continue;
         next = addShift(next, { date: newDate, siteId: sh.siteId, start: sh.start, end: sh.end, note: sh.note || '', ...(sh.rate != null ? { rate: sh.rate } : {}) });
       }
@@ -408,7 +421,7 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
       {mode === 'week' && (
         <>
           {noSitesHint}
-          <TurniWeek state={state} weekStart={weekStart} setWeekStart={setWeekStart} today={today}
+          <TurniWeek state={state} weekStart={weekStart} setWeekStart={setWeekStart} today={today} now={now}
             onOpenDay={(d) => setDayPopover(d)} onEditShift={openEdit} onEditOccasional={openEditOccasional} onEditMark={openEditMark} />
           <div className="grp-title">Strumenti</div>
           <div className="tools3">
@@ -443,7 +456,7 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
           <div className="view-row-left">
             <button className="btn btn-sm" onClick={goToday}>Vai a oggi</button>
             {activeSites.length > 0 && (
-              <button className={`btn btn-sm ${stampOn ? 'btn-primary' : ''}`} onClick={() => (stampOn ? setStampOn(false) : startStamp())}
+              <button className={`btn btn-sm ${stampOn ? 'btn-primary' : ''}`} onClick={() => (stampOn ? stopStamp() : startStamp())}
                 title="Riempi il mese toccando i giorni">
                 ✋ Timbro
               </button>
@@ -535,7 +548,7 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
 
       {stampOn && (
         <StampBar sites={activeSites} favorites={activeFavorites} markKinds={DAY_MARK_KINDS} stamp={stamp} setStamp={setStamp}
-          count={stampCount} onDone={() => setStampOn(false)} />
+          count={stampCount} onDone={stopStamp} />
       )}
 
       {dupOpen && (

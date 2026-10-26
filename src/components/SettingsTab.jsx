@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { exportBackup, importBackup, importBackupFromText, resetState, replaceAllData, clearAllData } from '../lib/store.js';
+import { exportBackup, importBackup, parseBackup, resetState, replaceAllData, clearAllData } from '../lib/store.js';
 import { roleLabel } from '../lib/defaults.js';
 import { loadTheme, applyTheme } from '../lib/theme.js';
 import { loadAccent, applyAccent, ACCENT_COLORS } from '../lib/accentColor.js';
@@ -35,25 +35,37 @@ export default function SettingsTab({ state, setState, onLogout, isAdmin, onOpen
   const displayName = (state.settings.displayName || '').trim();
   const role = roleLabel(state.settings);
 
+  // Il ripristino sostituisce tutto, anche sugli altri dispositivi: prima si chiede conferma
+  // mostrando cosa c'è nel backup e cosa si perde.
+  const restore = async ({ state: imported, exportedAt }) => {
+    const when = exportedAt ? ` del ${new Date(exportedAt).toLocaleDateString('it-IT')}` : '';
+    const ok = await confirmAction(
+      `Il backup${when} contiene ${imported.sites.length} sedi e ${imported.shifts.length} turni. Sostituirà tutti i dati attuali `
+      + `(${state.sites.length} sedi e ${state.shifts.length} turni), anche sugli altri dispositivi: ciò che hai aggiunto dopo il backup andrà perso.`,
+      { title: 'Ripristinare il backup?', danger: true, confirmLabel: 'Ripristina', cancelLabel: 'Annulla' },
+    );
+    if (!ok) return false;
+    setState((cur) => replaceAllData(cur, imported));
+    setMsg({ type: 'info', text: `Backup ripristinato: ${imported.sites.length} sedi, ${imported.shifts.length} turni.` });
+    return true;
+  };
+
   const doImport = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
-      const imported = await importBackup(file);
-      setState((cur) => replaceAllData(cur, imported));
-      setMsg({ type: 'info', text: `Backup importato: ${imported.sites.length} sedi, ${imported.shifts.length} turni.` });
+      await restore(await importBackup(file));
     } catch (err) {
       setMsg({ type: 'warn', text: err.message });
     } finally { e.target.value = ''; }
   };
 
-  const doImportText = () => {
+  const doImportText = async () => {
     try {
-      const imported = importBackupFromText(pasteText);
-      setState((cur) => replaceAllData(cur, imported));
-      setMsg({ type: 'info', text: `Backup importato: ${imported.sites.length} sedi, ${imported.shifts.length} turni.` });
-      setPasteText('');
-      setPasteOpen(false);
+      if (await restore(parseBackup(pasteText))) {
+        setPasteText('');
+        setPasteOpen(false);
+      }
     } catch (err) {
       setMsg({ type: 'warn', text: err.message });
     }
@@ -216,6 +228,8 @@ export default function SettingsTab({ state, setState, onLogout, isAdmin, onOpen
       </div>
       )}
 
+      {/* errore dell'eliminazione account (es. senza connessione): il messaggio del backup qui non si vede */}
+      {section === 'account' && msg && <div className={`hint hint-${msg.type}`}>{msg.text}</div>}
       {show('account') && (
         <button className="danger-link" style={{ marginBottom: 18 }} onClick={doDeleteAccount} disabled={deleting}>
           {deleting ? 'Eliminazione in corso…' : 'Elimina il mio account e tutti i dati'}

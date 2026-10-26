@@ -327,16 +327,27 @@ export async function exportBackup(state) {
   return saved;
 }
 
-export function importBackupFromText(text) {
+// Legge un backup: { state, exportedAt }. Un JSON qualsiasi (di un'altra app, `{}`, `[]`) viene
+// rifiutato: ripristinarlo sostituirebbe tutti i dati con uno stato vuoto, su ogni dispositivo.
+export function parseBackup(text) {
   let parsed;
   try {
     parsed = JSON.parse(text);
   } catch {
     throw new Error('Testo non valido: non è un JSON corretto.');
   }
-  const raw = parsed && parsed.state ? parsed.state : parsed;
-  if (parsed?.app && parsed.app !== 'turnio') throw new Error('Il testo non è un backup di Turnio.');
-  return sanitizeState(raw);
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('Il testo non è un backup di Turnio.');
+  if (parsed.app && parsed.app !== 'turnio') throw new Error('Il testo non è un backup di Turnio.');
+  // formato dell'app { app: 'turnio', state }, oppure lo stato "nudo" dei backup più vecchi
+  const raw = parsed.app === 'turnio' ? parsed.state : parsed;
+  if (!raw || typeof raw !== 'object' || (!Array.isArray(raw.sites) && !Array.isArray(raw.shifts))) {
+    throw new Error('Il testo non è un backup di Turnio.');
+  }
+  return { state: sanitizeState(raw), exportedAt: typeof parsed.exportedAt === 'string' ? parsed.exportedAt : null };
+}
+
+export function importBackupFromText(text) {
+  return parseBackup(text).state;
 }
 
 export function importBackup(file) {
@@ -344,7 +355,7 @@ export function importBackup(file) {
     const reader = new FileReader();
     reader.onload = () => {
       try {
-        resolve(importBackupFromText(String(reader.result)));
+        resolve(parseBackup(String(reader.result)));
       } catch (err) {
         reject(err instanceof Error ? err : new Error('File non valido o danneggiato.'));
       }

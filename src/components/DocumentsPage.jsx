@@ -9,8 +9,8 @@ import { ListRow } from './AltroTab.jsx';
 const loadExcel = () => import('../lib/excel.js');
 const loadPdf = () => import('../lib/pdf.js');
 
-// Documenti: riepilogo del mese in PDF o Excel, foglio ore per una struttura, copia di sicurezza.
-export default function DocumentsPage({ state, year, month, setYear, setMonth, onOpenBackup }) {
+// Documenti: riepilogo del mese in PDF o Excel e foglio ore per una struttura.
+export default function DocumentsPage({ state, year, month, setYear, setMonth }) {
   const [timesheet, setTimesheet] = useState(false);
   const [busy, setBusy] = useState(false);
   useEffect(() => { loadExcel().catch(() => {}); loadPdf().catch(() => {}); }, []);
@@ -54,11 +54,6 @@ export default function DocumentsPage({ state, year, month, setYear, setMonth, o
       <div className="lcard">
         <ListRow color="vio" icon="doc" title="Foglio ore di una struttura" sub="Turno per turno, con lo spazio per la firma"
           onClick={() => setTimesheet(true)} />
-      </div>
-
-      <div className="grp-title">I tuoi dati</div>
-      <div className="lcard">
-        <ListRow color="blue" icon="cloud" title="Copia di sicurezza" sub="Salva tutti i tuoi dati in un file" onClick={onOpenBackup} />
       </div>
 
       {timesheet && (

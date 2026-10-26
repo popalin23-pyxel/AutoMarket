@@ -1,6 +1,7 @@
 import React from 'react';
 import {
-  todayISO, monthDays, weekdayOf, shiftsToday, nextShiftAfter, computeMonthProgress, shiftsToConfirm, activeShifts,
+  todayISO, monthDays, weekdayOf, shiftsForToday, nextShiftAfter, computeMonthProgress, shiftsToConfirm, activeShifts, isShiftDone,
+  shiftStartDate,
 } from '../lib/calc.js';
 import { MONTHS_IT, WEEKDAYS_IT_LONG } from '../lib/defaults.js';
 import Icon from './icons/Icon.jsx';
@@ -11,7 +12,7 @@ const fmt = (n) => (n || 0).toLocaleString('it-IT', { useGrouping: 'always', min
 
 function formatDateLong(dateISO) {
   const [y, m, d] = dateISO.split('-').map(Number);
-  return `${WEEKDAYS_IT_LONG[weekdayOf(y, m, d)]} ${d} ${MONTHS_IT[m - 1]}`;
+  return `${WEEKDAYS_IT_LONG[weekdayOf(y, m, d)]} ${d} ${MONTHS_IT[m - 1].toLowerCase()}`;
 }
 
 function siteFor(sites, siteId) {
@@ -24,7 +25,9 @@ export default function NotificheTab({ state, onBack }) {
   const m = Number(today.slice(5, 7));
   const dayOfMonth = Number(today.slice(8, 10));
 
-  const todays = shiftsToday(state.shifts, today);
+  const now = new Date();
+  // turni di oggi non ancora finiti, compresa la notte iniziata ieri
+  const todays = shiftsForToday(state.shifts, now).filter((sh) => !isShiftDone(sh, now));
   const upcoming = !todays.length ? nextShiftAfter(state.shifts, today) : null;
   const progress = computeMonthProgress(state.shifts, state.sites, state.settings, y, m, state.occasionalWork);
   const month = progress.done; // netto già guadagnato (turni finiti)
@@ -32,23 +35,20 @@ export default function NotificheTab({ state, onBack }) {
   const goal = Number(state.settings.monthlyGoal) || 0;
 
   const items = [];
-  const now = new Date();
 
   if (toConfirm.length > 0) {
     items.push({ id: 'confirm', icon: 'checkCircle', tile: 'teal', title: toConfirm.length === 1 ? 'Un turno da confermare' : `${toConfirm.length} turni da confermare`,
-      text: 'In Home puoi segnare se sono andati come previsto, se è cambiato l\'orario o se non li hai fatti.' });
+      text: 'In Oggi puoi segnare se sono andati come previsto, se è cambiato l\'orario o se non li hai fatti.' });
   }
 
   for (const sh of todays) {
-    const [h, mn] = sh.start.split(':').map(Number);
-    const startDate = new Date(); startDate.setHours(h, mn, 0, 0);
-    const diffMin = (startDate - now) / 60000;
+    const diffMin = (shiftStartDate(sh) - now) / 60000;
     const site = siteFor(state.sites, sh.siteId);
     if (diffMin > 0 && diffMin <= 60) {
       items.push({ id: `soon-${sh.id}`, icon: 'bell', tile: 'rose', title: 'Turno tra poco',
         text: `Inizia alle ${sh.start} — ${site.name}`, site });
     } else {
-      items.push({ id: `today-${sh.id}`, icon: 'calendar', tile: 'teal', title: 'Turno di oggi',
+      items.push({ id: `today-${sh.id}`, icon: 'calendar', tile: 'teal', title: diffMin <= 0 ? 'Turno in corso' : 'Turno di oggi',
         text: `${site.name} · ${sh.start}–${sh.end}`, site });
     }
   }
@@ -64,7 +64,7 @@ export default function NotificheTab({ state, onBack }) {
     const forecast = progress.total.netTotal;
     if (month.netTotal >= goal) {
       items.push({ id: 'goal-done', icon: 'checkCircle', tile: 'lime', title: 'Obiettivo raggiunto 🎯',
-        text: `Netto di ${MONTHS_IT[m - 1]}: €${fmt(month.netTotal)} su €${fmt(goal)}` });
+        text: `Netto di ${MONTHS_IT[m - 1].toLowerCase()}: €${fmt(month.netTotal)} su €${fmt(goal)}` });
     } else if (forecast >= goal) {
       items.push({ id: 'goal-covered', icon: 'checkCircle', tile: 'teal', title: 'Obiettivo coperto',
         text: `Con i turni in programma arrivi a €${fmt(forecast)} su €${fmt(goal)}.` });
@@ -95,7 +95,7 @@ export default function NotificheTab({ state, onBack }) {
       if (hours >= cap * 0.9) {
         items.push({ id: `cap-${site.id}`, icon: 'hourglass', tile: hours > cap ? 'rose' : 'gold',
           title: hours > cap ? 'Tetto di ore superato' : 'Vicina al tetto di ore', site,
-          text: `${site.name}: ${hours} ore su ${cap} questo mese (turni in programma compresi).` });
+          text: `${site.name}: ${hours.toLocaleString('it-IT', { maximumFractionDigits: 1 })} ore su ${cap.toLocaleString('it-IT')} questo mese (turni in programma compresi).` });
       }
     }
   }
@@ -112,12 +112,12 @@ export default function NotificheTab({ state, onBack }) {
 
   if (monthDays(y, m) - dayOfMonth <= 3 && (month.shiftCount > 0 || month.occasionalCount > 0)) {
     items.push({ id: 'month-end', icon: 'history', tile: 'indigo', title: 'Il mese sta per finire',
-      text: `Finora a ${MONTHS_IT[m - 1]}: €${fmt(month.netTotal)} netti stimati.` });
+      text: `Finora a ${MONTHS_IT[m - 1].toLowerCase()}: €${fmt(month.netTotal)} netti stimati.` });
   }
 
   return (
     <div className="panel">
-      {onBack && <button className="btn btn-sm" style={{ marginBottom: 12 }} onClick={onBack}>‹ Home</button>}
+      {onBack && <button className="btn btn-sm" style={{ marginBottom: 12 }} onClick={onBack}>‹ Oggi</button>}
       <h2 className="panel-title">Notifiche</h2>
       <p className="panel-desc">Promemoria basati sui tuoi dati, visibili quando apri l'app (non sono notifiche push del telefono).</p>
 
@@ -131,7 +131,7 @@ export default function NotificheTab({ state, onBack }) {
               <div className="notif-body">
                 <div className="notif-title">{it.title}</div>
                 <div className="notif-text">
-                  {it.site && <SiteAvatar site={it.site} size={14} />} {it.text}
+                  {it.site && <SiteAvatar site={it.site} size={14} />}<span className="notif-text-body">{it.text}</span>
                 </div>
               </div>
             </div>

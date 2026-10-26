@@ -42,7 +42,7 @@ export default function AltroTab({ state, user, isAdmin, onOpen, onTool, onOpenP
   const activeSites = state.sites.filter((s) => !s.archived);
   const sitesSub = activeSites.length ? activeSites.map((s) => s.name).join(' · ') : 'Aggiungi la prima';
   const fund = PENSION_FUNDS.find((f) => f.id === st.pensionFund);
-  const regime = st.fiscalRegime === 'forfettario' ? 'Forfettario' : st.fiscalRegime === 'ordinario' ? 'Ordinario' : 'Da impostare';
+  const regime = { forfettario: 'Forfettario', ordinario: 'Ordinario', altro: 'Altro regime' }[st.fiscalRegime] ?? 'Da impostare';
   const taxSub = [regime, fund && fund.id !== 'altro' ? fund.label : ''].filter(Boolean).join(' · ');
   const goal = Number(st.monthlyGoal) || 0;
 

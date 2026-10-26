@@ -57,7 +57,11 @@ export default function MarkEditor({ date, mark, onSave, onUpdate, onDelete, onC
         {!mark && validRange && days > 1 && (
           <div className="editor-hours-preview" style={{ marginTop: 8 }}>{days} giorni</div>
         )}
-        {!validRange && <p className="hint hint-warn" style={{ marginTop: 10 }}>La data di fine viene prima di quella di inizio.</p>}
+        {!validRange && (
+          <p className="hint hint-warn" style={{ marginTop: 10 }}>
+            {!from ? 'Scegli il giorno di inizio.' : 'La data di fine viene prima di quella di inizio.'}
+          </p>
+        )}
 
         <div className="editor-label">Nota (opzionale)</div>
         <input type="text" value={note} placeholder="es. corso BLSD, viaggio"

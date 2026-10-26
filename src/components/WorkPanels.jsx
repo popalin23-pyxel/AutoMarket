@@ -49,7 +49,7 @@ export function GoalPanel({ state, setState }) {
           <label className="field-label">Obiettivo netto (€)</label>
           <NumberInput value={state.settings.monthlyGoal}
             onChange={(v) => setState((s) => updateSettings(s, { monthlyGoal: v === '' || v == null ? 0 : v }))}
-            min={0} max={99999} allowEmpty />
+            min={0} max={99999} />
         </div>
       </div>
       <GoalTimeCalculator state={state} />

@@ -108,6 +108,25 @@ export function shiftsToday(shifts, todayDateISO = todayISO()) {
   return activeShifts(shiftsOnDay(shifts, todayDateISO)).sort(byDateThenStart);
 }
 
+/**
+ * Turni che riguardano "adesso": quelli con la data di oggi e la notte iniziata ieri che non è
+ * ancora finita (alle 2 di notte il turno 20:00–08:00 di ieri è il turno in corso).
+ */
+export function shiftsForToday(shifts, now = new Date()) {
+  const today = toISO(now);
+  const yesterday = toISO(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1));
+  return activeShifts(shifts)
+    .filter((s) => s.date === today || (s.date === yesterday && !isShiftDone(s, now)))
+    .sort(byDateThenStart);
+}
+
+export function shiftStartDate(shift) {
+  const [y, mo, d] = (shift?.date || '').split('-').map(Number);
+  const [h, m] = (shift?.start || '').split(':').map(Number);
+  if (!y || !mo || !d || Number.isNaN(h) || Number.isNaN(m)) return null;
+  return new Date(y, mo - 1, d, h, m);
+}
+
 /** Il primo turno futuro (data successiva a quella data), utile per "prossimo turno". */
 export function nextShiftAfter(shifts, dateISO) {
   const future = shifts.filter((s) => s.date > dateISO && !isCancelled(s));
@@ -455,6 +474,42 @@ export function computeMonthProgress(shifts, sites, settings, year, month, occas
     planned: computeMonthSummary(plannedShifts, sites, settings, year, month, plannedOcc),
     total: computeMonthSummary(monthShifts, sites, settings, year, month, monthOcc),
   };
+}
+
+/** Come computeMonthProgress, per un intervallo di date [startISO, endISO]. */
+export function computeRangeProgress(shifts, sites, settings, startISO, endISO, occasionalWork = [], now = new Date()) {
+  const inShifts = shiftsInRange(shifts, startISO, endISO);
+  const inOcc = shiftsInRange(occasionalWork, startISO, endISO);
+  const todayStr = toISO(now);
+  const sum = (sh, occ) => computeRangeSummary(sh, sites, settings, startISO, endISO, occ);
+  return {
+    done: sum(inShifts.filter((s) => isShiftDone(s, now)), inOcc.filter((o) => (o.date || '') <= todayStr)),
+    planned: sum(inShifts.filter((s) => !isShiftDone(s, now)), inOcc.filter((o) => (o.date || '') > todayStr)),
+    total: sum(inShifts, inOcc),
+  };
+}
+
+/**
+ * Questa settimana fin qui contro la settimana scorsa allo stesso punto (stesso giorno e ora):
+ * confrontare la settimana appena iniziata con quella scorsa intera darebbe sempre un calo.
+ */
+export function compareWeekSoFar(shifts, sites, settings, now = new Date(), occasionalWork = []) {
+  const today = toISO(now);
+  const cur = computeRangeProgress(shifts, sites, settings, startOfWeek(today), endOfWeek(today), occasionalWork, now);
+  const prevNow = new Date(now); prevNow.setDate(prevNow.getDate() - 7);
+  const prevDay = toISO(prevNow);
+  const previous = computeRangeProgress(shifts, sites, settings, startOfWeek(prevDay), endOfWeek(prevDay), occasionalWork, prevNow).done;
+  return { ...cur, previous, deltaNetPct: pctDelta(cur.done.netTotal, previous.netTotal) };
+}
+
+/** Il mese fin qui contro il mese scorso fino allo stesso giorno (e ora). */
+export function compareMonthSoFar(shifts, sites, settings, now = new Date(), occasionalWork = []) {
+  const y = now.getFullYear(), m = now.getMonth() + 1;
+  const py = m === 1 ? y - 1 : y, pm = m === 1 ? 12 : m - 1;
+  const prevNow = new Date(py, pm - 1, Math.min(now.getDate(), monthDays(py, pm)), now.getHours(), now.getMinutes());
+  const current = computeMonthProgress(shifts, sites, settings, y, m, occasionalWork, now).done;
+  const previous = computeMonthProgress(shifts, sites, settings, py, pm, occasionalWork, prevNow).done;
+  return { current, previous, deltaNetPct: pctDelta(current.netTotal, previous.netTotal) };
 }
 
 export function computeYearSummary(shifts, sites, settings, year, occasionalWork = []) {

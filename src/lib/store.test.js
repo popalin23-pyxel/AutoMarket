@@ -93,6 +93,12 @@ describe('importBackupFromText: ripristino da file di backup', () => {
       .toThrow(/non è un backup di Turnio/i);
   });
 
+  it('un JSON valido ma che non è un backup ({}, [], null, altri dati) viene rifiutato, non svuota tutto', () => {
+    for (const t of ['{}', '[]', 'null', '42', JSON.stringify({ app: 'turnio' }), JSON.stringify({ nome: 'x', lista: [1, 2] })]) {
+      expect(() => importBackupFromText(t)).toThrow(/non è un backup di Turnio/i);
+    }
+  });
+
   it('un backup vecchio senza tombstones/expenses (versioni precedenti dell\'app) si ripristina comunque, senza crash', () => {
     const oldState = {
       sites: [{ id: 1, name: 'CDS', color: '#14b8a6', rate: 27 }],

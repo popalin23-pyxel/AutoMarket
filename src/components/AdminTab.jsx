@@ -33,7 +33,7 @@ export default function AdminTab({ onBack }) {
 
   return (
     <div className="panel">
-      {onBack && <button className="btn btn-sm" style={{ marginBottom: 12 }} onClick={onBack}>‹ Profilo</button>}
+      {onBack && <button className="btn btn-sm" style={{ marginBottom: 12 }} onClick={onBack}>‹ Altro</button>}
       <h2 className="panel-title">⚡ Super Admin</h2>
       <p className="panel-desc">Approva i nuovi account e assegna i ruoli. Finché un utente non è "Approvato" non può usare Turnio.</p>
 

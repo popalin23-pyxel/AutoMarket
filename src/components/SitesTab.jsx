@@ -14,6 +14,7 @@ const fmtDay = (iso) => { const [y, m, d] = iso.split('-'); return `${Number(d)}
 export default function SitesTab({ state, setState }) {
   const [name, setName] = useState('');
   const [rate, setRate] = useState('');
+  const [addError, setAddError] = useState('');
   const [color, setColor] = useState(SITE_COLORS[state.sites.length % SITE_COLORS.length]);
   const confirmAction = useConfirm();
   const [rateSite, setRateSite] = useState(null); // sede di cui si cambia la paga
@@ -27,8 +28,10 @@ export default function SitesTab({ state, setState }) {
     const n = name.trim();
     // 0 è una paga oraria valida (es. una sede "Appuntamento" per promemoria,
     // non un vero turno pagato) — niente a che fare col campo vuoto.
-    if (!n || rate === '' || rate == null) return;
+    if (!n) { setAddError('Scrivi il nome della sede.'); return; }
+    if (rate === '' || rate == null) { setAddError('Scrivi la paga oraria (anche 0, se non è pagata).'); return; }
     setState((s) => addSite(s, n, rate, { color }));
+    setAddError('');
     setName(''); setRate(''); setColor(SITE_COLORS[(state.sites.length + 1) % SITE_COLORS.length]);
   };
 
@@ -53,7 +56,7 @@ export default function SitesTab({ state, setState }) {
       <h2 className="panel-title">Sedi di lavoro</h2>
       <p className="panel-desc">
         Aggiungi ogni posto dove lavori con la sua paga oraria. La rivalsa lasciala vuota per usare
-        quella di default (in Fiscali); impostala solo se questa sede fa eccezione.
+        quella di default (in Tasse e cassa); impostala solo se questa sede fa eccezione.
       </p>
 
       <div className="form-row">
@@ -79,6 +82,7 @@ export default function SitesTab({ state, setState }) {
         </div>
         <button className="btn btn-primary" onClick={add}>Aggiungi</button>
       </div>
+      {addError && <div className="hint hint-warn">{addError}</div>}
 
       {activeSites.length === 0 && (
         <EmptyState icon="mapPin" title="Nessuna sede configurata" hint="Aggiungine una qui sopra per iniziare a registrare i turni." />

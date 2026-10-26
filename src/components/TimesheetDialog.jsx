@@ -48,6 +48,7 @@ export default function TimesheetDialog({ state, siteId, year, month, onClose })
         </p>
 
         <div className="editor-label">Struttura</div>
+        {sites.length === 0 && <p className="hint hint-warn">Non hai ancora sedi: aggiungile in Altro → Sedi e paghe.</p>}
         <div className="site-picker">
           {sites.map((s) => (
             <button key={s.id} type="button" className={`site-pick-btn ${sel === s.id ? 'sel' : ''}`} onClick={() => setSel(s.id)}>

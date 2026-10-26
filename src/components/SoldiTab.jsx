@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { computeMonthProgress, compareMonths, todayISO } from '../lib/calc.js';
+import { computeMonthProgress, compareMonths } from '../lib/calc.js';
 import { MONTHS_IT } from '../lib/defaults.js';
 import Icon from './icons/Icon.jsx';
 import { ListRow } from './AltroTab.jsx';
@@ -15,15 +15,15 @@ function BigEuro({ value }) {
 }
 
 // Soldi: quanto ti resta, spiegato come un conto in colonna, e sotto il dettaglio.
-export default function SoldiTab({ state, year, month, setYear, setMonth, onOpen }) {
-  const today = todayISO();
-  const curY = Number(today.slice(0, 4));
-  const curM = Number(today.slice(5, 7));
+export default function SoldiTab({ state, year, month, setYear, setMonth, onOpen, now = new Date() }) {
+  // `now` arriva da App (si aggiorna ogni minuto): quando un turno finisce, "finora" cresce da solo
+  const curY = now.getFullYear();
+  const curM = now.getMonth() + 1;
   const when = year * 12 + month - (curY * 12 + curM); // <0 passato, 0 questo mese, >0 futuro
 
   const progress = useMemo(
-    () => computeMonthProgress(state.shifts, state.sites, state.settings, year, month, state.occasionalWork),
-    [state.shifts, state.sites, state.settings, year, month, state.occasionalWork],
+    () => computeMonthProgress(state.shifts, state.sites, state.settings, year, month, state.occasionalWork, now),
+    [state.shifts, state.sites, state.settings, year, month, state.occasionalWork, now],
   );
   const cmp = useMemo(
     () => compareMonths(state.shifts, state.sites, state.settings, year, month, state.occasionalWork),
@@ -38,7 +38,8 @@ export default function SoldiTab({ state, year, month, setYear, setMonth, onOpen
   const aside = shown.taxes + (shown.occasionalTaxes || 0);
   const perHour = shown.totalHours > 0 ? shown.net / shown.totalHours : 0;
   const goal = Number(state.settings.monthlyGoal) || 0;
-  const pct = (v) => (goal > 0 ? Math.round((v / goal) * 100) : 0);
+  // per difetto: 99,6% non deve diventare "100%" se l'obiettivo non è raggiunto
+  const pct = (v) => (goal > 0 ? Math.floor((v / goal) * 100) : 0);
 
   const lead = when < 0 ? 'Tolte le tasse, ti sono rimasti'
     : when > 0 ? 'Con i turni in programma, tolte le tasse, ti resteranno'
@@ -48,7 +49,8 @@ export default function SoldiTab({ state, year, month, setYear, setMonth, onOpen
     const prefix = `${year}-${String(month).padStart(2, '0')}-`;
     return (state.expenses ?? []).filter((e) => (e.date || '').startsWith(prefix)).reduce((a, e) => a + (Number(e.amount) || 0), 0);
   }, [state.expenses, year, month]);
-  const perSiteSub = total.perSite.filter((p) => p.total > 0).slice(0, 3).map((p) => `${p.name} €${fmt0(p.total)}`).join(' · ');
+  // come il resto della pagina: questo mese solo i turni già fatti
+  const perSiteSub = shown.perSite.filter((p) => p.total > 0).slice(0, 3).map((p) => `${p.name} €${fmt0(p.total)}`).join(' · ');
 
   const prev = () => { if (month === 1) { setYear(year - 1); setMonth(12); } else setMonth(month - 1); };
   const next = () => { if (month === 12) { setYear(year + 1); setMonth(1); } else setMonth(month + 1); };
@@ -70,15 +72,17 @@ export default function SoldiTab({ state, year, month, setYear, setMonth, onOpen
         <div className="money-lead">{lead}</div>
         <div className="money-big-row">
           <span className="money-big"><BigEuro value={shown.netTotal} /></span>
-          {/* confronto solo su cifre complete: a metà mese "finora" contro un mese intero ingannerebbe */}
-          {hasData && !hasPlanned && (delta == null
+          {/* confronto solo per i mesi finiti: a metà mese (o per un mese futuro) le cifre sono parziali */}
+          {hasData && when < 0 && (delta == null
             ? <span className="pill-up new">nuovo</span>
             : <span className={`pill-up ${delta >= 0 ? 'up' : 'down'}`}>{delta >= 0 ? '↑' : '↓'} {fmt1(Math.abs(delta))}% su {prevName}</span>)}
         </div>
         <div className="money-sub">
           <Icon name="clock" size={16} />
-          {when > 0 ? 'Ore in programma' : 'Hai lavorato'} <b><span className="mono">{fmt1(shown.totalHours)}</span> ore</b>
-          {perHour > 0 && <> · €{fmt(perHour)} per ogni ora</>}
+          <span>
+            {when > 0 ? 'Ore in programma' : 'Hai lavorato'} <b><span className="mono">{fmt1(shown.totalHours)}</span> ore</b>
+            {perHour > 0 && <> · €{fmt(perHour)} per ogni ora</>}
+          </span>
         </div>
 
         <div className="conto">
@@ -135,7 +139,7 @@ export default function SoldiTab({ state, year, month, setYear, setMonth, onOpen
       <div className="grp-title">Nel dettaglio</div>
       <div className="lcard">
         <ListRow color="teal" icon="mapPin" title="Per sede" sub={perSiteSub || 'Quanto da ogni struttura'} onClick={() => onOpen('dettaglio')} />
-        <ListRow color="gold" icon="receipt" title="Spese" sub={monthExpenses > 0 ? `€${fmt(monthExpenses)} questo mese` : 'Benzina, divisa, corsi…'} onClick={() => onOpen('spese')} />
+        <ListRow color="gold" icon="receipt" title="Spese" sub={monthExpenses > 0 ? `€${fmt(monthExpenses)} a ${MONTHS_IT[month - 1].toLowerCase()}` : 'Benzina, divisa, corsi…'} onClick={() => onOpen('spese')} />
         <ListRow color="vio" icon="chart" title="Grafici" sub="Andamento, confronti, anno e ferie" onClick={() => onOpen('grafici')} />
         <ListRow color="blue" icon="download" title="Esporta e foglio ore" sub="PDF, Excel, foglio ore per la struttura" onClick={() => onOpen('documenti')} />
         <ListRow color="grn" icon="calc" title="Simulatore" sub="E se faccio un turno in più?" onClick={() => onOpen('simulatore')} />

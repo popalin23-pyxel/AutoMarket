@@ -197,15 +197,15 @@ function Shell() {
         <div key={`${active}:${subTab ?? ''}`} className="tab-fade">
           {active === 'dashboard' && (
             <DashboardTab state={state} setState={setState} userEmail={user?.email} isAdmin={isAdmin} onNavigate={navigate}
-              onOpenCurrentMonth={openCurrentMonth} />
+              onOpenCurrentMonth={openCurrentMonth} onAdd={() => setAddOpen(true)} />
           )}
           {active === 'calendar' && (
             <ShiftsTab state={state} setState={setState} year={year} month={month} setYear={setYear} setMonth={setMonth}
-              onNavigate={navigate} action={turniAction} onActionDone={() => setTurniAction(null)} />
+              onNavigate={navigate} action={turniAction} onActionDone={() => setTurniAction(null)} now={now} />
           )}
 
           {active === 'soldi' && !subPage && (
-            <SoldiTab state={state} year={year} month={month} setYear={setYear} setMonth={setMonth}
+            <SoldiTab state={state} year={year} month={month} setYear={setYear} setMonth={setMonth} now={now}
               onOpen={(sub) => navigate('soldi', sub)} />
           )}
           {active === 'soldi' && subPage === 'dettaglio' && subPageView('soldi',
@@ -214,8 +214,7 @@ function Shell() {
           {active === 'soldi' && subPage === 'grafici' && subPageView('soldi',
             <AnalisiTab state={state} initialSub={subArg || undefined} onOpenMonth={openMonthSummary} />)}
           {active === 'soldi' && subPage === 'documenti' && subPageView('soldi',
-            <DocumentsPage state={state} year={year} month={month} setYear={setYear} setMonth={setMonth}
-              onOpenBackup={() => navigate('altro', 'backup')} />)}
+            <DocumentsPage state={state} year={year} month={month} setYear={setYear} setMonth={setMonth} />)}
           {active === 'soldi' && subPage === 'simulatore' && subPageView('soldi', <EarningsSimulator state={state} onNavigate={navigate} />)}
 
           {active === 'altro' && !subPage && (
@@ -231,8 +230,7 @@ function Shell() {
           {active === 'altro' && subPage === 'fiscal' && subPageView('altro', <FiscalSettingsTab state={state} setState={setState} />)}
           {active === 'altro' && subPage === 'goal' && subPageView('altro', <GoalPanel state={state} setState={setState} />)}
           {active === 'altro' && subPage === 'documents' && subPageView('altro',
-            <DocumentsPage state={state} year={year} month={month} setYear={setYear} setMonth={setMonth}
-              onOpenBackup={() => navigate('altro', 'backup')} />)}
+            <DocumentsPage state={state} year={year} month={month} setYear={setYear} setMonth={setMonth} />)}
           {active === 'altro' && ['account', 'appearance', 'backup'].includes(subPage) && subPageView('altro',
             <SettingsTab state={state} setState={setState} onLogout={doLogout} isAdmin={isAdmin} section={subPage} />)}
 

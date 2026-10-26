@@ -35,7 +35,7 @@ export default function ShiftEditor({
   const [copyDate, setCopyDate] = useState('');
 
   const hours = hoursOfShift({ date, start, end });
-  const canSave = siteId != null && start && end;
+  const canSave = siteId != null && start && end && !!date;
   const showStatus = !!shift && (isShiftDone({ date, start, end }) || shift.status === 'cancelled');
   const site = sites.find((s) => s.id === siteId);
 
