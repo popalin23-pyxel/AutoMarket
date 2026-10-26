@@ -5,7 +5,7 @@ import GoalTimeCalculator from './GoalTimeCalculator.jsx';
 import NumberInput from './NumberInput.jsx';
 
 // Pannelli delle pagine "Sedi e paghe" e "Obiettivo" (in Altro).
-const fmt = (n) => n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmt = (n) => n.toLocaleString('it-IT', { useGrouping: 'always', minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 // Anteprima minima del mese per sede, sotto l'elenco sedi: il confronto completo è in Soldi → Grafici.
 export function SitesMonthPreview({ state, onNavigate }) {

@@ -12,9 +12,9 @@ import CountUpText from './CountUpText.jsx';
 import DeltaBadge from './DeltaBadge.jsx';
 import BackupReminder from './BackupReminder.jsx';
 
-const fmt = (n) => n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const fmt0 = (n) => n.toLocaleString('it-IT', { maximumFractionDigits: 1 });
-const fmtInt = (n) => n.toLocaleString('it-IT', { maximumFractionDigits: 0 });
+const fmt = (n) => n.toLocaleString('it-IT', { useGrouping: 'always', minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmt0 = (n) => n.toLocaleString('it-IT', { useGrouping: 'always', maximumFractionDigits: 1 });
+const fmtInt = (n) => n.toLocaleString('it-IT', { useGrouping: 'always', maximumFractionDigits: 0 });
 
 function greetingWord() {
   const h = new Date().getHours();

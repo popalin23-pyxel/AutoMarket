@@ -25,7 +25,7 @@ import WeekDuplicateDialog from './WeekDuplicateDialog.jsx';
 import TurniWeek from './TurniWeek.jsx';
 import Icon from './icons/Icon.jsx';
 
-const fmt = (n) => n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmt = (n) => n.toLocaleString('it-IT', { useGrouping: 'always', minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 const VIEW_KEY = 'turnio_view_pref';
 const MODE_KEY = 'turnio_turni_mode'; // 'week' | 'month'

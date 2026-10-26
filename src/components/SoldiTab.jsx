@@ -4,9 +4,9 @@ import { MONTHS_IT } from '../lib/defaults.js';
 import Icon from './icons/Icon.jsx';
 import { ListRow } from './AltroTab.jsx';
 
-const fmt = (n) => (Number(n) || 0).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const fmt0 = (n) => (Number(n) || 0).toLocaleString('it-IT', { maximumFractionDigits: 0 });
-const fmt1 = (n) => (Number(n) || 0).toLocaleString('it-IT', { maximumFractionDigits: 1 });
+const fmt = (n) => (Number(n) || 0).toLocaleString('it-IT', { useGrouping: 'always', minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmt0 = (n) => (Number(n) || 0).toLocaleString('it-IT', { useGrouping: 'always', maximumFractionDigits: 0 });
+const fmt1 = (n) => (Number(n) || 0).toLocaleString('it-IT', { useGrouping: 'always', maximumFractionDigits: 1 });
 
 // Euro grandi con i centesimi più piccoli: €3.051,31
 function BigEuro({ value }) {

@@ -5,7 +5,7 @@ import { useBackClose } from '../lib/backStack.js';
 import Portal from '../lib/Portal.jsx';
 import NumberInput from './NumberInput.jsx';
 
-const fmt = (n) => (Number(n) || 0).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmt = (n) => (Number(n) || 0).toLocaleString('it-IT', { useGrouping: 'always', minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 // Cambio della paga oraria di una sede: da una certa data in poi (i turni precedenti
 // restano con la tariffa di allora) oppure come correzione su tutti i turni.

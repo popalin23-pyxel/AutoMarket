@@ -5,8 +5,8 @@ import { PENSION_FUNDS, suggestedFund, rivalsaLabel } from '../lib/defaults.js';
 import NumberInput from './NumberInput.jsx';
 import Icon from './icons/Icon.jsx';
 
-const fmt = (n) => (n || 0).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const pct = (n) => (Number(n) || 0).toLocaleString('it-IT', { maximumFractionDigits: 2 });
+const fmt = (n) => (n || 0).toLocaleString('it-IT', { useGrouping: 'always', minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const pct = (n) => (Number(n) || 0).toLocaleString('it-IT', { useGrouping: 'always', maximumFractionDigits: 2 });
 
 const REGIMES = [
   { id: 'forfettario', label: 'Forfettario' },

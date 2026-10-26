@@ -13,7 +13,7 @@ import CountUpText from './CountUpText.jsx';
 import { useCountUp } from '../lib/useCountUp.js';
 import { useSwipe } from '../lib/useSwipe.js';
 
-const fmt = (n) => n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmt = (n) => n.toLocaleString('it-IT', { useGrouping: 'always', minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 export default function SummaryTab({ state, year, month, setYear, setMonth }) {
   const sum = useMemo(

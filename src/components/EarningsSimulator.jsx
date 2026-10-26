@@ -4,7 +4,7 @@ import EmptyState from './EmptyState.jsx';
 import NumberInput from './NumberInput.jsx';
 import { computeTaxes, siteRateOn, todayISO } from '../lib/calc.js';
 
-const fmt = (n) => n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmt = (n) => n.toLocaleString('it-IT', { useGrouping: 'always', minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const round2 = (n) => Math.round((n + Number.EPSILON) * 100) / 100;
 
 export default function EarningsSimulator({ state, onNavigate }) {

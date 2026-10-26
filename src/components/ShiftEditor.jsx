@@ -7,7 +7,7 @@ import Portal from '../lib/Portal.jsx';
 import SiteAvatar from './SiteAvatar.jsx';
 import NumberInput from './NumberInput.jsx';
 
-const fmt = (n) => n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmt = (n) => n.toLocaleString('it-IT', { useGrouping: 'always', minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const round2 = (n) => Math.round((n + Number.EPSILON) * 100) / 100;
 const longDate = (iso) => {
   const d = new Date(iso + 'T00:00:00');

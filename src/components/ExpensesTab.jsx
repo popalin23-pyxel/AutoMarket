@@ -7,7 +7,7 @@ import Icon from './icons/Icon.jsx';
 import NumberInput from './NumberInput.jsx';
 import EmptyState from './EmptyState.jsx';
 
-const fmt = (n) => (n || 0).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmt = (n) => (n || 0).toLocaleString('it-IT', { useGrouping: 'always', minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const catFor = (id) => EXPENSE_CATEGORIES.find((c) => c.id === id) || EXPENSE_CATEGORIES[EXPENSE_CATEGORIES.length - 1];
 
 export default function ExpensesTab({ state, setState }) {

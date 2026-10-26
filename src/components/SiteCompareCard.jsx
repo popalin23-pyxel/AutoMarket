@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { computeRangeSummary } from '../lib/calc.js';
 import SiteAvatar from './SiteAvatar.jsx';
 
-const fmt = (n) => n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmt = (n) => n.toLocaleString('it-IT', { useGrouping: 'always', minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 export default function SiteCompareCard({ state, year, yearSelect }) {
   const yearRange = useMemo(

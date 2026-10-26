@@ -10,8 +10,8 @@ import DeltaBadge from './DeltaBadge.jsx';
 import HistoryTab from './HistoryTab.jsx';
 import SiteCompareCard from './SiteCompareCard.jsx';
 
-const fmt = (n) => n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const fmt0 = (n) => n.toLocaleString('it-IT', { maximumFractionDigits: 1 });
+const fmt = (n) => n.toLocaleString('it-IT', { useGrouping: 'always', minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmt0 = (n) => n.toLocaleString('it-IT', { useGrouping: 'always', maximumFractionDigits: 1 });
 
 const SUB_TABS = [
   { id: 'trend', label: 'Andamento' },

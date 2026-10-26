@@ -7,7 +7,7 @@ import { WEEKDAYS_IT } from './defaults.js';
 import { pdfSafe } from './pdfText.js';
 import { saveFile } from './saveFile.js';
 
-const fmt = (n) => (n ?? 0).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmt = (n) => (n ?? 0).toLocaleString('it-IT', { useGrouping: 'always', minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const itDate = (iso) => { const [y, m, d] = iso.split('-'); return `${d}/${m}/${y}`; };
 const weekday = (iso) => { const [y, m, d] = iso.split('-').map(Number); return WEEKDAYS_IT[(new Date(y, m - 1, d).getDay() + 6) % 7]; };
 const fileBase = (ts) => `foglio-ore_${ts.site.name.replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-|-$/g, '').toLowerCase() || 'sede'}_${ts.fromISO}_${ts.toISO}`;

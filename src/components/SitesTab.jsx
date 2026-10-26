@@ -8,7 +8,7 @@ import RateChangeDialog from './RateChangeDialog.jsx';
 import { siteRateOn, scheduledRateChange, todayISO } from '../lib/calc.js';
 import SiteDetailsDialog from './SiteDetailsDialog.jsx';
 
-const fmtRate = (n) => (Number(n) || 0).toLocaleString('it-IT', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+const fmtRate = (n) => (Number(n) || 0).toLocaleString('it-IT', { useGrouping: 'always', minimumFractionDigits: 0, maximumFractionDigits: 2 });
 const fmtDay = (iso) => { const [y, m, d] = iso.split('-'); return `${Number(d)}/${Number(m)}/${y.slice(2)}`; };
 
 export default function SitesTab({ state, setState }) {

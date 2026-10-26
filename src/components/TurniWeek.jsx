@@ -6,8 +6,8 @@ import {
 import { MONTHS_IT, WEEKDAYS_IT, dayMarkKind } from '../lib/defaults.js';
 import Icon from './icons/Icon.jsx';
 
-const fmt = (n) => (Number(n) || 0).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const fmt1 = (n) => (Number(n) || 0).toLocaleString('it-IT', { maximumFractionDigits: 1 });
+const fmt = (n) => (Number(n) || 0).toLocaleString('it-IT', { useGrouping: 'always', minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmt1 = (n) => (Number(n) || 0).toLocaleString('it-IT', { useGrouping: 'always', maximumFractionDigits: 1 });
 const dayNum = (iso) => Number(iso.slice(8));
 
 function weekTitle(start, today) {

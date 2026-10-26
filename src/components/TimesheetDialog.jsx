@@ -5,7 +5,7 @@ import { useLockBodyScroll } from '../lib/useLockBodyScroll.js';
 import { useBackClose } from '../lib/backStack.js';
 import Portal from '../lib/Portal.jsx';
 
-const fmt = (n) => (n ?? 0).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmt = (n) => (n ?? 0).toLocaleString('it-IT', { useGrouping: 'always', minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const loadTimesheet = () => import('../lib/timesheet.js');
 
 // Foglio ore da mandare a una struttura: una sede, un periodo (di base il mese aperto).

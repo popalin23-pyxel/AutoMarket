@@ -10,8 +10,8 @@ import ShiftEditor from './ShiftEditor.jsx';
 import OccasionalEditor from './OccasionalEditor.jsx';
 import MarkEditor from './MarkEditor.jsx';
 
-const fmt0 = (n) => (Number(n) || 0).toLocaleString('it-IT', { maximumFractionDigits: 0 });
-const fmt1 = (n) => (Number(n) || 0).toLocaleString('it-IT', { maximumFractionDigits: 1 });
+const fmt0 = (n) => (Number(n) || 0).toLocaleString('it-IT', { useGrouping: 'always', maximumFractionDigits: 0 });
+const fmt1 = (n) => (Number(n) || 0).toLocaleString('it-IT', { useGrouping: 'always', maximumFractionDigits: 1 });
 
 function longDate(iso) {
   const d = new Date(iso + 'T00:00:00');

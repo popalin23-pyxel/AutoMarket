@@ -2,8 +2,8 @@ import React, { useMemo } from 'react';
 import { computeMonthProgress, computeTaxes, siteRateOn, todayISO } from '../lib/calc.js';
 import EmptyState from './EmptyState.jsx';
 
-const fmt = (n) => n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const fmt1 = (n) => n.toLocaleString('it-IT', { maximumFractionDigits: 1 });
+const fmt = (n) => n.toLocaleString('it-IT', { useGrouping: 'always', minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmt1 = (n) => n.toLocaleString('it-IT', { useGrouping: 'always', maximumFractionDigits: 1 });
 const round2 = (n) => Math.round((n + Number.EPSILON) * 100) / 100;
 
 export default function GoalTimeCalculator({ state }) {

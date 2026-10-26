@@ -4,7 +4,7 @@ import { isStandalone } from '../lib/install.js';
 import Icon from './icons/Icon.jsx';
 import InstallGuide from './InstallGuide.jsx';
 
-const fmt0 = (n) => (Number(n) || 0).toLocaleString('it-IT', { maximumFractionDigits: 0 });
+const fmt0 = (n) => (Number(n) || 0).toLocaleString('it-IT', { useGrouping: 'always', maximumFractionDigits: 0 });
 
 function Tile({ color, icon, title, sub, onClick }) {
   return (

@@ -6,7 +6,7 @@ import YearHeatmap from './charts/YearHeatmap.jsx';
 import EmptyState from './EmptyState.jsx';
 import CountUpText from './CountUpText.jsx';
 
-const fmt = (n) => n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmt = (n) => n.toLocaleString('it-IT', { useGrouping: 'always', minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 // Riepilogo di un anno (selezionato dal genitore, Analisi → Anno).
 export default function HistoryTab({ state, year, yearSelect, onOpenMonth }) {

@@ -7,7 +7,7 @@ import Icon from './icons/Icon.jsx';
 import SiteAvatar from './SiteAvatar.jsx';
 import EmptyState from './EmptyState.jsx';
 
-const fmt = (n) => (n || 0).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmt = (n) => (n || 0).toLocaleString('it-IT', { useGrouping: 'always', minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 function formatDateLong(dateISO) {
   const [y, m, d] = dateISO.split('-').map(Number);

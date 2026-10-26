@@ -175,7 +175,7 @@ function Shell() {
           <span className="brand-logo">Turn<span className="accent">io</span></span>
           {(monthSummary.shiftCount > 0 || monthSummary.occasionalCount > 0) && (
             <span className="brand-sub">
-              Questo mese: €{monthProgress.done.netTotal.toLocaleString('it-IT', { maximumFractionDigits: 0 })} netto finora
+              Questo mese: €{monthProgress.done.netTotal.toLocaleString('it-IT', { useGrouping: 'always', maximumFractionDigits: 0 })} netto finora
             </span>
           )}
         </div>

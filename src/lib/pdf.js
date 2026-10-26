@@ -5,7 +5,7 @@ import { MONTHS_IT } from './defaults.js';
 import { pdfSafe } from './pdfText.js';
 import { saveFile } from './saveFile.js';
 
-const fmt = (n) => (n ?? 0).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmt = (n) => (n ?? 0).toLocaleString('it-IT', { useGrouping: 'always', minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 
 export function exportMonthPdf(sum, opts = {}) {
