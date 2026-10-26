@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import App from './App.jsx';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
 import './lib/install.js'; // cattura subito l'invito a installare l'app (Android/Chrome)
+import { reloadOnce, chunkLoadOk } from './lib/loadChunk.js';
 import './styles.css';
 
 // Quando pubblichiamo un aggiornamento il service worker lo scarica in background, ma la
@@ -28,6 +29,10 @@ if ('serviceWorker' in navigator) {
     });
   });
 }
+
+// un pezzo dell'app non più disponibile dopo un aggiornamento (vedi lib/loadChunk.js)
+window.addEventListener('vite:preloadError', (e) => { if (reloadOnce()) e.preventDefault(); });
+window.addEventListener('load', () => setTimeout(chunkLoadOk, 10000));
 
 createRoot(document.getElementById('root')).render(
   <React.StrictMode>

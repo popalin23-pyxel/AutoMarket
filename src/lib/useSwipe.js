@@ -6,6 +6,9 @@ export function useSwipe(onSwipeLeft, onSwipeRight, threshold = 50) {
 
   const onTouchStart = (e) => {
     const t = e.touches[0];
+    // dal bordo dello schermo Safari (iPhone) fa "Indietro": quei gesti non cambiano mese
+    const edge = 24;
+    if (t.clientX < edge || t.clientX > window.innerWidth - edge) { start.current = null; return; }
     start.current = { x: t.clientX, y: t.clientY };
   };
 

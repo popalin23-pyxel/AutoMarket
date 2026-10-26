@@ -4,10 +4,11 @@ import { MONTHS_IT, professionalHeaderLines, rivalsaLabel } from '../lib/default
 import Icon from './icons/Icon.jsx';
 import TimesheetDialog from './TimesheetDialog.jsx';
 import { ListRow } from './AltroTab.jsx';
+import { loadChunk } from '../lib/loadChunk.js';
 
 // PDF ed Excel si caricano solo quando servono (pesano ~675 KB)
-const loadExcel = () => import('../lib/excel.js');
-const loadPdf = () => import('../lib/pdf.js');
+const loadExcel = () => loadChunk(() => import('../lib/excel.js'));
+const loadPdf = () => loadChunk(() => import('../lib/pdf.js'));
 
 // Documenti: riepilogo del mese in PDF o Excel e foglio ore per una struttura.
 export default function DocumentsPage({ state, year, month, setYear, setMonth }) {

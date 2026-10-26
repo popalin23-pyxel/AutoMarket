@@ -4,9 +4,10 @@ import { professionalHeaderLines, rivalsaLabel } from '../lib/defaults.js';
 import { useLockBodyScroll } from '../lib/useLockBodyScroll.js';
 import { useBackClose } from '../lib/backStack.js';
 import Portal from '../lib/Portal.jsx';
+import { loadChunk } from '../lib/loadChunk.js';
 
 const fmt = (n) => (n ?? 0).toLocaleString('it-IT', { useGrouping: 'always', minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const loadTimesheet = () => import('../lib/timesheet.js');
+const loadTimesheet = () => loadChunk(() => import('../lib/timesheet.js'));
 
 // Foglio ore da mandare a una struttura: una sede, un periodo (di base il mese aperto).
 export default function TimesheetDialog({ state, siteId, year, month, onClose }) {

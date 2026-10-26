@@ -1,10 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { computeMonthSummary } from '../lib/calc.js';
 import { MONTHS_IT, hexToRgba, professionalHeaderLines, rivalsaLabel } from '../lib/defaults.js';
-
-// Excel e PDF (~675 KB) si caricano solo quando si apre il riepilogo, non a ogni avvio dell'app.
-const loadExcel = () => import('../lib/excel.js');
-const loadPdf = () => import('../lib/pdf.js');
+import { loadChunk } from '../lib/loadChunk.js';
 import RingChart from './charts/RingChart.jsx';
 import EmptyState from './EmptyState.jsx';
 import SiteAvatar from './SiteAvatar.jsx';
@@ -12,6 +9,10 @@ import TimesheetDialog from './TimesheetDialog.jsx';
 import CountUpText from './CountUpText.jsx';
 import { useCountUp } from '../lib/useCountUp.js';
 import { useSwipe } from '../lib/useSwipe.js';
+
+// Excel e PDF (~675 KB) si caricano solo quando si apre il riepilogo, non a ogni avvio dell'app.
+const loadExcel = () => loadChunk(() => import('../lib/excel.js'));
+const loadPdf = () => loadChunk(() => import('../lib/pdf.js'));
 
 const fmt = (n) => n.toLocaleString('it-IT', { useGrouping: 'always', minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
