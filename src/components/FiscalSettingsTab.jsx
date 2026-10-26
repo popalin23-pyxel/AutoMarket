@@ -252,7 +252,7 @@ export default function FiscalSettingsTab({ state, setState }) {
               ? 'Lo paga la struttura e lo versi alla cassa: non è un tuo guadagno.'
               : 'Fa parte del compenso e si tassa.'}
             {!exact && ' Nel calcolo semplice resta compreso nel fatturato tassato, come finora.'}
-            {' '}Ogni sede può avere una percentuale diversa (Studio → Sedi).
+            {' '}Ogni sede può avere una percentuale diversa (Altro → Sedi e paghe).
           </p>
 
           <h2 className="panel-title" style={{ marginTop: 22 }}>Prestazioni occasionali</h2>

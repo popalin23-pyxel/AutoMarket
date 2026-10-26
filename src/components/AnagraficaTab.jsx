@@ -10,7 +10,7 @@ export default function AnagraficaTab({ state, setState }) {
     <div className="panel">
       <h2 className="panel-title">Anagrafica</h2>
       <p className="panel-desc">
-        I tuoi dati professionali: compaiono nel saluto della Home e nell'intestazione dei report PDF ed Excel.
+        I tuoi dati professionali: compaiono nel saluto di Oggi e nell'intestazione dei report PDF ed Excel.
       </p>
 
       <div className="field" style={{ marginBottom: 14 }}>

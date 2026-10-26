@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { hoursOfShift, isShiftDone, siteRateOn, computeTaxes } from '../lib/calc.js';
-import { rivalsaLabel } from '../lib/defaults.js';
+import { rivalsaLabel, MONTHS_IT, WEEKDAYS_IT_LONG } from '../lib/defaults.js';
 import { useLockBodyScroll } from '../lib/useLockBodyScroll.js';
 import { useBackClose } from '../lib/backStack.js';
 import Portal from '../lib/Portal.jsx';
@@ -9,14 +9,19 @@ import NumberInput from './NumberInput.jsx';
 
 const fmt = (n) => n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const round2 = (n) => Math.round((n + Number.EPSILON) * 100) / 100;
+const longDate = (iso) => {
+  const d = new Date(iso + 'T00:00:00');
+  return Number.isNaN(d.getTime()) ? iso : `${WEEKDAYS_IT_LONG[(d.getDay() + 6) % 7].toLowerCase()} ${d.getDate()} ${MONTHS_IT[d.getMonth()].toLowerCase()}`;
+};
 
 export default function ShiftEditor({
   date, shift, sites, favorites = [], lastSiteId, settings, allShifts = [],
   onSave, onDelete, onClose, onSaveFavorite, onDeleteFavorite, onCopy,
+  initial, // nuovo turno già impostato (sede e orario scelti in "Aggiungi")
 }) {
-  const [siteId, setSiteId] = useState(shift?.siteId ?? lastSiteId ?? sites[0]?.id ?? null);
-  const [start, setStart] = useState(shift?.start ?? '07:00');
-  const [end, setEnd] = useState(shift?.end ?? '14:00');
+  const [siteId, setSiteId] = useState(shift?.siteId ?? initial?.siteId ?? lastSiteId ?? sites[0]?.id ?? null);
+  const [start, setStart] = useState(shift?.start ?? initial?.start ?? '07:00');
+  const [end, setEnd] = useState(shift?.end ?? initial?.end ?? '14:00');
   const [note, setNote] = useState(shift?.note ?? '');
   const [repeatWeeks, setRepeatWeeks] = useState(0);
   // turno già passato: svolto (confermato) o non fatto (annullato, non conta nei guadagni)
@@ -81,12 +86,12 @@ export default function ShiftEditor({
     <div className="editor-overlay" onClick={onClose}>
       <div className="editor-card" onClick={(e) => e.stopPropagation()}>
         <div className="editor-head">
-          <span>{shift ? 'Modifica turno' : 'Nuovo turno'} · {date}</span>
+          <span>{shift ? 'Modifica turno' : 'Nuovo turno'} · {longDate(date)}</span>
           <button className="btn btn-sm" onClick={onClose}>✕</button>
         </div>
 
         {sites.length === 0 ? (
-          <p className="hint hint-warn">Aggiungi prima una sede in Studio → Sedi.</p>
+          <p className="hint hint-warn">Aggiungi prima una sede in Altro → Sedi e paghe.</p>
         ) : (
           <>
             {favorites.length > 0 && (

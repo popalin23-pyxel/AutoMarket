@@ -43,7 +43,7 @@ export default function EarningsSimulator({ state, onNavigate }) {
         <h2 className="panel-title">Simulatore guadagni</h2>
         <EmptyState icon="euro" title="Aggiungi prima una sede" hint="Il simulatore usa la paga oraria delle tue sedi per stimare i guadagni." />
         {onNavigate && (
-          <button className="link-btn" onClick={() => onNavigate('studio', 'sites')}>Aggiungi una sede in Studio → Sedi →</button>
+          <button className="link-btn" onClick={() => onNavigate('altro', 'sites')}>Aggiungi una sede in Altro → Sedi e paghe →</button>
         )}
       </div>
     );

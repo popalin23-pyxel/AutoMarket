@@ -15,7 +15,7 @@ export function weekLabel(startISO) {
 }
 
 // Copia i turni di una settimana (lunedì–domenica) del mese aperto nella settimana dopo.
-export default function WeekDuplicateDialog({ shifts, year, month, today, onConfirm, onClose }) {
+export default function WeekDuplicateDialog({ shifts, year, month, today, initialWeek, onConfirm, onClose }) {
   const pad = (n) => String(n).padStart(2, '0');
   const weeks = useMemo(() => {
     const out = [];
@@ -26,7 +26,8 @@ export default function WeekDuplicateDialog({ shifts, year, month, today, onConf
     return out;
   }, [shifts, year, month]);
   const [sel, setSel] = useState(() => {
-    const cur = weeks.find((w) => w.start === startOfWeek(today) && w.count > 0);
+    // proposta: la settimana che si sta guardando (vista Settimana), altrimenti quella di oggi
+    const cur = weeks.find((w) => w.start === (initialWeek ?? startOfWeek(today)) && w.count > 0);
     return (cur ?? weeks.find((w) => w.count > 0))?.start ?? null;
   });
   useLockBodyScroll();

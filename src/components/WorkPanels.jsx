@@ -1,23 +1,14 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { computeMonthSummary, todayISO } from '../lib/calc.js';
 import { updateSettings } from '../lib/store.js';
-import AnagraficaTab from './AnagraficaTab.jsx';
-import SitesTab from './SitesTab.jsx';
-import FiscalSettingsTab from './FiscalSettingsTab.jsx';
 import GoalTimeCalculator from './GoalTimeCalculator.jsx';
 import NumberInput from './NumberInput.jsx';
 
-const SUB_TABS = [
-  { id: 'anagrafica', label: 'Anagrafica' },
-  { id: 'sites', label: 'Sedi' },
-  { id: 'fiscal', label: 'Fiscali' },
-  { id: 'goal', label: 'Obiettivo' },
-];
-
+// Pannelli delle pagine "Sedi e paghe" e "Obiettivo" (in Altro).
 const fmt = (n) => n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-// Anteprima minima del mese per sede, sotto l'elenco sedi: il confronto completo è in Analisi.
-function SitesMonthPreview({ state, onNavigate }) {
+// Anteprima minima del mese per sede, sotto l'elenco sedi: il confronto completo è in Soldi → Grafici.
+export function SitesMonthPreview({ state, onNavigate }) {
   const today = todayISO();
   const sum = useMemo(
     () => computeMonthSummary(state.shifts, state.sites, state.settings, Number(today.slice(0, 4)), Number(today.slice(5, 7))),
@@ -41,18 +32,18 @@ function SitesMonthPreview({ state, onNavigate }) {
           </div>
         ))}
       </div>
-      <button className="link-btn" onClick={() => onNavigate('analisi', 'compare')}>Vedi il confronto completo in Analisi →</button>
+      <button className="link-btn" onClick={() => onNavigate('soldi', 'grafici/compare')}>Vedi il confronto completo nei grafici →</button>
     </div>
   );
 }
 
-function GoalPanel({ state, setState }) {
+export function GoalPanel({ state, setState }) {
   return (
     <>
       <div className="panel">
         <h2 className="panel-title">Obiettivo mensile</h2>
         <p className="panel-desc">
-          Quanto vuoi guadagnare (netto) ogni mese. Lo vedi come barra di avanzamento nella Home. Lascia 0 per nasconderlo.
+          Quanto vuoi guadagnare (netto) ogni mese. Lo vedi come barra di avanzamento in Oggi e in Soldi. Lascia 0 per nasconderlo.
         </p>
         <div className="field">
           <label className="field-label">Obiettivo netto (€)</label>
@@ -62,32 +53,6 @@ function GoalPanel({ state, setState }) {
         </div>
       </div>
       <GoalTimeCalculator state={state} />
-    </>
-  );
-}
-
-export default function StudioTab({ state, setState, initialSub = 'anagrafica', onNavigate }) {
-  const [sub, setSub] = useState(initialSub);
-
-  return (
-    <>
-      <div className="tabs">
-        {SUB_TABS.map((t) => (
-          <button key={t.id} className={`tab ${sub === t.id ? 'active' : ''}`} onClick={() => setSub(t.id)}>
-            {t.label}
-          </button>
-        ))}
-      </div>
-
-      {sub === 'anagrafica' && <AnagraficaTab state={state} setState={setState} />}
-      {sub === 'sites' && (
-        <>
-          <SitesTab state={state} setState={setState} />
-          <SitesMonthPreview state={state} onNavigate={onNavigate} />
-        </>
-      )}
-      {sub === 'fiscal' && <FiscalSettingsTab state={state} setState={setState} />}
-      {sub === 'goal' && <GoalPanel state={state} setState={setState} />}
     </>
   );
 }

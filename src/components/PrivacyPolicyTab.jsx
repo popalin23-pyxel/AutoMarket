@@ -22,7 +22,7 @@ export default function PrivacyPolicyTab({ onBack }) {
         <p>Per far funzionare l'app raccogliamo e conserviamo:</p>
         <ul>
           <li><b>Dati account</b>: email, password (mai salvata in chiaro: viene cifrata dal nostro fornitore di autenticazione), data di creazione dell'account.</li>
-          <li><b>Anagrafica</b> (facoltativa): nome e cognome, ruolo professionale, Partita IVA o numero di iscrizione all'albo — solo se scegli di inserirli in Studio → Anagrafica.</li>
+          <li><b>Anagrafica</b> (facoltativa): nome e cognome, ruolo professionale, Partita IVA o numero di iscrizione all'albo — solo se scegli di inserirli in Altro → I miei dati.</li>
           <li><b>Sedi di lavoro</b>: nomi delle strutture/datori di lavoro inseriti e la relativa paga oraria.</li>
           <li><b>Turni</b>: data, orario, sede, note personali, eventuale tariffa speciale e se il turno è stato svolto o annullato.</li>
           <li><b>Schede delle strutture</b> (facoltative): ragione sociale e Partita IVA della struttura, nome, telefono ed email del referente, indirizzo, date del contratto e note che decidi di inserire.</li>
@@ -58,15 +58,15 @@ export default function PrivacyPolicyTab({ onBack }) {
 
         <h3>5. Per quanto tempo conserviamo i dati</h3>
         <p>
-          Finché il tuo account resta attivo. Se cancelli il tuo account dal Profilo, i tuoi dati
+          Finché il tuo account resta attivo. Se cancelli il tuo account da Altro → Account, i tuoi dati
           (turni, prestazioni, sedi, spese, ferie e assenze, anagrafica, impostazioni) vengono <b>eliminati definitivamente e immediatamente</b> dai nostri
           server, senza bisogno di richiederlo a nessuno.
         </p>
 
         <h3>6. I tuoi diritti</h3>
         <ul>
-          <li><b>Accesso ed esportazione</b>: puoi scaricare in ogni momento una copia completa dei tuoi dati in formato JSON dal Profilo (tocca la tua iniziale in alto a destra → "Esporta backup").</li>
-          <li><b>Cancellazione</b>: puoi eliminare definitivamente il tuo account e tutti i tuoi dati dal Profilo, senza contattare nessuno.</li>
+          <li><b>Accesso ed esportazione</b>: puoi scaricare in ogni momento una copia completa dei tuoi dati in formato JSON da Altro → Copia di sicurezza.</li>
+          <li><b>Cancellazione</b>: puoi eliminare definitivamente il tuo account e tutti i tuoi dati da Altro → Account, senza contattare nessuno.</li>
           <li><b>Rettifica</b>: puoi modificare o correggere in ogni momento i tuoi dati direttamente nell'app.</li>
           <li><b>Reclamo</b>: hai sempre diritto a presentare reclamo al Garante per la protezione dei dati personali (garanteprivacy.it).</li>
         </ul>

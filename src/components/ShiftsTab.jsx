@@ -1,10 +1,10 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   monthDays, weekdayOf, shiftsOnDay, hoursOfShift, todayISO, holidaysOfYear, isHoliday,
-  startOfWeek, endOfWeek, shiftsInRange, addDaysISO, computeWeekSummary, isCancelled, activeShifts,
+  startOfWeek, endOfWeek, shiftsInRange, addDaysISO, isCancelled, activeShifts,
   countMarks, latestMarkByDate,
 } from '../lib/calc.js';
-import { MONTHS_IT, WEEKDAYS_IT, DAY_MARK_KINDS, dayMarkKind, hexToRgba } from '../lib/defaults.js';
+import { MONTHS_IT, WEEKDAYS_IT, WEEKDAYS_IT_LONG, DAY_MARK_KINDS, dayMarkKind, hexToRgba } from '../lib/defaults.js';
 import {
   addShift, updateShift, removeShift, restoreShift, addFavorite, removeFavorite,
   addOccasionalWork, updateOccasionalWork, removeOccasionalWork,
@@ -22,10 +22,27 @@ import StampBar from './StampBar.jsx';
 import MarkEditor from './MarkEditor.jsx';
 import AvailabilityDialog from './AvailabilityDialog.jsx';
 import WeekDuplicateDialog from './WeekDuplicateDialog.jsx';
+import TurniWeek from './TurniWeek.jsx';
+import Icon from './icons/Icon.jsx';
 
 const fmt = (n) => n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 const VIEW_KEY = 'turnio_view_pref';
+const MODE_KEY = 'turnio_turni_mode'; // 'week' | 'month'
+
+const pad2 = (n) => String(n).padStart(2, '0');
+// la settimana "appartiene" al mese del suo giovedì (come le settimane ISO)
+const weekMonth = (ws) => { const th = addDaysISO(ws, 3); return [Number(th.slice(0, 4)), Number(th.slice(5, 7))]; };
+// prima settimana di un mese: quella che contiene il suo primo giovedì
+const firstWeekOf = (y, m) => {
+  const ws = startOfWeek(`${y}-${pad2(m)}-01`);
+  const [wy, wm] = weekMonth(ws);
+  return wy === y && wm === m ? ws : addDaysISO(ws, 7);
+};
+const longDate = (iso) => {
+  const d = new Date(iso + 'T00:00:00');
+  return `${WEEKDAYS_IT_LONG[(d.getDay() + 6) % 7]} ${d.getDate()} ${MONTHS_IT[d.getMonth()].toLowerCase()}`;
+};
 
 function DayPopoverOverlay({ dateISO, onClose, children }) {
   useLockBodyScroll();
@@ -35,7 +52,7 @@ function DayPopoverOverlay({ dateISO, onClose, children }) {
     <div className="editor-overlay" onClick={onClose}>
       <div className="editor-card" onClick={(e) => e.stopPropagation()}>
         <div className="editor-head">
-          <span>{dateISO}</span>
+          <span>{longDate(dateISO)}</span>
           <button className="btn btn-sm" onClick={onClose}>✕</button>
         </div>
         {children}
@@ -45,7 +62,13 @@ function DayPopoverOverlay({ dateISO, onClose, children }) {
   );
 }
 
-export default function ShiftsTab({ state, setState, year, month, setYear, setMonth, onNavigate }) {
+export default function ShiftsTab({ state, setState, year, month, setYear, setMonth, onNavigate, action, onActionDone }) {
+  const [mode, setModeRaw] = useState(() => { try { return localStorage.getItem(MODE_KEY) || 'week'; } catch { return 'week'; } });
+  // settimana mostrata (lunedì): quella di oggi se è aperto il mese corrente, altrimenti la prima del mese
+  const [weekStart, setWeekStartRaw] = useState(() => {
+    const t = todayISO();
+    return Number(t.slice(0, 4)) === year && Number(t.slice(5, 7)) === month ? startOfWeek(t) : firstWeekOf(year, month);
+  });
   const [editing, setEditing] = useState(null); // { date, shift: null|obj }
   const [editingOccasional, setEditingOccasional] = useState(null); // { date, entry: null|obj }
   const [editingMark, setEditingMark] = useState(null); // { date, mark: null|obj } — ferie e assenze
@@ -72,6 +95,22 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
   }, [stampOn]);
 
   useEffect(() => { try { localStorage.setItem(VIEW_KEY, view); } catch {} }, [view]);
+
+  // il mese aperto segue la settimana mostrata (serve a timbro, disponibilità, copia settimana e a Soldi)
+  const setWeekStart = (ws) => {
+    setWeekStartRaw(ws);
+    const [wy, wm] = weekMonth(ws);
+    if (wy !== year || wm !== month) { setYear(wy); setMonth(wm); }
+  };
+  const setMode = (m) => {
+    if (m === mode) return;
+    if (m === 'week') {
+      const t = todayISO();
+      setWeekStart(Number(t.slice(0, 4)) === year && Number(t.slice(5, 7)) === month ? startOfWeek(t) : firstWeekOf(year, month));
+    }
+    setModeRaw(m);
+    try { localStorage.setItem(MODE_KEY, m); } catch {}
+  };
 
   const days = monthDays(year, month);
   const today = todayISO();
@@ -150,8 +189,18 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
     setStamp(fav ? { type: 'shift', siteId: fav.siteId, start: fav.start, end: fav.end } : null);
     setStampCount(0);
     setDayPopover(null);
+    setModeRaw('month'); // il timbro si usa sul mese intero
     setStampOn(true);
   };
+
+  // strumento chiesto da fuori (Altro → Strumenti)
+  useEffect(() => {
+    if (!action) return;
+    if (action === 'stamp') { if (activeSites.length > 0) startStamp(); else setModeRaw('month'); }
+    else if (action === 'availability') setAvailabilityOpen(true);
+    else if (action === 'duplicate') setDupOpen(true);
+    onActionDone?.();
+  }, [action]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Un tocco aggiunge il turno (o il giorno di ferie/assenza) timbrato su quel giorno; un secondo
   // tocco lo toglie, ma solo se è stato timbrato in questa sessione (con "Annulla"): ciò che c'era
@@ -220,21 +269,6 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
     setEditingMark(null);
     offerUndo('mark', mark);
   };
-
-  const weekStart = startOfWeek(today);
-  const weekEnd = endOfWeek(today);
-  const weekSummary = useMemo(
-    () => computeWeekSummary(state.shifts, state.sites, state.settings, today, state.occasionalWork),
-    [state.shifts, state.sites, state.settings, today, state.occasionalWork],
-  );
-  const thisWeekShifts = useMemo(() => activeShifts(shiftsInRange(state.shifts, weekStart, weekEnd)), [state.shifts, weekStart, weekEnd]);
-  const weekLabel = useMemo(() => {
-    const wsD = Number(weekStart.slice(8)), wsM = Number(weekStart.slice(5, 7));
-    const weD = Number(weekEnd.slice(8)), weM = Number(weekEnd.slice(5, 7));
-    return wsM === weM
-      ? `${wsD}–${weD} ${MONTHS_IT[weM - 1].slice(0, 3)}`
-      : `${wsD} ${MONTHS_IT[wsM - 1].slice(0, 3)} – ${weD} ${MONTHS_IT[weM - 1].slice(0, 3)}`;
-  }, [weekStart, weekEnd]);
 
   // copia i turni della settimana scelta (che inizia il lunedì weekStartISO) in quella dopo
   const duplicateWeek = (weekStartISO) => {
@@ -350,8 +384,48 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
     );
   };
 
+  const noSitesHint = activeSites.length === 0 && (
+    <div className="hint hint-warn" style={{ marginTop: 12 }}>
+      Prima di registrare i turni, aggiungi almeno una sede di lavoro con la sua paga oraria.
+      {onNavigate && (
+        <div><button className="link-btn" style={{ marginTop: 8 }} onClick={() => onNavigate('altro', 'sites')}>
+          Aggiungi una sede in Altro → Sedi e paghe →
+        </button></div>
+      )}
+    </div>
+  );
+
   return (
     <>
+      <div className="page-head">
+        <h1 className="page-title">Turni</h1>
+        <div className="seg" role="tablist">
+          <button type="button" role="tab" aria-selected={mode === 'week'} className={mode === 'week' ? 'on' : ''} onClick={() => setMode('week')}>Settimana</button>
+          <button type="button" role="tab" aria-selected={mode === 'month'} className={mode === 'month' ? 'on' : ''} onClick={() => setMode('month')}>Mese</button>
+        </div>
+      </div>
+
+      {mode === 'week' && (
+        <>
+          {noSitesHint}
+          <TurniWeek state={state} weekStart={weekStart} setWeekStart={setWeekStart} today={today}
+            onOpenDay={(d) => setDayPopover(d)} onEditShift={openEdit} onEditOccasional={openEditOccasional} onEditMark={openEditMark} />
+          <div className="grp-title">Strumenti</div>
+          <div className="tools3">
+            <button type="button" className="tool3" onClick={startStamp} disabled={activeSites.length === 0}>
+              <Icon name="stamp" size={26} />Segna più giorni
+            </button>
+            <button type="button" className="tool3" onClick={() => setAvailabilityOpen(true)}>
+              <Icon name="send" size={26} />Invia giorni liberi
+            </button>
+            <button type="button" className="tool3" onClick={() => setDupOpen(true)}>
+              <Icon name="copy" size={26} />Copia la settimana
+            </button>
+          </div>
+        </>
+      )}
+
+      {mode === 'month' && (<>
       <div className="panel" onTouchStart={swipe.onTouchStart} onTouchEnd={swipe.onTouchEnd} style={monthAccent ? {
         borderTopColor: monthAccent, borderTopWidth: 3,
         background: `linear-gradient(160deg, ${hexToRgba(monthAccent, 0.10)}, var(--glass))`,
@@ -404,16 +478,7 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
           </div>
         )}
 
-        {activeSites.length === 0 && (
-          <div className="hint hint-warn" style={{ marginTop: 12 }}>
-            Prima di registrare i turni, aggiungi almeno una sede di lavoro con la sua paga oraria.
-            {onNavigate && (
-              <div><button className="link-btn" style={{ marginTop: 8 }} onClick={() => onNavigate('studio', 'sites')}>
-                Aggiungi una sede in Studio → Sedi →
-              </button></div>
-            )}
-          </div>
-        )}
+        {noSitesHint}
       </div>
 
       {view === 'list' ? (
@@ -445,15 +510,7 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
           onDayClick={(dateISO) => (stampOn ? applyStamp(dateISO) : setDayPopover(dateISO))} />
       )}
 
-      {thisWeekShifts.length > 0 && (
-        <div className="panel week-total-card">
-          <span className="week-total-label">Questa settimana ({weekLabel})</span>
-          <div className="week-total-row">
-            <span><b>{fmt(weekSummary.totalHours)}h</b> lavorate</span>
-            <span>€<b>{fmt(weekSummary.netTotal)}</b> netto stimato</span>
-          </div>
-        </div>
-      )}
+      </>)}
 
       {dayPopover && (
         <DayPopoverOverlay dateISO={dayPopover} onClose={() => setDayPopover(null)}>
@@ -483,6 +540,7 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
 
       {dupOpen && (
         <WeekDuplicateDialog shifts={state.shifts} year={year} month={month} today={today}
+          initialWeek={mode === 'week' ? weekStart : undefined}
           onConfirm={duplicateWeek} onClose={() => setDupOpen(false)} />
       )}
 

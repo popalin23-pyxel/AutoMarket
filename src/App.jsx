@@ -15,12 +15,22 @@ import PendingApproval from './components/PendingApproval.jsx';
 import AdminTab from './components/AdminTab.jsx';
 import DashboardTab from './components/DashboardTab.jsx';
 import ShiftsTab from './components/ShiftsTab.jsx';
-import GuadagniTab from './components/GuadagniTab.jsx';
+import SoldiTab from './components/SoldiTab.jsx';
+import SummaryTab from './components/SummaryTab.jsx';
+import ExpensesTab from './components/ExpensesTab.jsx';
+import EarningsSimulator from './components/EarningsSimulator.jsx';
 import AnalisiTab from './components/AnalisiTab.jsx';
-import StudioTab from './components/StudioTab.jsx';
+import AltroTab from './components/AltroTab.jsx';
+import AnagraficaTab from './components/AnagraficaTab.jsx';
+import SitesTab from './components/SitesTab.jsx';
+import FiscalSettingsTab from './components/FiscalSettingsTab.jsx';
+import { SitesMonthPreview, GoalPanel } from './components/WorkPanels.jsx';
+import DocumentsPage from './components/DocumentsPage.jsx';
 import SettingsTab from './components/SettingsTab.jsx';
 import NotificheTab from './components/NotificheTab.jsx';
 import PrivacyPolicyTab from './components/PrivacyPolicyTab.jsx';
+import AddSheet from './components/AddSheet.jsx';
+import SubPage from './components/ui/SubPage.jsx';
 import Icon from './components/icons/Icon.jsx';
 import Splash from './components/Splash.jsx';
 import OnboardingTour, { needsOnboarding } from './components/OnboardingTour.jsx';
@@ -29,12 +39,24 @@ applyTheme(loadTheme()); // applicato subito al caricamento del modulo, prima de
 applyAccent(loadAccent());
 applyDensity(loadDensity());
 
-const AVATAR_PALETTE = ['#2dd4bf', '#f59e0b', '#818cf8', '#fb7185', '#a3e635', '#22d3ee', '#c084fc', '#fbbf24'];
+// Sotto-pagine di Soldi e Altro (si aprono a tutto schermo con "‹ Indietro")
+const SUBPAGE_TITLES = {
+  soldi: { dettaglio: 'Per sede', spese: 'Spese', grafici: 'Grafici', documenti: 'Esporta e foglio ore', simulatore: 'Simulatore' },
+  altro: {
+    anagrafica: 'I miei dati', sites: 'Sedi e paghe', fiscal: 'Tasse e cassa', goal: 'Obiettivo', documents: 'Documenti',
+    account: 'Account', appearance: 'Aspetto', backup: 'Copia di sicurezza',
+  },
+};
 
-function avatarColor(email) {
-  let hash = 0;
-  for (const ch of email || '') hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
-  return AVATAR_PALETTE[hash % AVATAR_PALETTE.length];
+// Collegamenti delle vecchie schede (Guadagni, Analisi, Studio, Profilo) alla nuova struttura
+function mapRoute(tab, sub) {
+  if (tab === 'studio') return ['altro', sub ?? null];
+  if (tab === 'settings') return ['altro', null];
+  if (tab === 'earnings') {
+    return ['soldi', sub === 'sim' ? 'simulatore' : sub === 'expenses' ? 'spese' : null];
+  }
+  if (tab === 'analisi') return ['soldi', sub ? `grafici/${sub}` : 'grafici'];
+  return [tab, sub];
 }
 
 function NotConfigured() {
@@ -55,9 +77,13 @@ function Shell() {
   const { user, isAdmin, isApproved, signOut } = useAuth();
   const [state, setState] = useState(loadState);
   const [active, setActive] = useState('dashboard');
-  // sotto-scheda con cui aprire Guadagni/Analisi/Studio da un collegamento (es. "Studio → Sedi").
-  // Fa parte della key del contenitore: cambiarla rimonta la scheda sulla sotto-scheda richiesta.
+  // sotto-pagina aperta in Soldi o Altro (es. 'spese', 'sites'; 'grafici/compare' per un grafico preciso).
+  // Fa parte della key del contenitore: cambiarla rimonta la pagina.
   const [subTab, setSubTab] = useState(null);
+  // strumento da aprire in Turni (timbro, disponibilità, copia settimana), chiesto da Altro
+  const [turniAction, setTurniAction] = useState(null);
+  const [addOpen, setAddOpen] = useState(false);
+  const [savedToast, setSavedToast] = useState(false);
   const [year, setYear] = useState(() => new Date().getFullYear());
   const [month, setMonth] = useState(() => new Date().getMonth() + 1);
   // ora corrente, aggiornata ogni minuto e al ritorno in primo piano: le app restano aperte
@@ -79,19 +105,28 @@ function Shell() {
     userId: user?.id ?? null, enabled: !!isApproved, state, setState,
   });
 
-  const navigate = (tab, sub = null) => {
-    // ritoccare la scheda già aperta (senza sotto-scheda esplicita) non la rimonta:
-    // porta solo in cima, senza perdere moduli non ancora salvati
-    if (!(tab === active && sub == null)) { setSubTab(sub); setActive(tab); }
+  const navigate = (tab0, sub0 = null) => {
+    const [tab, mapped] = mapRoute(tab0, sub0);
+    let sub = mapped;
+    if (tab === 'calendar' && sub) { setTurniAction(sub); sub = null; }
+    // ritoccare la pagina già aperta non la rimonta: porta solo in cima, senza perdere
+    // moduli non ancora salvati; da una sotto-pagina invece si torna alla pagina principale
+    if (!(tab === active && sub == null && subTab == null)) { setSubTab(sub); setActive(tab); }
     window.scrollTo(0, 0);
   };
-  // Indietro (Android): dalle schermate aperte dal Profilo torna al Profilo, dalle altre
-  // schede torna alla Home; solo dalla Home esce dall'app.
+  // Indietro (Android): da una sotto-pagina torna alla sua pagina, da Privacy e Amministrazione
+  // torna ad Altro, dalle altre pagine torna a Oggi; solo da Oggi esce dall'app.
   const goBackTo = (tab) => { setSubTab(null); setActive(tab); window.scrollTo(0, 0); };
-  // (ordine voluto: la voce più interna viene chiusa per prima)
-  useBackClose(() => goBackTo('settings'), active === 'admin' || active === 'privacy');
+  const inSubpage = (active === 'soldi' || active === 'altro') && subTab != null;
+  // (ordine voluto: la voce più interna viene aggiunta per ultima e chiusa per prima)
   useBackClose(() => goBackTo('dashboard'), active !== 'dashboard');
-  const openMonthSummary = (y, m) => { setYear(y); setMonth(m); navigate('earnings', 'summary'); };
+  useBackClose(() => goBackTo('altro'), active === 'admin' || active === 'privacy');
+  useBackClose(() => goBackTo(active), inSubpage);
+  const openMonthSummary = (y, m) => { setYear(y); setMonth(m); navigate('soldi'); };
+  const [subPage, subArg] = (subTab ?? '').split('/');
+  const subPageView = (tab, content) => (
+    <SubPage title={SUBPAGE_TITLES[tab][subPage]} onBack={() => goBackTo(tab)}>{content}</SubPage>
+  );
   // azioni della Home: aprono sempre il mese corrente, non l'ultimo mese consultato
   const openCurrentMonth = (tab, sub = null) => {
     const d = new Date();
@@ -117,16 +152,21 @@ function Shell() {
   );
   const monthSummary = monthProgress.total;
 
-  // Il Profilo (account, aspetto, backup) si apre dall'avatar in alto a destra.
+  // Oggi · Turni · [+ Aggiungi] · Soldi · Altro
   const TABS = [
-    { id: 'dashboard', label: 'Home', icon: 'home' },
-    { id: 'calendar', label: 'Calendario', icon: 'calendar' },
-    { id: 'earnings', label: 'Guadagni', icon: 'euro' },
-    { id: 'analisi', label: 'Analisi', icon: 'chart' },
-    { id: 'studio', label: 'Studio', icon: 'briefcase' },
+    { id: 'dashboard', label: 'Oggi', icon: 'sun' },
+    { id: 'calendar', label: 'Turni', icon: 'calendar' },
+    { id: 'soldi', label: 'Soldi', icon: 'euro' },
+    { id: 'altro', label: 'Altro', icon: 'menu' },
   ];
-
-  const initial = (user?.email || '?').trim()[0]?.toUpperCase() || '?';
+  const tabActive = (id) => id === active || (id === 'altro' && (active === 'admin' || active === 'privacy'));
+  const tabButton = (t) => (
+    <button key={t.id} className={`bnav-btn ${tabActive(t.id) ? 'active' : ''}`} onClick={() => navigate(t.id)}>
+      <span className="bnav-icon"><Icon name={t.icon} size={22} strokeWidth={2} /></span>
+      <span className="bnav-label">{t.label}</span>
+    </button>
+  );
+  const flashSaved = () => { setSavedToast(true); setTimeout(() => setSavedToast(false), 1400); };
 
   return (
     <div className="app">
@@ -150,11 +190,6 @@ function Shell() {
             onClick={() => navigate('notifications')} title="Notifiche" aria-label="Notifiche">
             <Icon name="bell" size={16} />
           </button>
-          <button className={`avatar ${['settings', 'admin', 'privacy'].includes(active) ? 'active' : ''}`}
-            style={{ background: avatarColor(user?.email) }}
-            onClick={() => navigate('settings')} title="Profilo" aria-label="Profilo">
-            {initial}
-          </button>
         </div>
       </header>
 
@@ -166,25 +201,43 @@ function Shell() {
           )}
           {active === 'calendar' && (
             <ShiftsTab state={state} setState={setState} year={year} month={month} setYear={setYear} setMonth={setMonth}
-              onNavigate={navigate} />
+              onNavigate={navigate} action={turniAction} onActionDone={() => setTurniAction(null)} />
           )}
-          {active === 'earnings' && (
-            <GuadagniTab state={state} setState={setState} year={year} month={month} setYear={setYear} setMonth={setMonth}
-              initialSub={subTab ?? undefined} onNavigate={navigate} />
+
+          {active === 'soldi' && !subPage && (
+            <SoldiTab state={state} year={year} month={month} setYear={setYear} setMonth={setMonth}
+              onOpen={(sub) => navigate('soldi', sub)} />
           )}
-          {active === 'analisi' && (
-            <AnalisiTab state={state} initialSub={subTab ?? undefined} onOpenMonth={openMonthSummary} />
+          {active === 'soldi' && subPage === 'dettaglio' && subPageView('soldi',
+            <SummaryTab state={state} year={year} month={month} setYear={setYear} setMonth={setMonth} />)}
+          {active === 'soldi' && subPage === 'spese' && subPageView('soldi', <ExpensesTab state={state} setState={setState} />)}
+          {active === 'soldi' && subPage === 'grafici' && subPageView('soldi',
+            <AnalisiTab state={state} initialSub={subArg || undefined} onOpenMonth={openMonthSummary} />)}
+          {active === 'soldi' && subPage === 'documenti' && subPageView('soldi',
+            <DocumentsPage state={state} year={year} month={month} setYear={setYear} setMonth={setMonth}
+              onOpenBackup={() => navigate('altro', 'backup')} />)}
+          {active === 'soldi' && subPage === 'simulatore' && subPageView('soldi', <EarningsSimulator state={state} onNavigate={navigate} />)}
+
+          {active === 'altro' && !subPage && (
+            <AltroTab state={state} user={user} isAdmin={isAdmin} onOpen={(sub) => navigate('altro', sub)}
+              onTool={(t) => openCurrentMonth('calendar', t)} onOpenPrivacy={() => navigate('privacy')}
+              onOpenAdmin={() => navigate('admin')} onLogout={doLogout} />
           )}
-          {active === 'studio' && (
-            <StudioTab state={state} setState={setState} initialSub={subTab ?? undefined} onNavigate={navigate} />
-          )}
-          {active === 'settings' && (
-            <SettingsTab state={state} setState={setState} onLogout={doLogout} isAdmin={isAdmin}
-              onOpenAdmin={() => navigate('admin')} onOpenPrivacy={() => navigate('privacy')}
-              onOpenAnagrafica={() => navigate('studio', 'anagrafica')} />
-          )}
-          {active === 'admin' && isAdmin && <AdminTab onBack={() => navigate('settings')} />}
-          {active === 'privacy' && <PrivacyPolicyTab onBack={() => navigate('settings')} />}
+          {active === 'altro' && subPage === 'anagrafica' && subPageView('altro', <AnagraficaTab state={state} setState={setState} />)}
+          {active === 'altro' && subPage === 'sites' && subPageView('altro', <>
+            <SitesTab state={state} setState={setState} />
+            <SitesMonthPreview state={state} onNavigate={navigate} />
+          </>)}
+          {active === 'altro' && subPage === 'fiscal' && subPageView('altro', <FiscalSettingsTab state={state} setState={setState} />)}
+          {active === 'altro' && subPage === 'goal' && subPageView('altro', <GoalPanel state={state} setState={setState} />)}
+          {active === 'altro' && subPage === 'documents' && subPageView('altro',
+            <DocumentsPage state={state} year={year} month={month} setYear={setYear} setMonth={setMonth}
+              onOpenBackup={() => navigate('altro', 'backup')} />)}
+          {active === 'altro' && ['account', 'appearance', 'backup'].includes(subPage) && subPageView('altro',
+            <SettingsTab state={state} setState={setState} onLogout={doLogout} isAdmin={isAdmin} section={subPage} />)}
+
+          {active === 'admin' && isAdmin && <AdminTab onBack={() => goBackTo('altro')} />}
+          {active === 'privacy' && <PrivacyPolicyTab onBack={() => goBackTo('altro')} />}
           {active === 'notifications' && (
             <NotificheTab state={state} onBack={() => navigate('dashboard')} />
           )}
@@ -192,13 +245,20 @@ function Shell() {
       </div>
 
       <nav className="bottom-nav">
-        {TABS.map((t) => (
-          <button key={t.id} className={`bnav-btn ${active === t.id ? 'active' : ''}`} onClick={() => navigate(t.id)}>
-            <span className="bnav-icon"><Icon name={t.icon} size={20} /></span>
-            <span className="bnav-label">{t.label}</span>
-          </button>
-        ))}
+        {TABS.slice(0, 2).map(tabButton)}
+        <button type="button" className="bnav-btn bnav-add" onClick={() => setAddOpen(true)} aria-label="Aggiungi">
+          <span className="bnav-fab"><Icon name="plus" size={28} strokeWidth={2.6} /></span>
+          <span className="bnav-label">Aggiungi</span>
+        </button>
+        {TABS.slice(2).map(tabButton)}
       </nav>
+
+      {addOpen && (
+        <AddSheet state={state} setState={setState} onClose={() => setAddOpen(false)} onSaved={flashSaved}
+          onGoSites={() => { setAddOpen(false); navigate('altro', 'sites'); }} />
+      )}
+
+      {savedToast && <div className="save-toast">✓ Salvato</div>}
 
       {showOnboarding && <OnboardingTour onDone={() => setShowOnboarding(false)} />}
 

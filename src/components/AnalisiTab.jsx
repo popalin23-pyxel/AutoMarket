@@ -123,7 +123,7 @@ export default function AnalisiTab({ state, initialSub = 'trend', onOpenMonth })
       {!hasAnyData ? (
         <div className="panel">
           <EmptyState icon="chart" title="Ancora nessun dato da analizzare"
-            hint="Registra qualche turno nel Calendario: qui compariranno andamenti e confronti." />
+            hint="Registra qualche turno in Turni: qui compariranno andamenti e confronti." />
         </div>
       ) : (
         <>

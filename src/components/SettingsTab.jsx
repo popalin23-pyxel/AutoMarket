@@ -11,7 +11,10 @@ import InstallGuide from './InstallGuide.jsx';
 
 // Profilo: tu e l'app (account, aspetto, backup). Ciò che riguarda l'attività
 // professionale (anagrafica, sedi, fiscale, obiettivo) sta nella scheda Studio.
-export default function SettingsTab({ state, setState, onLogout, isAdmin, onOpenAdmin, onOpenPrivacy, onOpenAnagrafica }) {
+// `section` ('account' | 'appearance' | 'backup') mostra una sola parte: nella nuova interfaccia
+// ognuna si apre dal suo tasto in Altro.
+export default function SettingsTab({ state, setState, onLogout, isAdmin, onOpenAdmin, onOpenPrivacy, onOpenAnagrafica, section }) {
+  const show = (s) => !section || section === s;
   const { user, updatePassword, deleteAccount } = useAuth();
   const confirmAction = useConfirm();
   const [deleting, setDeleting] = useState(false);
@@ -94,15 +97,18 @@ export default function SettingsTab({ state, setState, onLogout, isAdmin, onOpen
 
   return (
     <>
+      {!section && (
       <div className="panel">
         <h2 className="panel-title">Profilo</h2>
         <div className="profile-id">
           <div className="profile-id-name">{displayName || 'Nome non impostato'}</div>
           <div className="profile-id-sub">{[role, user?.email].filter(Boolean).join(' · ')}</div>
         </div>
-        <button className="link-btn" onClick={onOpenAnagrafica}>Nome, ruolo e P.IVA si modificano in Studio → Anagrafica →</button>
+        <button className="link-btn" onClick={onOpenAnagrafica}>Nome, ruolo e P.IVA si modificano in Altro → I miei dati →</button>
       </div>
+      )}
 
+      {show('account') && (
       <div className="panel">
         <h2 className="panel-title">Account</h2>
         <p className="panel-desc">I tuoi dati sono privati e sincronizzati con il cloud.</p>
@@ -119,19 +125,24 @@ export default function SettingsTab({ state, setState, onLogout, isAdmin, onOpen
           <button className="btn" disabled={pwBusy}>{pwBusy ? '…' : 'Cambia password'}</button>
         </form>
         {pwMsg && <div className={`hint hint-${pwMsg.type}`} style={{ marginTop: 10, marginBottom: 0 }}>{pwMsg.text}</div>}
+        {section === 'account' && user?.email && (
+          <p className="panel-desc" style={{ marginTop: 12, marginBottom: 0 }}>Accedi con: <b>{user.email}</b></p>
+        )}
 
-        {!isStandalone() && (
+        {!section && !isStandalone() && (
           <button className="btn btn-block" style={{ marginTop: 14 }} onClick={() => setInstallGuide(true)}>📲 Installa l'app sul telefono</button>
         )}
-        <button className="btn btn-block" style={{ marginTop: 14 }} onClick={onOpenPrivacy}>📄 Privacy Policy</button>
+        {!section && <button className="btn btn-block" style={{ marginTop: 14 }} onClick={onOpenPrivacy}>📄 Privacy Policy</button>}
         {installGuide && <InstallGuide onClose={() => setInstallGuide(false)} />}
 
-        {isAdmin && (
+        {!section && isAdmin && (
           <button className="btn btn-block" style={{ marginTop: 10 }} onClick={onOpenAdmin}>⚡ Pannello Amministrazione</button>
         )}
-        <button className="btn btn-danger" style={{ marginTop: 14 }} onClick={onLogout}>Esci</button>
+        {!section && <button className="btn btn-danger" style={{ marginTop: 14 }} onClick={onLogout}>Esci</button>}
       </div>
+      )}
 
+      {show('appearance') && (
       <div className="panel">
         <h2 className="panel-title">Aspetto</h2>
         <p className="panel-desc">Scegli come vuoi vedere l'app.</p>
@@ -165,7 +176,9 @@ export default function SettingsTab({ state, setState, onLogout, isAdmin, onOpen
           </button>
         </div>
       </div>
+      )}
 
+      {show('backup') && (
       <div className="panel">
         <h2 className="panel-title">Dati & Backup</h2>
         <p className="panel-desc">
@@ -201,10 +214,13 @@ export default function SettingsTab({ state, setState, onLogout, isAdmin, onOpen
           </div>
         )}
       </div>
+      )}
 
-      <button className="danger-link" style={{ marginBottom: 18 }} onClick={doDeleteAccount} disabled={deleting}>
-        {deleting ? 'Eliminazione in corso…' : 'Elimina il mio account e tutti i dati'}
-      </button>
+      {show('account') && (
+        <button className="danger-link" style={{ marginBottom: 18 }} onClick={doDeleteAccount} disabled={deleting}>
+          {deleting ? 'Eliminazione in corso…' : 'Elimina il mio account e tutti i dati'}
+        </button>
+      )}
     </>
   );
 }

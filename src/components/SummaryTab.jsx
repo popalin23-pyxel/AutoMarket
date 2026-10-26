@@ -142,7 +142,7 @@ export default function SummaryTab({ state, year, month, setYear, setMonth }) {
           )}
         </div>
         <p className="fiscal-footnote">
-          Stima, non sostituisce il calcolo del commercialista.{exact ? ' Calcolo del regime forfettario: vedi Studio → Fiscali → Come si calcola.' : ''}
+          Stima, non sostituisce il calcolo del commercialista.{exact ? ' Calcolo del regime forfettario: vedi Altro → Tasse e cassa → Come si calcola.' : ''}
         </p>
       </div>
 
