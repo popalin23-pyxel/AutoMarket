@@ -3,6 +3,8 @@ import { roleLabel, PENSION_FUNDS } from '../lib/defaults.js';
 import { isStandalone } from '../lib/install.js';
 import Icon from './icons/Icon.jsx';
 import InstallGuide from './InstallGuide.jsx';
+import { visibleTrash } from '../lib/history.js';
+import { versionLabel } from '../lib/version.js';
 
 const fmt0 = (n) => (Number(n) || 0).toLocaleString('it-IT', { useGrouping: 'always', maximumFractionDigits: 0 });
 
@@ -32,7 +34,7 @@ export function ListRow({ color, icon, title, sub, end, onClick }) {
 }
 
 // Altro: tutto ciò che non è Oggi, Turni o Soldi, diviso in poche categorie.
-export default function AltroTab({ state, user, isAdmin, onOpen, onTool, onOpenPrivacy, onOpenAdmin, onLogout }) {
+export default function AltroTab({ state, user, isAdmin, newReports = 0, onOpen, onTool, onOpenPrivacy, onOpenAdmin, onLogout }) {
   const [installGuide, setInstallGuide] = useState(false);
   const st = state.settings;
   const name = (st.displayName || '').trim() || (user?.email || '').split('@')[0] || 'Il mio profilo';
@@ -45,6 +47,7 @@ export default function AltroTab({ state, user, isAdmin, onOpen, onTool, onOpenP
   const regime = { forfettario: 'Forfettario', ordinario: 'Ordinario', altro: 'Altro regime' }[st.fiscalRegime] ?? 'Da impostare';
   const taxSub = [regime, fund && fund.id !== 'altro' ? fund.label : ''].filter(Boolean).join(' · ');
   const goal = Number(st.monthlyGoal) || 0;
+  const inTrash = visibleTrash(state).length;
 
   return (
     <>
@@ -74,6 +77,14 @@ export default function AltroTab({ state, user, isAdmin, onOpen, onTool, onOpenP
         <ListRow color="blue" icon="copy" title="Copia la settimana" sub="Ripeti gli stessi turni" onClick={() => onTool('duplicate')} />
       </div>
 
+      <div className="grp-title">I tuoi dati</div>
+      <div className="lcard">
+        <ListRow color="sla" icon="history" title="Modifiche e cestino"
+          sub={inTrash ? `${inTrash} ${inTrash === 1 ? 'elemento' : 'elementi'} nel cestino · chi ha cambiato cosa` : 'Chi ha cambiato cosa e quando · cestino'}
+          onClick={() => onOpen('history')} />
+        <ListRow color="blue" icon="cloud" title="Copia di sicurezza" sub="Copie automatiche sul server · file sul telefono" onClick={() => onOpen('backup')} />
+      </div>
+
       <div className="grp-title">Account e app</div>
       <div className="acc-grid">
         <button type="button" className="acc-btn" onClick={() => onOpen('account')}>
@@ -82,11 +93,11 @@ export default function AltroTab({ state, user, isAdmin, onOpen, onTool, onOpenP
         <button type="button" className="acc-btn" onClick={() => onOpen('appearance')}>
           <span className="lrow-ic ic-vio"><Icon name="palette" size={18} strokeWidth={2} /></span>Aspetto
         </button>
-        <button type="button" className="acc-btn" onClick={() => onOpen('backup')}>
-          <span className="lrow-ic ic-blue"><Icon name="cloud" size={18} strokeWidth={2} /></span>Copia di sicurezza
-        </button>
         <button type="button" className="acc-btn" onClick={onOpenPrivacy}>
           <span className="lrow-ic ic-sla"><Icon name="shield" size={18} strokeWidth={2} /></span>Privacy
+        </button>
+        <button type="button" className="acc-btn" onClick={() => onOpen('report')}>
+          <span className="lrow-ic ic-gold"><Icon name="alert" size={18} strokeWidth={2} /></span>Segnala un problema
         </button>
         {!isStandalone() && (
           <button type="button" className="acc-btn" onClick={() => setInstallGuide(true)}>
@@ -95,13 +106,16 @@ export default function AltroTab({ state, user, isAdmin, onOpen, onTool, onOpenP
         )}
         {isAdmin && (
           <button type="button" className="acc-btn" onClick={onOpenAdmin}>
-            <span className="lrow-ic ic-gold"><Icon name="zap" size={18} strokeWidth={2} /></span>Amministrazione
+            <span className="lrow-ic ic-gold"><Icon name="zap" size={18} strokeWidth={2} /></span>
+            <span>Amministrazione{newReports > 0 && <span className="acc-badge">{newReports}</span>}</span>
           </button>
         )}
         <button type="button" className="acc-btn out" onClick={onLogout}>
           <span className="lrow-ic ic-rose"><Icon name="logout" size={18} strokeWidth={2} /></span>Esci
         </button>
       </div>
+
+      <p className="app-version">Turnio · versione {versionLabel()}</p>
 
       {installGuide && <InstallGuide onClose={() => setInstallGuide(false)} />}
     </>

@@ -24,6 +24,7 @@ import AvailabilityDialog from './AvailabilityDialog.jsx';
 import WeekDuplicateDialog from './WeekDuplicateDialog.jsx';
 import TurniWeek from './TurniWeek.jsx';
 import Icon from './icons/Icon.jsx';
+import { historyOf } from '../lib/history.js';
 
 const fmt = (n) => n.toLocaleString('it-IT', { useGrouping: 'always', minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -535,7 +536,7 @@ export default function ShiftsTab({ state, setState, year, month, setYear, setMo
         <ShiftEditor date={editing.date} shift={editing.shift} settings={state.settings}
           sites={state.sites.filter((s) => !s.archived || s.id === editing.shift?.siteId)}
           favorites={activeFavorites} lastSiteId={activeSites.some((s) => s.id === state.lastSiteId) ? state.lastSiteId : null}
-          allShifts={state.shifts}
+          allShifts={state.shifts} history={editing.shift ? historyOf(state, 'shifts', editing.shift.id) : []}
           onSave={save} onDelete={del} onClose={() => setEditing(null)} onCopy={copyShiftTo}
           onSaveFavorite={saveFavorite} onDeleteFavorite={deleteFavorite} />
       )}

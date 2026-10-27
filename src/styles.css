@@ -1408,3 +1408,55 @@ button.wk-dn:active { background: rgba(var(--ink), 0.06); }
 
 /* "rimbalzo" dell'iPhone in cima alla pagina: si vede il colore della barra, non una striscia crema */
 html { background: linear-gradient(var(--bar-color) 50%, var(--bg) 50%); }
+
+/* ── Modifiche e cestino ───────────────────────────────────── */
+.seg-wide { width: 100%; }
+.seg-wide button { flex: 1; }
+.hist-row { display: flex; align-items: center; gap: 12px; padding: 10px 12px 10px 13px; border-top: 1px solid var(--border); }
+.hist-row:first-child { border-top: none; }
+.hist-t { display: block; font-size: 14.5px; font-weight: 600; line-height: 1.35; overflow-wrap: anywhere; }
+.hist-restore { height: 38px; padding: 0 12px; display: inline-flex; align-items: center; gap: 5px; font-size: 14px; }
+.hist-restore:disabled { opacity: 0.6; }
+.hist-empty { padding: 18px 16px; color: var(--text-dim); text-align: center; }
+.shift-history { margin-top: 14px; padding-top: 4px; border-top: 1px dashed var(--border-hi); }
+.shift-history-row { display: flex; flex-direction: column; font-size: 12.5px; padding: 5px 0; color: var(--text-dim); }
+.shift-history-row b { color: var(--text); font-weight: 700; }
+
+/* versione dell'app e contatore sul tasto Amministrazione */
+.app-version { text-align: center; font-size: 12px; color: var(--text-mut); margin: 4px 0 14px; }
+.acc-badge {
+  display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 6px; margin-left: 6px; border-radius: 10px;
+  background: var(--accent-dk); color: var(--on-accent); font-size: 12px; font-weight: 800; vertical-align: 1px;
+}
+
+/* ── Segnala un problema ───────────────────────────────────── */
+.report-card { padding: 14px; }
+.report-card textarea { width: 100%; min-width: 0; resize: vertical; border-radius: 12px; padding: 10px 12px; line-height: 1.45; }
+.report-photo { display: flex; align-items: center; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+.report-photo img { width: 72px; height: 72px; object-fit: cover; border-radius: 10px; border: 1px solid var(--border-hi); }
+.report-send { height: 50px; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 16px; }
+
+/* ── Amministrazione: aggiornamento del database e segnalazioni ── */
+.upgrade-card { border: 1.5px solid var(--t-gold-bd); background: var(--t-gold-bg); }
+.upgrade-steps { margin: 4px 0 12px 20px; font-size: 13.5px; line-height: 1.6; }
+.upgrade-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+.upgrade-sql { width: 100%; min-width: 0; font-family: var(--mono); font-size: 11px; }
+.report-list { display: flex; flex-direction: column; gap: 10px; }
+.report-item { border: 1px solid var(--border-hi); border-radius: var(--radius-sm); padding: 10px 12px; background: var(--bg-panel); }
+.report-item.st-risolto { opacity: 0.7; }
+.report-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.report-status { font-size: 11.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.4px; padding: 2px 8px; border-radius: 8px; }
+.report-status.st-nuovo { background: var(--t-gold-bg); color: var(--t-gold-tx); }
+.report-status.st-visto { background: var(--t-blue-bg); color: var(--t-blue-tx); }
+.report-status.st-risolto { background: var(--t-grn-bg); color: var(--t-grn-tx); }
+.report-when { font-size: 12px; color: var(--text-mut); }
+.report-from { font-size: 12.5px; font-weight: 700; margin-top: 4px; overflow-wrap: anywhere; }
+.report-msg { margin: 6px 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; }
+.report-thumb { border: none; background: none; padding: 0; cursor: zoom-in; }
+.report-thumb img { max-width: 140px; max-height: 140px; border-radius: 8px; border: 1px solid var(--border-hi); }
+.report-details { font-size: 12px; color: var(--text-dim); margin: 6px 0; }
+.report-details summary { cursor: pointer; font-weight: 600; }
+.report-details ul { margin: 6px 0 0 16px; }
+.report-ua { overflow-wrap: anywhere; font-family: var(--mono); font-size: 10.5px; }
+.report-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+.report-zoom { max-width: 100%; max-height: 100%; border-radius: 10px; }

@@ -72,7 +72,8 @@ export default function SettingsTab({ state, setState, onLogout, isAdmin, onOpen
   };
 
   const doReset = async () => {
-    const ok = await confirmAction('Sicuro di voler cancellare TUTTI i dati (sedi, turni, impostazioni)? Operazione irreversibile.',
+    const ok = await confirmAction('Sicuro di voler cancellare TUTTI i dati (sedi, turni, impostazioni), anche la cronologia delle modifiche e il cestino? '
+      + 'Resta solo la copia automatica sul server degli ultimi giorni (qui sopra, in "Copie automatiche sul server").',
       { title: 'Azzerare tutti i dati', danger: true, confirmLabel: 'Azzera tutto' });
     if (!ok) return;
     setState(clearAllData); // azzeramento propagato anche agli altri dispositivi

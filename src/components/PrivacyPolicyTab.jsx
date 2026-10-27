@@ -9,7 +9,7 @@ export default function PrivacyPolicyTab({ onBack }) {
     <div className="panel privacy-page">
       {onBack && <button className="btn btn-sm" style={{ marginBottom: 12 }} onClick={onBack}>‹ Indietro</button>}
       <h2 className="panel-title">Privacy Policy di Turnio</h2>
-      <p className="panel-desc">Ultimo aggiornamento: 22 ottobre 2026</p>
+      <p className="panel-desc">Ultimo aggiornamento: 27 ottobre 2026</p>
 
       <div className="privacy-body">
         <h3>1. Titolare del trattamento</h3>
@@ -30,6 +30,9 @@ export default function PrivacyPolicyTab({ onBack }) {
           <li><b>Prestazioni occasionali</b>: data, descrizione, importo e note inserite per ciascuna prestazione.</li>
           <li><b>Spese</b>: importi, categorie, date e note inserite nella sezione Spese.</li>
           <li><b>Impostazioni fiscali</b>: regime, cassa previdenziale, modalità di calcolo, aliquote, contributi, rivalsa o contributo integrativo e obiettivo di guadagno mensile impostati.</li>
+          <li><b>Cronologia delle modifiche e cestino</b>: per ogni modifica ai tuoi dati, quando è stata fatta, una breve descrizione e il tipo di dispositivo (es. "Android (app)"); gli elementi eliminati restano nel cestino per 30 giorni. Servono a te per ritrovare e ripristinare i dati, e restano nel tuo account.</li>
+          <li><b>Copie automatiche giornaliere</b>: ogni giorno in cui modifichi qualcosa, una copia dei tuoi dati com'erano a inizio giornata, conservata sul server per 30 giorni per poterli ripristinare.</li>
+          <li><b>Segnalazioni</b> (solo se usi "Segnala un problema"): il messaggio che scrivi, la foto dello schermo se la alleghi, la tua email e dati tecnici (versione dell'app, tipo di telefono e browser, dimensioni dello schermo, ultime pagine aperte ed eventuali errori). Non includono i tuoi turni né i tuoi guadagni.</li>
           <li><b>Dati tecnici minimi</b> raccolti automaticamente dai fornitori di infrastruttura (Supabase, Vercel) per far funzionare il servizio: indirizzo IP e log di accesso ai server.</li>
         </ul>
         <p>
@@ -58,8 +61,11 @@ export default function PrivacyPolicyTab({ onBack }) {
 
         <h3>5. Per quanto tempo conserviamo i dati</h3>
         <p>
-          Finché il tuo account resta attivo. Se cancelli il tuo account da Altro → Account, i tuoi dati
-          (turni, prestazioni, sedi, spese, ferie e assenze, anagrafica, impostazioni) vengono <b>eliminati definitivamente e immediatamente</b> dai nostri
+          Finché il tuo account resta attivo. La cronologia delle modifiche si tiene per gli ultimi 60 giorni, il cestino e le copie
+          automatiche giornaliere per 30 giorni; "Azzera tutti i dati" svuota subito anche cronologia e cestino, mentre le copie
+          giornaliere restano fino alla loro scadenza (servono proprio a recuperare un azzeramento fatto per errore).
+          Se cancelli il tuo account da Altro → Account, i tuoi dati (turni, prestazioni, sedi, spese, ferie e assenze, anagrafica,
+          impostazioni, cronologia, copie giornaliere e segnalazioni) vengono <b>eliminati definitivamente e immediatamente</b> dai nostri
           server, senza bisogno di richiederlo a nessuno.
         </p>
 

@@ -3,6 +3,7 @@ import { shiftsToConfirm, weekdayOf } from '../lib/calc.js';
 import { WEEKDAYS_IT } from '../lib/defaults.js';
 import { updateShift } from '../lib/store.js';
 import Portal from '../lib/Portal.jsx';
+import { useConfirm } from '../lib/ConfirmContext.jsx';
 import SiteAvatar from './SiteAvatar.jsx';
 
 const MAX_ROWS = 5;
@@ -21,14 +22,24 @@ export default function ConfirmShiftsCard({ state, setState, now }) {
   const [undo, setUndo] = useState(null);
   const undoTimer = useRef(null);
   const siteById = useMemo(() => new Map(state.sites.map((s) => [s.id, s])), [state.sites]);
+  const confirmAction = useConfirm();
 
   const showUndo = (shift) => {
     setUndo(shift);
     clearTimeout(undoTimer.current);
-    undoTimer.current = setTimeout(() => setUndo(null), 5000);
+    undoTimer.current = setTimeout(() => setUndo(null), 10000);
   };
   // askConfirm: undefined = la risposta è data (vedi shiftsToConfirm)
-  const setStatus = (shift, status) => {
+  const setStatus = async (shift, status) => {
+    // "non fatto" toglie il turno da ore e guadagni: un tocco per sbaglio non deve bastare
+    if (status === 'cancelled') {
+      const site = siteById.get(shift.siteId)?.name ?? 'sede eliminata';
+      const ok = await confirmAction(
+        `${site}, ${shortDate(shift.date)} ${shift.start}–${shift.end}: resterà nel calendario barrato e non verrà contato in ore e guadagni.`,
+        { title: 'Non hai fatto questo turno?', danger: true, confirmLabel: 'Sì, non l\'ho fatto', cancelLabel: 'No, torna indietro' },
+      );
+      if (!ok) return;
+    }
     setState((s) => updateShift(s, shift.id, { status, askConfirm: undefined }));
     if (status === 'cancelled') showUndo(shift);
   };

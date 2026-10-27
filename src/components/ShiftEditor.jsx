@@ -3,6 +3,8 @@ import { hoursOfShift, isShiftDone, siteRateOn, computeTaxes } from '../lib/calc
 import { rivalsaLabel, MONTHS_IT, WEEKDAYS_IT_LONG } from '../lib/defaults.js';
 import { useLockBodyScroll } from '../lib/useLockBodyScroll.js';
 import { useBackClose } from '../lib/backStack.js';
+import { useConfirm } from '../lib/ConfirmContext.jsx';
+import { whenLabel } from '../lib/history.js';
 import Portal from '../lib/Portal.jsx';
 import SiteAvatar from './SiteAvatar.jsx';
 import NumberInput from './NumberInput.jsx';
@@ -18,7 +20,9 @@ export default function ShiftEditor({
   date, shift, sites, favorites = [], lastSiteId, settings, allShifts = [],
   onSave, onDelete, onClose, onSaveFavorite, onDeleteFavorite, onCopy,
   initial, // nuovo turno già impostato (sede e orario scelti in "Aggiungi")
+  history = [], // righe della cronologia di questo turno (vedi lib/history.js)
 }) {
+  const confirmAction = useConfirm();
   const [siteId, setSiteId] = useState(shift?.siteId ?? initial?.siteId ?? lastSiteId ?? sites[0]?.id ?? null);
   const [start, setStart] = useState(shift?.start ?? initial?.start ?? '07:00');
   const [end, setEnd] = useState(shift?.end ?? initial?.end ?? '14:00');
@@ -39,8 +43,16 @@ export default function ShiftEditor({
   const showStatus = !!shift && (isShiftDone({ date, start, end }) || shift.status === 'cancelled');
   const site = sites.find((s) => s.id === siteId);
 
-  const save = () => {
+  const save = async () => {
     if (!canSave) return;
+    // "non fatto" toglie il turno da ore e guadagni: si chiede conferma, per non sbagliare con un tocco
+    if (shift && status === 'cancelled' && shift.status !== 'cancelled') {
+      const ok = await confirmAction(
+        `Il turno del ${longDate(date)} (${start}–${end}) resterà nel calendario barrato e non verrà contato in ore e guadagni.`,
+        { title: 'Segnare come «non fatto»?', danger: true, confirmLabel: 'Sì, non l\'ho fatto', cancelLabel: 'No' },
+      );
+      if (!ok) return;
+    }
     const data = { date, siteId, start, end, note: note.trim() };
     if (shift) data.status = status ?? undefined;
     const special = customRateOn && customRate !== '' && customRate != null ? Number(customRate) : undefined;
@@ -228,6 +240,18 @@ export default function ShiftEditor({
               <button className="btn btn-primary btn-block" onClick={save} disabled={!canSave}>Salva</button>
               {shift && <button className="btn btn-danger" onClick={() => onDelete(shift.id)}>Elimina</button>}
             </div>
+
+            {shift && history.length > 0 && (
+              <div className="shift-history">
+                <div className="editor-label">Storia di questo turno</div>
+                {history.slice(0, 5).map((h) => (
+                  <div key={h.id} className="shift-history-row">
+                    <b>{h.text.split(':')[0]}</b>
+                    <span>{whenLabel(h.at)} · {h.dev || 'dispositivo sconosciuto'}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </>
         )}
       </div>

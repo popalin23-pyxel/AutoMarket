@@ -24,6 +24,10 @@ function freshState() {
     settingsUpdatedAt: 0, // ultima modifica alle impostazioni (per l'unione tra dispositivi)
     // id eliminati (con timestamp): evita che riappaiano dopo un'unione multi-dispositivo (vedi mergeState.js)
     tombstones: { sites: {}, shifts: {}, favorites: {}, expenses: {}, occasionalWork: {}, dayMarks: {} },
+    // cronologia delle modifiche e cestino (vedi history.js); historyResetAt = "Azzera tutti i dati"
+    history: [], // [{ id, at, dev, col, itemId, act, text }]
+    trash: [],   // [{ id, at, dev, col, item, text, restoredAt? }]
+    historyResetAt: 0,
   };
 }
 
@@ -81,6 +85,9 @@ export function sanitizeState(parsed) {
       sites: {}, shifts: {}, favorites: {}, expenses: {}, occasionalWork: {}, dayMarks: {},
       ...(parsed.tombstones ?? {}),
     },
+    history: Array.isArray(parsed.history) ? parsed.history : [],
+    trash: Array.isArray(parsed.trash) ? parsed.trash : [],
+    historyResetAt: Number(parsed.historyResetAt) || 0,
   };
 }
 
@@ -99,8 +106,9 @@ export function saveState(state) {
   try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { console.warn('Turnio: salvataggio fallito', e); }
 }
 
+// stato vuoto (uscita dall'account, account eliminato): niente cronologia né cestino del vecchio
 export function resetState() {
-  const s = freshState();
+  const s = { ...freshState(), historyResetAt: Date.now() };
   saveState(s);
   return s;
 }
@@ -114,6 +122,10 @@ const COLLECTIONS = ['sites', 'shifts', 'favorites', 'expenses', 'occasionalWork
 export function replaceAllData(current, next) {
   const now = Date.now();
   const out = { ...next, settingsUpdatedAt: now, tombstones: {}, seq: { ...next.seq } };
+  // la cronologia e il cestino restano quelli dell'account (un backup vecchio non li sostituisce)
+  out.history = current.history ?? [];
+  out.trash = current.trash ?? [];
+  out.historyResetAt = Number(current.historyResetAt) || 0;
   for (const [k, v] of Object.entries(current.seq ?? {})) out.seq[k] = Math.max(Number(out.seq[k]) || 1, Number(v) || 1);
   for (const key of COLLECTIONS) {
     const items = next[key] ?? [];
@@ -127,8 +139,8 @@ export function replaceAllData(current, next) {
   return out;
 }
 
-// "Azzera tutti i dati": come un ripristino da un backup vuoto.
-export const clearAllData = (current) => replaceAllData(current, freshState());
+// "Azzera tutti i dati": come un ripristino da un backup vuoto, e senza cronologia né cestino.
+export const clearAllData = (current) => ({ ...replaceAllData(current, freshState()), history: [], trash: [], historyResetAt: Date.now() });
 
 // ── Sedi ──────────────────────────────────────────────────────────────
 export function addSite(state, name, rate, opts = {}) {
@@ -209,6 +221,8 @@ function restoreItem(state, collection, item) {
 export const restoreShift = (state, shift) => restoreItem(state, 'shifts', shift);
 export const restoreOccasionalWork = (state, entry) => restoreItem(state, 'occasionalWork', entry);
 export const restoreDayMark = (state, mark) => restoreItem(state, 'dayMarks', mark);
+// dal cestino (vedi history.js): torna con lo stesso id, e la riga del cestino si chiude da sola
+export const restoreFromTrash = (state, entry) => restoreItem(state, entry.col, entry.item);
 
 // ── Scorciatoie turno (preferiti) ──────────────────────────────────────
 export function addFavorite(state, fav) {

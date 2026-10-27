@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { loadState, saveState, resetState } from './lib/store.js';
 import { computeMonthProgress } from './lib/calc.js';
+import { withHistory } from './lib/history.js';
 import { useNow } from './lib/useNow.js';
 import { loadTheme, applyTheme } from './lib/theme.js';
 import { loadAccent, applyAccent } from './lib/accentColor.js';
@@ -30,6 +31,10 @@ import SettingsTab from './components/SettingsTab.jsx';
 import NotificheTab from './components/NotificheTab.jsx';
 import PrivacyPolicyTab from './components/PrivacyPolicyTab.jsx';
 import AddSheet from './components/AddSheet.jsx';
+import HistoryPage from './components/HistoryPage.jsx';
+import ReportPage from './components/ReportPage.jsx';
+import ServerCopies from './components/ServerCopies.jsx';
+import { countNewReports } from './lib/serverData.js';
 import SubPage from './components/ui/SubPage.jsx';
 import Icon from './components/icons/Icon.jsx';
 import Splash from './components/Splash.jsx';
@@ -45,6 +50,7 @@ const SUBPAGE_TITLES = {
   altro: {
     anagrafica: 'I miei dati', sites: 'Sedi e paghe', fiscal: 'Tasse e cassa', goal: 'Obiettivo', documents: 'Documenti',
     account: 'Account', appearance: 'Aspetto', backup: 'Copia di sicurezza',
+    history: 'Modifiche e cestino', report: 'Segnala un problema',
   },
 };
 
@@ -84,6 +90,9 @@ function Shell() {
   const [turniAction, setTurniAction] = useState(null);
   const [addOpen, setAddOpen] = useState(false);
   const [savedToast, setSavedToast] = useState(false);
+  const [newReports, setNewReports] = useState(0); // segnalazioni da leggere (solo amministratore)
+  // ultime pagine aperte, da allegare a "Segnala un problema"
+  const recentPages = useRef([]);
   const [year, setYear] = useState(() => new Date().getFullYear());
   const [month, setMonth] = useState(() => new Date().getMonth() + 1);
   // ora corrente, aggiornata ogni minuto e al ritorno in primo piano: le app restano aperte
@@ -96,6 +105,14 @@ function Shell() {
 
   // cache locale sempre aggiornata (funziona anche offline)
   useEffect(() => { saveState(state); }, [state]);
+
+  // Tutte le modifiche fatte dall'utente passano di qui e lasciano una riga nella cronologia
+  // (e ciò che si elimina va nel cestino): vedi lib/history.js. I dati che arrivano dal cloud
+  // usano setState diretto: le loro righe le ha già scritte il dispositivo che li ha cambiati.
+  const updateState = useCallback(
+    (update) => setState((prev) => withHistory(prev, typeof update === 'function' ? update(prev) : update)),
+    [],
+  );
 
   // sincronizzazione cloud (vedi lib/useCloudSync.js). Dipende dall'id utente, non
   // dall'oggetto user: Supabase ne crea uno nuovo a ogni rinnovo del token (es. quando
@@ -118,6 +135,14 @@ function Shell() {
   // torna ad Altro, dalle altre pagine torna a Oggi; solo da Oggi esce dall'app.
   const goBackTo = (tab) => { setSubTab(null); setActive(tab); window.scrollTo(0, 0); };
   const inSubpage = (active === 'soldi' || active === 'altro') && subTab != null;
+  useEffect(() => {
+    const page = subTab ? `${active}/${subTab}` : active;
+    if (recentPages.current[recentPages.current.length - 1] !== page) recentPages.current = [...recentPages.current, page].slice(-6);
+  }, [active, subTab]);
+  // segnalazioni da leggere: si ricontano ogni volta che si torna sulla pagina Altro
+  useEffect(() => {
+    if (isAdmin && active === 'altro' && !subTab) countNewReports().then(setNewReports).catch(() => {});
+  }, [isAdmin, active, subTab]);
   // (ordine voluto: la voce più interna viene aggiunta per ultima e chiusa per prima)
   useBackClose(() => goBackTo('dashboard'), active !== 'dashboard');
   useBackClose(() => goBackTo('altro'), active === 'admin' || active === 'privacy');
@@ -196,11 +221,11 @@ function Shell() {
       <div className="app-body">
         <div key={`${active}:${subTab ?? ''}`} className="tab-fade">
           {active === 'dashboard' && (
-            <DashboardTab state={state} setState={setState} userEmail={user?.email} isAdmin={isAdmin} onNavigate={navigate}
+            <DashboardTab state={state} setState={updateState} userEmail={user?.email} isAdmin={isAdmin} onNavigate={navigate}
               onOpenCurrentMonth={openCurrentMonth} onAdd={() => setAddOpen(true)} />
           )}
           {active === 'calendar' && (
-            <ShiftsTab state={state} setState={setState} year={year} month={month} setYear={setYear} setMonth={setMonth}
+            <ShiftsTab state={state} setState={updateState} year={year} month={month} setYear={setYear} setMonth={setMonth}
               onNavigate={navigate} action={turniAction} onActionDone={() => setTurniAction(null)} now={now} />
           )}
 
@@ -210,7 +235,7 @@ function Shell() {
           )}
           {active === 'soldi' && subPage === 'dettaglio' && subPageView('soldi',
             <SummaryTab state={state} year={year} month={month} setYear={setYear} setMonth={setMonth} />)}
-          {active === 'soldi' && subPage === 'spese' && subPageView('soldi', <ExpensesTab state={state} setState={setState} />)}
+          {active === 'soldi' && subPage === 'spese' && subPageView('soldi', <ExpensesTab state={state} setState={updateState} />)}
           {active === 'soldi' && subPage === 'grafici' && subPageView('soldi',
             <AnalisiTab state={state} initialSub={subArg || undefined} onOpenMonth={openMonthSummary} />)}
           {active === 'soldi' && subPage === 'documenti' && subPageView('soldi',
@@ -218,23 +243,30 @@ function Shell() {
           {active === 'soldi' && subPage === 'simulatore' && subPageView('soldi', <EarningsSimulator state={state} onNavigate={navigate} />)}
 
           {active === 'altro' && !subPage && (
-            <AltroTab state={state} user={user} isAdmin={isAdmin} onOpen={(sub) => navigate('altro', sub)}
+            <AltroTab state={state} user={user} isAdmin={isAdmin} newReports={newReports} onOpen={(sub) => navigate('altro', sub)}
               onTool={(t) => openCurrentMonth('calendar', t)} onOpenPrivacy={() => navigate('privacy')}
               onOpenAdmin={() => navigate('admin')} onLogout={doLogout} />
           )}
-          {active === 'altro' && subPage === 'anagrafica' && subPageView('altro', <AnagraficaTab state={state} setState={setState} />)}
+          {active === 'altro' && subPage === 'anagrafica' && subPageView('altro', <AnagraficaTab state={state} setState={updateState} />)}
           {active === 'altro' && subPage === 'sites' && subPageView('altro', <>
-            <SitesTab state={state} setState={setState} />
+            <SitesTab state={state} setState={updateState} />
             <SitesMonthPreview state={state} onNavigate={navigate} />
           </>)}
-          {active === 'altro' && subPage === 'fiscal' && subPageView('altro', <FiscalSettingsTab state={state} setState={setState} />)}
-          {active === 'altro' && subPage === 'goal' && subPageView('altro', <GoalPanel state={state} setState={setState} />)}
+          {active === 'altro' && subPage === 'fiscal' && subPageView('altro', <FiscalSettingsTab state={state} setState={updateState} />)}
+          {active === 'altro' && subPage === 'goal' && subPageView('altro', <GoalPanel state={state} setState={updateState} />)}
           {active === 'altro' && subPage === 'documents' && subPageView('altro',
             <DocumentsPage state={state} year={year} month={month} setYear={setYear} setMonth={setMonth} />)}
-          {active === 'altro' && ['account', 'appearance', 'backup'].includes(subPage) && subPageView('altro',
-            <SettingsTab state={state} setState={setState} onLogout={doLogout} isAdmin={isAdmin} section={subPage} />)}
+          {active === 'altro' && ['account', 'appearance', 'backup'].includes(subPage) && subPageView('altro', <>
+            {subPage === 'backup' && <ServerCopies state={state} setState={updateState} userId={user?.id} />}
+            <SettingsTab state={state} setState={updateState} onLogout={doLogout} isAdmin={isAdmin} section={subPage} />
+          </>)}
+          {active === 'altro' && subPage === 'history' && subPageView('altro', <HistoryPage state={state} setState={updateState} />)}
+          {active === 'altro' && subPage === 'report' && subPageView('altro',
+            <ReportPage state={state} user={user} recentPages={recentPages.current.slice(0, -1)} syncStatus={syncStatus} />)}
 
-          {active === 'admin' && isAdmin && <AdminTab onBack={() => goBackTo('altro')} />}
+          {active === 'admin' && isAdmin && (
+            <SubPage title="Amministrazione" onBack={() => goBackTo('altro')}><AdminTab onReportsCount={setNewReports} /></SubPage>
+          )}
           {active === 'privacy' && <PrivacyPolicyTab onBack={() => goBackTo('altro')} />}
           {active === 'notifications' && (
             <NotificheTab state={state} onBack={() => navigate('dashboard')} />
@@ -252,7 +284,7 @@ function Shell() {
       </nav>
 
       {addOpen && (
-        <AddSheet state={state} setState={setState} onClose={() => setAddOpen(false)} onSaved={flashSaved}
+        <AddSheet state={state} setState={updateState} onClose={() => setAddOpen(false)} onSaved={flashSaved}
           onGoSites={() => { setAddOpen(false); navigate('altro', 'sites'); }} />
       )}
 

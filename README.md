@@ -53,6 +53,13 @@ Nel progetto, apri **SQL Editor** → incolla ed esegui il contenuto di
 `src/lib/cloudState.js` → costante `SETUP_SQL` (crea le tabelle `turnio_states` e
 `profiles`, con tutte le regole di sicurezza).
 
+**2b. Aggiornamento 1.5 (copie giornaliere e segnalazioni)**
+Esegui anche, sempre nel **SQL Editor**, il contenuto della costante `UPGRADE_SQL_2` in
+`src/lib/cloudState.js`. Su un progetto già avviato basta questo passaggio: lo trovi anche
+nell'app, in **Altro → Amministrazione → Da fare: aggiornare il database** (tasto "Copia lo script").
+Crea `turnio_backups` (una copia dei dati di ogni utente al giorno, alla prima modifica, per 30 giorni)
+e `turnio_reports` (le segnalazioni di "Segnala un problema", visibili all'amministratore).
+
 **3. Recupera le chiavi**
 In **Project Settings → API** copia **Project URL** e **anon public key**.
 

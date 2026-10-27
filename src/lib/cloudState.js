@@ -79,7 +79,81 @@ export async function saveCloudStateSafely(userId, localState, lastKnownVersion)
   return { state: localState, merged: false, version };
 }
 
+// Aggiornamento del database (versione 1.5): copie automatiche giornaliere e segnalazioni.
+// Da eseguire una volta sola nel SQL Editor di Supabase; si può rieseguire senza danni.
+export const UPGRADE_SQL_2 = `-- ════════════════════════════════════════════════════════════
+-- Turnio 1.5 · 1) Copia automatica giornaliera dei dati di ogni utente
+-- La prima modifica di ogni giorno salva i dati com'erano prima (copia "di inizio
+-- giornata"); si tengono gli ultimi 30 giorni. Solo il proprietario le vede.
+-- ════════════════════════════════════════════════════════════
+create table if not exists turnio_backups (
+  user_id uuid not null references auth.users(id) on delete cascade,
+  day date not null,
+  data jsonb not null,
+  created_at timestamptz not null default now(),
+  primary key (user_id, day)
+);
+
+alter table turnio_backups enable row level security;
+
+drop policy if exists "ognuno vede solo le proprie copie" on turnio_backups;
+create policy "ognuno vede solo le proprie copie" on turnio_backups
+  for select using (auth.uid() = user_id);
+-- nessuna policy di scrittura: le copie le scrive solo il database (funzione qui sotto)
+
+create or replace function public.turnio_daily_backup()
+returns trigger
+language plpgsql security definer set search_path = public
+as $$
+declare
+  today date := (now() at time zone 'Europe/Rome')::date;
+begin
+  insert into public.turnio_backups (user_id, day, data)
+  values (old.user_id, today, old.data)
+  on conflict (user_id, day) do nothing;
+  delete from public.turnio_backups where user_id = old.user_id and day < today - 30;
+  return new;
+end;
+$$;
+
+drop trigger if exists turnio_daily_backup on turnio_states;
+create trigger turnio_daily_backup
+  before update on turnio_states
+  for each row when (old.data is distinct from new.data)
+  execute function public.turnio_daily_backup();
+
+-- ════════════════════════════════════════════════════════════
+-- Turnio 1.5 · 2) Segnalazioni dei problemi ("Segnala un problema")
+-- Ognuno invia e vede le proprie; l'amministratore le vede tutte.
+-- ════════════════════════════════════════════════════════════
+create table if not exists turnio_reports (
+  id bigint generated always as identity primary key,
+  user_id uuid references auth.users(id) on delete cascade,
+  email text,
+  created_at timestamptz not null default now(),
+  message text not null check (char_length(message) between 1 and 4000),
+  context jsonb not null default '{}'::jsonb,
+  screenshot text check (screenshot is null or char_length(screenshot) < 1500000),
+  status text not null default 'nuovo' check (status in ('nuovo','visto','risolto'))
+);
+
+alter table turnio_reports enable row level security;
+
+drop policy if exists "invio segnalazioni a mio nome" on turnio_reports;
+create policy "invio segnalazioni a mio nome" on turnio_reports
+  for insert with check (auth.uid() = user_id and status = 'nuovo');
+drop policy if exists "vedo le mie, l'admin le vede tutte" on turnio_reports;
+create policy "vedo le mie, l'admin le vede tutte" on turnio_reports
+  for select using (auth.uid() = user_id or public.is_admin());
+drop policy if exists "solo l'admin cambia lo stato" on turnio_reports;
+create policy "solo l'admin cambia lo stato" on turnio_reports
+  for update using (public.is_admin()) with check (public.is_admin());
+drop policy if exists "solo l'admin elimina" on turnio_reports;
+create policy "solo l'admin elimina" on turnio_reports
+  for delete using (public.is_admin());`;
+
 // Script SQL da eseguire una volta sola nel progetto Supabase (SQL Editor).
+// (per un progetto nuovo va eseguito anche UPGRADE_SQL_2, subito dopo)
 export const SETUP_SQL = `-- ════════════════════════════════════════════════════════════
 -- 1) Dati Turnio: una riga per utente, protetta da RLS
 -- ════════════════════════════════════════════════════════════

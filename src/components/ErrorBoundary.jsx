@@ -1,4 +1,5 @@
 import React from 'react';
+import { logError } from '../lib/errorLog.js';
 
 // Rete di sicurezza: se un componente qualsiasi genera un errore non gestito,
 // mostra un messaggio comprensibile invece di una pagina bianca. I dati non
@@ -15,6 +16,7 @@ export default class ErrorBoundary extends React.Component {
 
   componentDidCatch(error, info) {
     console.error('Turnio: errore non gestito', error, info);
+    logError(`${error?.message || error}${info?.componentStack ? ` · ${info.componentStack.trim().split('\n')[0]}` : ''}`);
   }
 
   render() {

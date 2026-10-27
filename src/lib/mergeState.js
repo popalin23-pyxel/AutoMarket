@@ -7,9 +7,13 @@
 //   modifica più recente (`_u`, impostato da store.js a ogni creazione/modifica);
 // - eliminazioni tracciate con "tombstone" (id + quando): un elemento eliminato
 //   resta eliminato ovunque, a meno che non sia stato ripristinato/modificato dopo;
-// - impostazioni: vince la versione modificata più di recente (`settingsUpdatedAt`).
+// - impostazioni: vince la versione modificata più di recente (`settingsUpdatedAt`);
+// - cronologia e cestino: si uniscono le righe dei due dispositivi (vedi history.js), tranne
+//   quelle precedenti a un "Azzera tutti i dati" (`historyResetAt`).
 // A parità (es. dati salvati prima che esistessero i timestamp) vince il locale,
 // oppure il remoto se richiesto con preferRemoteOnTie.
+
+import { pruneHistory, pruneTrash } from './history.js';
 
 const stamp = (item) => Number(item?._u) || 0;
 
@@ -66,6 +70,10 @@ export function mergeStates(local, remote, { preferRemoteOnTie = false } = {}) {
     settingsUpdatedAt: Math.max(localSet, remoteSet),
   };
   for (const key of COLLECTIONS) merged[key] = mergeArraysById(local[key], remote[key], tombstones[key], preferRemoteOnTie);
+  const resetAt = Math.max(Number(local.historyResetAt) || 0, Number(remote.historyResetAt) || 0);
+  merged.historyResetAt = resetAt;
+  merged.history = pruneHistory(mergeArraysById(local.history, remote.history, {}), resetAt);
+  merged.trash = pruneTrash(mergeArraysById(local.trash, remote.trash, {}), resetAt);
   return merged;
 }
 
