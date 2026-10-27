@@ -1460,3 +1460,109 @@ html { background: linear-gradient(var(--bar-color) 50%, var(--bg) 50%); }
 .report-ua { overflow-wrap: anywhere; font-family: var(--mono); font-size: 10.5px; }
 .report-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
 .report-zoom { max-width: 100%; max-height: 100%; border-radius: 10px; }
+
+/* ════════════════════════════════════════════════════════════════════
+   Oggi (bozza A): saluto con il fatturato nell'angolo, la giornata in una frase,
+   da fare, i soldi in breve, i prossimi turni
+   ════════════════════════════════════════════════════════════════════ */
+.og-greet { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin: 2px 2px 12px 4px; }
+.og-greet-l { min-width: 0; }
+.og-greet h1 { font-size: 24px; font-weight: 700; letter-spacing: -0.4px; line-height: 1.15; }
+.og-greet-date { font-size: 14px; color: var(--text-dim); font-weight: 600; margin-top: 3px; }
+.og-fatt {
+  flex: none; display: flex; flex-direction: column; align-items: flex-end; background: var(--bg-panel); border: 1px solid var(--border-hi);
+  border-radius: 14px; padding: 7px 11px 8px; box-shadow: 0 4px 12px var(--shadow-soft); cursor: pointer; font-family: inherit; color: var(--text);
+}
+.og-fatt .l { font-size: 10.5px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; color: var(--text-dim); }
+.og-fatt .v { font-family: var(--mono); font-size: 16px; font-weight: 700; line-height: 1.2; white-space: nowrap; }
+.og-fatt .s { font-size: 12px; color: var(--text-dim); white-space: nowrap; }
+.og-fatt .s b { color: var(--text); font-family: var(--mono); }
+
+.og-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; flex: none; }
+.og-today { padding: 14px 16px; position: relative; overflow: hidden; }
+.og-today::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 5px; background: var(--accent); }
+.og-today.off::before { background: var(--green); }
+.og-lbl { font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--accent-text); }
+.og-today.off .og-lbl { color: var(--green-text); }
+.og-main { font-size: 23px; font-weight: 700; letter-spacing: -.3px; margin-top: 4px; line-height: 1.25; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.og-times { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.og-time {
+  font-family: var(--mono); font-weight: 700; font-size: 16px; padding: 7px 11px; border-radius: 12px; display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(var(--accent-rgb), .09); border: 1px solid rgba(var(--accent-rgb), .25);
+}
+.og-time.done { background: var(--t-grn-bg); border-color: var(--t-grn-bd); color: var(--t-grn-tx); }
+.og-time.now { background: var(--accent-dk); border-color: var(--accent-dk); color: var(--on-accent); }
+.og-time small { font-family: var(--sans); font-size: 12px; font-weight: 700; }
+.og-when { display: flex; align-items: center; gap: 7px; font-size: 15px; color: var(--text-dim); margin-top: 10px; }
+.og-when > svg { flex: none; }
+.og-when b { color: var(--text); }
+.og-note { font-size: 13.5px; color: var(--text-dim); margin-top: 6px; overflow-wrap: anywhere; }
+.og-next { display: flex; align-items: center; gap: 10px; margin-top: 12px; padding-top: 11px; border-top: 1px dashed var(--border-hi); font-size: 15px; }
+.og-next > div { min-width: 0; }
+.og-next b { font-weight: 700; overflow-wrap: anywhere; }
+.og-next-ic { width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center; flex: none; }
+.og-next-s { display: block; color: var(--text-dim); font-size: 13.5px; }
+
+.og-todo-h { display: flex; align-items: center; gap: 8px; margin: 16px 6px 8px; }
+.og-todo-h .grp-title { margin: 0; }
+.og-count { min-width: 22px; height: 22px; border-radius: 11px; background: var(--accent-dk); color: var(--on-accent); font-size: 12.5px; font-weight: 800; display: grid; place-items: center; padding: 0 6px; }
+.og-todo-hint { font-size: 13.5px; color: var(--text-dim); margin-left: auto; }
+.og-allok { margin-left: auto; height: 32px; padding: 0 12px; border-radius: 16px; border: 1px solid var(--t-grn-bd); background: var(--t-grn-bg); color: var(--t-grn-tx); font-weight: 700; font-size: 13.5px; cursor: pointer; font-family: inherit; }
+.og-todo { padding: 2px 14px; }
+.og-ti { padding: 11px 0 12px; }
+.og-ti + .og-ti { border-top: 1px solid var(--border); }
+.og-tt { display: flex; align-items: center; gap: 8px; font-size: 16px; min-width: 0; }
+.og-tt-site { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.og-tt-tm { margin-left: auto; font-family: var(--mono); color: var(--text-dim); font-size: 14px; white-space: nowrap; }
+.og-tb { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.3fr) minmax(0, 1fr); gap: 7px; margin-top: 9px; }
+.og-tb button {
+  min-height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; gap: 5px; font-size: 14.5px; font-weight: 700;
+  border: 1.5px solid var(--border-hi); background: var(--bg-panel); color: var(--text); cursor: pointer; font-family: inherit; padding: 4px 6px; line-height: 1.15;
+}
+.og-tb .ok { background: var(--t-grn-ic); border-color: transparent; color: #fff; }
+.og-tb .no { color: var(--t-rose-tx); border-color: var(--t-rose-bd); }
+.og-tb-edit { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-top: 9px; }
+.og-tb-edit input[type=time] { width: 110px; min-width: 0; }
+.og-more-note { font-size: 13px; color: var(--text-dim); padding: 0 0 10px; }
+
+.og-money { padding: 14px 16px; }
+.og-m-lead { font-size: 15px; color: var(--text-dim); font-weight: 600; }
+.og-m-big { font-family: var(--mono); font-size: 34px; font-weight: 700; color: var(--green-text); letter-spacing: -1px; line-height: 1.15; }
+.og-m-big small { font-size: .6em; }
+.og-track { position: relative; height: 12px; border-radius: 6px; background: rgba(var(--ink), .08); overflow: hidden; margin-top: 10px; }
+.og-track .plan { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 6px; background: repeating-linear-gradient(135deg, rgba(var(--accent-rgb), .30) 0 6px, rgba(var(--accent-rgb), .14) 6px 12px); }
+.og-track .fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 6px; background: linear-gradient(90deg, var(--accent), var(--gold)); }
+.og-track .fill.reached { background: var(--green); }
+.og-g-row { display: flex; justify-content: space-between; font-size: 13.5px; color: var(--text-dim); margin-top: 6px; }
+.og-g-row b { color: var(--text); }
+.og-g-ok { display: flex; align-items: center; gap: 8px; font-size: 14.5px; margin-top: 9px; }
+.og-g-ok .c { width: 22px; height: 22px; border-radius: 50%; background: var(--t-grn-bg); color: var(--t-grn-tx); display: grid; place-items: center; flex: none; }
+.og-g-ok .c.warn { background: var(--t-gold-bg); color: var(--t-gold-tx); }
+.og-link {
+  display: flex; align-items: center; justify-content: space-between; width: 100%; margin-top: 12px; padding: 10px 0 0; border: none;
+  border-top: 1px solid var(--border); background: none; font-size: 14.5px; font-weight: 700; color: var(--accent-text); cursor: pointer; font-family: inherit;
+}
+
+.og-next-row {
+  display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 12px; border: none; border-top: 1px solid var(--border);
+  background: none; color: var(--text); text-align: left; cursor: pointer; font-family: inherit;
+}
+.og-next-row:first-child { border-top: none; }
+.og-nd { width: 46px; text-align: center; flex: none; }
+.og-nd .w { display: block; font-size: 12px; font-weight: 800; color: var(--text-dim); letter-spacing: .04em; }
+.og-nd .n { display: block; font-family: var(--mono); font-size: 20px; font-weight: 700; line-height: 1.1; }
+.og-nx { flex: 1; min-width: 0; }
+.og-nx-a { display: flex; align-items: center; gap: 7px; font-size: 16px; font-weight: 700; min-width: 0; overflow-wrap: anywhere; }
+.og-nx-b { display: block; font-family: var(--mono); font-size: 14px; color: var(--text-dim); margin-top: 1px; }
+.og-nx-b.h { font-family: inherit; }
+.og-tag { font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 10px; background: var(--t-blue-bg); color: var(--t-blue-tx); white-space: nowrap; flex: none; display: inline-flex; align-items: center; gap: 3px; }
+.og-tag.night { background: var(--t-vio-bg); color: var(--t-vio-tx); }
+.og-more {
+  display: flex; align-items: center; justify-content: center; gap: 4px; width: 100%; padding: 11px; border: none; border-top: 1px solid var(--border);
+  background: none; font-size: 14.5px; font-weight: 700; color: var(--accent-text); cursor: pointer; font-family: inherit;
+}
+@media (max-width: 380px) {
+  .og-greet h1 { font-size: 21px; }
+  .og-fatt { padding: 6px 9px 7px; }
+  .og-fatt .v { font-size: 15px; }
+}

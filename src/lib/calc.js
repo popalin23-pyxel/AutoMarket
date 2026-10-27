@@ -489,29 +489,6 @@ export function computeRangeProgress(shifts, sites, settings, startISO, endISO, 
   };
 }
 
-/**
- * Questa settimana fin qui contro la settimana scorsa allo stesso punto (stesso giorno e ora):
- * confrontare la settimana appena iniziata con quella scorsa intera darebbe sempre un calo.
- */
-export function compareWeekSoFar(shifts, sites, settings, now = new Date(), occasionalWork = []) {
-  const today = toISO(now);
-  const cur = computeRangeProgress(shifts, sites, settings, startOfWeek(today), endOfWeek(today), occasionalWork, now);
-  const prevNow = new Date(now); prevNow.setDate(prevNow.getDate() - 7);
-  const prevDay = toISO(prevNow);
-  const previous = computeRangeProgress(shifts, sites, settings, startOfWeek(prevDay), endOfWeek(prevDay), occasionalWork, prevNow).done;
-  return { ...cur, previous, deltaNetPct: pctDelta(cur.done.netTotal, previous.netTotal) };
-}
-
-/** Il mese fin qui contro il mese scorso fino allo stesso giorno (e ora). */
-export function compareMonthSoFar(shifts, sites, settings, now = new Date(), occasionalWork = []) {
-  const y = now.getFullYear(), m = now.getMonth() + 1;
-  const py = m === 1 ? y - 1 : y, pm = m === 1 ? 12 : m - 1;
-  const prevNow = new Date(py, pm - 1, Math.min(now.getDate(), monthDays(py, pm)), now.getHours(), now.getMinutes());
-  const current = computeMonthProgress(shifts, sites, settings, y, m, occasionalWork, now).done;
-  const previous = computeMonthProgress(shifts, sites, settings, py, pm, occasionalWork, prevNow).done;
-  return { current, previous, deltaNetPct: pctDelta(current.netTotal, previous.netTotal) };
-}
-
 export function computeYearSummary(shifts, sites, settings, year, occasionalWork = []) {
   const months = [];
   for (let m = 1; m <= 12; m++) {

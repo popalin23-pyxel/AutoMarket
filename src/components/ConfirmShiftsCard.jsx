@@ -4,13 +4,12 @@ import { WEEKDAYS_IT } from '../lib/defaults.js';
 import { updateShift } from '../lib/store.js';
 import Portal from '../lib/Portal.jsx';
 import { useConfirm } from '../lib/ConfirmContext.jsx';
-import SiteAvatar from './SiteAvatar.jsx';
 
 const MAX_ROWS = 5;
 
 function shortDate(dateISO) {
   const [y, m, d] = dateISO.split('-').map(Number);
-  return `${WEEKDAYS_IT[weekdayOf(y, m, d)].toLowerCase()} ${d}/${m}`;
+  return `${WEEKDAYS_IT[weekdayOf(y, m, d)]} ${d}/${m}`;
 }
 
 // "Confermi?": i turni finiti da poco, segnati in anticipo, chiedono se sono andati così.
@@ -68,47 +67,49 @@ export default function ConfirmShiftsCard({ state, setState, now }) {
   );
   if (!list.length) return undoToast || null;
 
+  // "Da fare": i turni finiti da confermare, con tre tasti grandi (Fatto / Orario diverso / Non fatto)
   return (
-    <div className="panel confirm-shifts">
-      <div className="confirm-shifts-head">
-        <h2 className="panel-title">{list.length === 1 ? 'Turno da confermare' : `${list.length} turni da confermare`}</h2>
-        {list.length > 1 && <button className="btn btn-sm" onClick={confirmAll} disabled={!!editing}>✓ Tutti fatti</button>}
+    <>
+      <div className="og-todo-h">
+        <span className="grp-title">Da fare</span>
+        <span className="og-count">{list.length}</span>
+        {list.length > 1
+          ? <button type="button" className="og-allok" onClick={confirmAll} disabled={!!editing}>✓ Tutti fatti</button>
+          : <span className="og-todo-hint">Hai fatto questo turno?</span>}
       </div>
-      <p className="panel-desc">È andato tutto come previsto? Così i conti del mese sono giusti.</p>
-      <div className="confirm-shifts-list">
+      <div className="ncard og-todo">
         {list.slice(0, MAX_ROWS).map((sh) => {
           const site = siteById.get(sh.siteId) ?? { name: 'Sede eliminata', color: '#6b7280' };
           const isEditing = editing?.id === sh.id;
           return (
-            <div key={sh.id} className="confirm-shift-row">
-              <div className="confirm-shift-info">
-                <SiteAvatar site={site} size={18} />
-                <span className="confirm-shift-site">{site.name}</span>
-                <span className="confirm-shift-when">{shortDate(sh.date)} · {sh.start}–{sh.end}</span>
+            <div key={sh.id} className="og-ti">
+              <div className="og-tt">
+                <span className="og-dot" style={{ background: site.color }} />
+                <b>{shortDate(sh.date)}</b>
+                <span className="og-tt-site">· {site.name}</span>
+                <span className="og-tt-tm">{sh.start}–{sh.end}</span>
               </div>
               {isEditing ? (
-                <div className="confirm-shift-edit">
+                <div className="og-tb-edit">
                   <input type="time" value={editing.start} aria-label="Inizio" onChange={(e) => setEditing({ ...editing, start: e.target.value })} />
                   <input type="time" value={editing.end} aria-label="Fine" onChange={(e) => setEditing({ ...editing, end: e.target.value })} />
-                  <button className="btn btn-sm btn-primary" onClick={saveTimes} disabled={!timesValid}>Salva</button>
-                  <button className="btn btn-sm" onClick={() => setEditing(null)}>✕</button>
+                  <button type="button" className="btn btn-primary" onClick={saveTimes} disabled={!timesValid}>Salva</button>
+                  <button type="button" className="btn" onClick={() => setEditing(null)} aria-label="Annulla">✕</button>
                   {!timesValid && <span className="confirm-shift-err">Inizio e fine devono essere diversi.</span>}
                 </div>
               ) : (
-                <div className="confirm-shift-actions">
-                  <button className="btn btn-sm btn-primary" onClick={() => setStatus(sh, 'done')}>✓ Fatto</button>
-                  <button className="btn btn-sm" onClick={() => setEditing({ id: sh.id, start: sh.start, end: sh.end })}>Orario</button>
-                  <button className="btn btn-sm" onClick={() => setStatus(sh, 'cancelled')}>✗ Non fatto</button>
+                <div className="og-tb">
+                  <button type="button" className="ok" onClick={() => setStatus(sh, 'done')}>✓ Fatto</button>
+                  <button type="button" onClick={() => setEditing({ id: sh.id, start: sh.start, end: sh.end })}>Orario diverso</button>
+                  <button type="button" className="no" onClick={() => setStatus(sh, 'cancelled')}>Non fatto</button>
                 </div>
               )}
             </div>
           );
         })}
+        {list.length > MAX_ROWS && <p className="og-more-note">…e altri {list.length - MAX_ROWS}: li trovi in Turni.</p>}
       </div>
-      {list.length > MAX_ROWS && (
-        <p className="panel-desc" style={{ marginTop: 8, marginBottom: 0 }}>…e altri {list.length - MAX_ROWS}.</p>
-      )}
       {undoToast}
-    </div>
+    </>
   );
 }
