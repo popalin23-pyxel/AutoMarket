@@ -34,7 +34,7 @@ export function ListRow({ color, icon, title, sub, end, onClick }) {
 }
 
 // Altro: tutto ciò che non è Oggi, Turni o Soldi, diviso in poche categorie.
-export default function AltroTab({ state, user, isAdmin, newReports = 0, onOpen, onTool, onOpenPrivacy, onOpenAdmin, onLogout }) {
+export default function AltroTab({ state, user, isAdmin, newReports = 0, onOpen, onTool, onAsk, onOpenPrivacy, onOpenAdmin, onLogout }) {
   const [installGuide, setInstallGuide] = useState(false);
   const st = state.settings;
   const name = (st.displayName || '').trim() || (user?.email || '').split('@')[0] || 'Il mio profilo';
@@ -75,6 +75,7 @@ export default function AltroTab({ state, user, isAdmin, newReports = 0, onOpen,
         <ListRow color="vio" icon="stamp" title="Segna più giorni" sub="Riempi il mese: tocca i giorni" onClick={() => onTool('stamp')} />
         <ListRow color="grn" icon="send" title="Invia giorni liberi" sub="Messaggio con la tua disponibilità" onClick={() => onTool('availability')} />
         <ListRow color="blue" icon="copy" title="Copia la settimana" sub="Ripeti gli stessi turni" onClick={() => onTool('duplicate')} />
+        <ListRow color="gold" icon="spark" title="Chiedi a Turnio" sub="Domande pronte sui tuoi turni e soldi" onClick={onAsk} />
       </div>
 
       <div className="grp-title">I tuoi dati</div>

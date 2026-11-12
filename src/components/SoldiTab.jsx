@@ -138,6 +138,7 @@ export default function SoldiTab({ state, year, month, setYear, setMonth, onOpen
 
       <div className="grp-title">Nel dettaglio</div>
       <div className="lcard">
+        <ListRow color="gold" icon="spark" title="Chiedi a Turnio" sub="Domande pronte: guadagni, notti, mese migliore…" onClick={() => onOpen('chiedi')} />
         <ListRow color="teal" icon="mapPin" title="Per sede" sub={perSiteSub || 'Quanto da ogni struttura'} onClick={() => onOpen('dettaglio')} />
         <ListRow color="gold" icon="receipt" title="Spese" sub={monthExpenses > 0 ? `€${fmt(monthExpenses)} a ${MONTHS_IT[month - 1].toLowerCase()}` : 'Benzina, divisa, corsi…'} onClick={() => onOpen('spese')} />
         <ListRow color="vio" icon="chart" title="Grafici" sub="Andamento, confronti, anno e ferie" onClick={() => onOpen('grafici')} />

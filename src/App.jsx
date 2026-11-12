@@ -32,6 +32,7 @@ import NotificheTab from './components/NotificheTab.jsx';
 import PrivacyPolicyTab from './components/PrivacyPolicyTab.jsx';
 import AddSheet from './components/AddSheet.jsx';
 import HistoryPage from './components/HistoryPage.jsx';
+import AskPage from './components/AskPage.jsx';
 import ReportPage from './components/ReportPage.jsx';
 import ServerCopies from './components/ServerCopies.jsx';
 import { countNewReports } from './lib/serverData.js';
@@ -46,7 +47,10 @@ applyDensity(loadDensity());
 
 // Sotto-pagine di Soldi e Altro (si aprono a tutto schermo con "‹ Indietro")
 const SUBPAGE_TITLES = {
-  soldi: { dettaglio: 'Per sede', spese: 'Spese', grafici: 'Grafici', documenti: 'Esporta e foglio ore', simulatore: 'Simulatore' },
+  soldi: {
+    chiedi: 'Chiedi a Turnio', dettaglio: 'Per sede', spese: 'Spese', grafici: 'Grafici', documenti: 'Esporta e foglio ore',
+    simulatore: 'Simulatore',
+  },
   altro: {
     anagrafica: 'I miei dati', sites: 'Sedi e paghe', fiscal: 'Tasse e cassa', goal: 'Obiettivo', documents: 'Documenti',
     account: 'Account', appearance: 'Aspetto', backup: 'Copia di sicurezza',
@@ -241,10 +245,11 @@ function Shell() {
           {active === 'soldi' && subPage === 'documenti' && subPageView('soldi',
             <DocumentsPage state={state} year={year} month={month} setYear={setYear} setMonth={setMonth} />)}
           {active === 'soldi' && subPage === 'simulatore' && subPageView('soldi', <EarningsSimulator state={state} onNavigate={navigate} />)}
+          {active === 'soldi' && subPage === 'chiedi' && subPageView('soldi', <AskPage state={state} now={now} onNavigate={navigate} />)}
 
           {active === 'altro' && !subPage && (
             <AltroTab state={state} user={user} isAdmin={isAdmin} newReports={newReports} onOpen={(sub) => navigate('altro', sub)}
-              onTool={(t) => openCurrentMonth('calendar', t)} onOpenPrivacy={() => navigate('privacy')}
+              onTool={(t) => openCurrentMonth('calendar', t)} onAsk={() => navigate('soldi', 'chiedi')} onOpenPrivacy={() => navigate('privacy')}
               onOpenAdmin={() => navigate('admin')} onLogout={doLogout} />
           )}
           {active === 'altro' && subPage === 'anagrafica' && subPageView('altro', <AnagraficaTab state={state} setState={updateState} />)}
