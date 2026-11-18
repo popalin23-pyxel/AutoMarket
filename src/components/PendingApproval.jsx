@@ -26,7 +26,7 @@ export default function PendingApproval() {
           ) : (
             <span>
               Il tuo account (<b>{user?.email}</b>) è in attesa di approvazione.
-              Chi ti ha invitato deve attivarlo dal pannello di amministrazione.
+              Lo attiva chi gestisce Turnio: appena è attivo, tocca il tasto qui sotto.
             </span>
           )}
         </div>

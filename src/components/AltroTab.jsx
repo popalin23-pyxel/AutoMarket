@@ -3,6 +3,7 @@ import { roleLabel, PENSION_FUNDS } from '../lib/defaults.js';
 import { isStandalone } from '../lib/install.js';
 import Icon from './icons/Icon.jsx';
 import InstallGuide from './InstallGuide.jsx';
+import InviteSheet from './InviteSheet.jsx';
 import { visibleTrash } from '../lib/history.js';
 import { versionLabel } from '../lib/version.js';
 
@@ -36,6 +37,7 @@ export function ListRow({ color, icon, title, sub, end, onClick }) {
 // Altro: tutto ciò che non è Oggi, Turni o Soldi, diviso in poche categorie.
 export default function AltroTab({ state, user, isAdmin, newReports = 0, onOpen, onTool, onAsk, onOpenPrivacy, onOpenAdmin, onLogout }) {
   const [installGuide, setInstallGuide] = useState(false);
+  const [invite, setInvite] = useState(false);
   const st = state.settings;
   const name = (st.displayName || '').trim() || (user?.email || '').split('@')[0] || 'Il mio profilo';
   const role = roleLabel(st);
@@ -61,6 +63,15 @@ export default function AltroTab({ state, user, isAdmin, newReports = 0, onOpen,
         </div>
         <button type="button" className="pill-btn" onClick={() => onOpen('anagrafica')}>I miei dati</button>
       </div>
+
+      <button type="button" className="ncard invite-card" onClick={() => setInvite(true)}>
+        <span className="lrow-ic ic-grn"><Icon name="users" size={20} strokeWidth={2} /></span>
+        <span className="lrow-tx">
+          <span className="lrow-t" style={{ display: 'block' }}>Invita un amico</span>
+          <span className="lrow-s" style={{ display: 'block' }}>Su WhatsApp o dove vuoi</span>
+        </span>
+        <span className="invite-card-btn"><Icon name="share" size={16} strokeWidth={2.2} /> Invita</span>
+      </button>
 
       <div className="grp-title">Il mio lavoro</div>
       <div className="tiles2">
@@ -119,6 +130,7 @@ export default function AltroTab({ state, user, isAdmin, newReports = 0, onOpen,
       <p className="app-version">Turnio · versione {versionLabel()}</p>
 
       {installGuide && <InstallGuide onClose={() => setInstallGuide(false)} />}
+      {invite && <InviteSheet isAdmin={isAdmin} onClose={() => setInvite(false)} />}
     </>
   );
 }

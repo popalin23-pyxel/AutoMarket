@@ -1706,3 +1706,46 @@ select.ask-chip { width: auto; min-width: 0; font-size: 14px; }
   font-size: 15px; font-weight: 700; cursor: pointer;
 }
 .fs-detail { padding-top: 4px; }
+
+/* ── Invita un amico (1.8) ───────────────────────────────────────────────── */
+.invite-card {
+  display: flex; align-items: center; gap: 13px; width: 100%; padding: 12px 12px 12px 13px; text-align: left;
+  color: var(--text); font-family: inherit; cursor: pointer;
+}
+.invite-card:active { background: rgba(var(--ink), 0.04); }
+.invite-card-btn {
+  display: inline-flex; align-items: center; gap: 6px; flex: none; height: 38px; padding: 0 14px; border-radius: 19px;
+  background: var(--accent); color: var(--on-accent); font-size: 14.5px; font-weight: 700;
+}
+.invite-intro { font-size: 14.5px; color: var(--text-dim); line-height: 1.45; margin: -2px 0 14px; }
+.invite-msg {
+  display: block; width: 100%; min-width: 0; margin-top: 7px; resize: vertical; font-family: inherit;
+  font-size: 15px; line-height: 1.45; padding: 11px 13px; border-radius: 14px;
+}
+.invite-share {
+  display: flex; flex-direction: column; align-items: center; gap: 2px; margin-top: 14px; padding: 12px 14px; min-height: 58px;
+  font-size: 17px; white-space: normal;
+}
+.invite-share small { font-size: 12.5px; font-weight: 500; opacity: 0.9; }
+.invite-sub { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-mut); margin: 18px 0 9px; }
+.invite-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.invite-ch {
+  display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 2px 9px; border-radius: 15px;
+  border: 1.5px solid var(--border-hi); background: var(--bg-panel); color: var(--text); text-decoration: none;
+  font-size: 13px; font-weight: 700; min-width: 0;
+}
+.invite-ch:active { background: rgba(var(--ink), 0.05); }
+.invite-ch-ic { width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; color: #fff; }
+.ch-whatsapp .invite-ch-ic { background: #25d366; }
+.ch-telegram .invite-ch-ic { background: #229ed9; }
+.ch-email .invite-ch-ic { background: #6b7280; }
+.ch-sms .invite-ch-ic { background: #34c759; }
+.invite-copy { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; }
+.invite-copy-btn { display: flex; align-items: center; justify-content: center; gap: 7px; min-height: 46px; font-size: 14px; white-space: normal; text-align: center; }
+.invite-copy-btn.ok { border-color: var(--green); color: var(--green-text); background: rgba(var(--green-rgb, 22, 163, 74), 0.10); }
+.invite-url { text-align: center; font-size: 13px; color: var(--text-mut); margin: 10px 0 0; word-break: break-all; }
+.invite-note {
+  display: flex; gap: 8px; align-items: flex-start; margin: 14px 0 0; padding: 10px 12px; border-radius: 12px;
+  background: rgba(var(--ink), 0.04); font-size: 13px; line-height: 1.4; color: var(--text-dim);
+}
+.invite-note svg { flex: none; margin-top: 1px; }
