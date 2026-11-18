@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { isStandalone, devicePlatform, installCardDismissed, dismissInstallCard, promptInstall } from '../lib/install.js';
-import InstallGuide, { useCanPromptInstall } from './InstallGuide.jsx';
+import InstallSheet, { useCanPromptInstall } from './InstallSheet.jsx';
 
 // In Home, solo sul telefono e solo se Horarya è aperta dal browser e non installata.
 export default function InstallCard() {
@@ -20,7 +20,7 @@ export default function InstallCard() {
           : <button className="btn btn-primary btn-sm" onClick={() => setGuide(true)}>Come si fa</button>}
         <button className="btn btn-sm" onClick={dismiss}>Non ora</button>
       </div>
-      {guide && <InstallGuide onClose={() => setGuide(false)} />}
+      {guide && <InstallSheet onClose={() => setGuide(false)} />}
     </div>
   );
 }

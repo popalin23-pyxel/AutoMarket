@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../lib/AuthContext.jsx';
 import Icon from './icons/Icon.jsx';
 import BrandLogo from './BrandLogo.jsx';
+import { InstallBanner } from './InstallSheet.jsx';
 
 export default function PendingApproval() {
   const { user, refreshProfile, signOut, profile, profileError } = useAuth();
@@ -36,6 +37,7 @@ export default function PendingApproval() {
         </button>
         <button className="auth-link" style={{ marginTop: 14 }} onClick={signOut}>Esci</button>
       </div>
+      <InstallBanner />
     </div>
   );
 }

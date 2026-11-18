@@ -12,7 +12,7 @@ if (typeof window !== 'undefined') {
     deferredPrompt = e;
     notify();
   });
-  window.addEventListener('appinstalled', () => { deferredPrompt = null; notify(); });
+  window.addEventListener('appinstalled', () => { deferredPrompt = null; markInstalled(); notify(); });
 }
 
 export const canPromptInstall = () => !!deferredPrompt;
@@ -26,6 +26,7 @@ export async function promptInstall() {
   notify();
   e.prompt();
   const choice = await e.userChoice.catch(() => null);
+  if (choice?.outcome === 'accepted') markInstalled();
   return choice?.outcome === 'accepted';
 }
 
@@ -34,10 +35,11 @@ export function isStandalone() {
   return window.matchMedia?.('(display-mode: standalone)').matches || window.navigator.standalone === true;
 }
 
-export function devicePlatform() {
-  if (typeof navigator === 'undefined') return 'desktop';
-  const ua = navigator.userAgent || '';
-  if (/iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) return 'ios';
+export function devicePlatform(uaIn) {
+  if (typeof navigator === 'undefined' && uaIn == null) return 'desktop';
+  const ua = uaIn ?? navigator.userAgent ?? '';
+  const nav = typeof navigator !== 'undefined' ? navigator : {};
+  if (/iPad|iPhone|iPod/.test(ua) || (uaIn == null && nav.platform === 'MacIntel' && nav.maxTouchPoints > 1)) return 'ios';
   if (/Android/i.test(ua)) return 'android';
   return 'desktop';
 }
@@ -52,4 +54,42 @@ export function installCardDismissed() {
 }
 export function dismissInstallCard() {
   try { localStorage.setItem(DISMISS_KEY, String(Date.now())); } catch {}
+}
+
+// Dove è aperto il link: telefono, browser, e se è il browser interno di un'app (WhatsApp,
+// Instagram, Facebook…), da cui non si può installare.
+export function browserInfo(ua = typeof navigator !== 'undefined' ? navigator.userAgent || '' : '') {
+  const platform = devicePlatform(ua);
+  const inApp = /FBAN|FBAV|FB_IAB|Instagram|Line\/|WhatsApp|Snapchat|TikTok|musical_ly|LinkedInApp|Twitter|Telegram/i.test(ua)
+    || (platform === 'android' && /; wv\)/.test(ua));
+  let browser = 'other';
+  if (platform === 'ios') {
+    if (/CriOS/.test(ua)) browser = 'chrome';
+    else if (/FxiOS/.test(ua)) browser = 'firefox';
+    else if (/EdgiOS/.test(ua)) browser = 'edge';
+    else if (/Safari/.test(ua) && !inApp) browser = 'safari';
+  } else if (platform === 'android') {
+    if (/SamsungBrowser/.test(ua)) browser = 'samsung';
+    else if (/Firefox/.test(ua)) browser = 'firefox';
+    else if (/Chrome/.test(ua) && !inApp) browser = 'chrome';
+  }
+  return { platform, browser, inApp };
+}
+
+// La finestra "Installa sul telefono" che sale da sola: una volta per apertura e, se si tocca
+// "Più tardi", non prima di 3 giorni.
+const SHEET_KEY = 'horarya_install_sheet_later';
+const SHEET_DAYS = 3;
+let shownThisVisit = false;
+export function autoInstallSheetDue() {
+  if (shownThisVisit || isStandalone() || devicePlatform() === 'desktop') return false;
+  try { return Date.now() - (Number(localStorage.getItem(SHEET_KEY)) || 0) > SHEET_DAYS * 86400000; } catch { return true; }
+}
+export function markAutoInstallSheetShown() { shownThisVisit = true; }
+// installata da questo browser: nel browser non la si ripropone per un mese
+function markInstalled() {
+  try { localStorage.setItem(SHEET_KEY, String(Date.now() + 27 * 86400000)); } catch {}
+}
+export function installSheetLater() {
+  try { localStorage.setItem(SHEET_KEY, String(Date.now())); } catch {}
 }

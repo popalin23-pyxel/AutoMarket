@@ -7,7 +7,7 @@ import { loadDensity, applyDensity } from '../lib/density.js';
 import { useAuth } from '../lib/AuthContext.jsx';
 import { useConfirm } from '../lib/ConfirmContext.jsx';
 import { isStandalone } from '../lib/install.js';
-import InstallGuide from './InstallGuide.jsx';
+import InstallSheet from './InstallSheet.jsx';
 
 // Profilo: tu e l'app (account, aspetto, backup). Ciò che riguarda l'attività
 // professionale (anagrafica, sedi, fiscale, obiettivo) sta nella scheda Studio.
@@ -146,7 +146,7 @@ export default function SettingsTab({ state, setState, onLogout, isAdmin, onOpen
           <button className="btn btn-block" style={{ marginTop: 14 }} onClick={() => setInstallGuide(true)}>📲 Installa l'app sul telefono</button>
         )}
         {!section && <button className="btn btn-block" style={{ marginTop: 14 }} onClick={onOpenPrivacy}>📄 Privacy Policy</button>}
-        {installGuide && <InstallGuide onClose={() => setInstallGuide(false)} />}
+        {installGuide && <InstallSheet onClose={() => setInstallGuide(false)} />}
 
         {!section && isAdmin && (
           <button className="btn btn-block" style={{ marginTop: 10 }} onClick={onOpenAdmin}>⚡ Pannello Amministrazione</button>

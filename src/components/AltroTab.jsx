@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { roleLabel, PENSION_FUNDS } from '../lib/defaults.js';
 import { isStandalone } from '../lib/install.js';
 import Icon from './icons/Icon.jsx';
-import InstallGuide from './InstallGuide.jsx';
+import InstallSheet from './InstallSheet.jsx';
 import InviteSheet from './InviteSheet.jsx';
 import { visibleTrash } from '../lib/history.js';
 import { versionLabel } from '../lib/version.js';
@@ -129,7 +129,7 @@ export default function AltroTab({ state, user, isAdmin, newReports = 0, onOpen,
 
       <p className="app-version">Horarya · versione {versionLabel()}</p>
 
-      {installGuide && <InstallGuide onClose={() => setInstallGuide(false)} />}
+      {installGuide && <InstallSheet onClose={() => setInstallGuide(false)} />}
       {invite && <InviteSheet isAdmin={isAdmin} onClose={() => setInvite(false)} />}
     </>
   );

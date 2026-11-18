@@ -700,7 +700,7 @@ td .site-picker { flex-wrap: nowrap; }
 
 /* ── Autenticazione ────────────────────────────────────── */
 .auth-wrap {
-  min-height: 100vh; min-height: 100dvh; display: flex; align-items: center; justify-content: center; padding: 20px;
+  min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px;
   border-top: env(safe-area-inset-top, 0px) solid var(--bar-color);
   position: relative; overflow: hidden;
 }
@@ -1763,3 +1763,44 @@ select.ask-chip { width: auto; min-width: 0; font-size: 14px; }
 .splash-logo { display: block; }
 .splash-logo .brand-svg { margin: 0 auto; }
 .auth-app-icon { display: block; width: 72px; height: 72px; margin: 0 auto 14px; border-radius: 18px; box-shadow: 0 10px 24px rgba(20, 0, 6, 0.30); }
+
+/* ── Installa sul telefono (1.10) ────────────────────────────────────────── */
+.inst-sheet { position: relative; text-align: center; padding-top: 10px; }
+.inst-x { position: absolute; top: 14px; right: calc(14px + env(safe-area-inset-right, 0px)); width: 40px; height: 40px; }
+.inst-icon { display: block; width: 84px; height: 84px; margin: 6px auto 12px; border-radius: 21px; box-shadow: 0 12px 28px rgba(20, 0, 6, 0.32); }
+.inst-title { font-size: 22px; font-weight: 700; letter-spacing: -0.3px; margin: 0 0 6px; }
+.inst-sub { font-size: 14.5px; color: var(--text-dim); line-height: 1.45; margin: 0 auto 16px; max-width: 360px; }
+.inst-go { display: flex; align-items: center; justify-content: center; gap: 9px; min-height: 54px; font-size: 17px; }
+.inst-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 9px; text-align: left; }
+.inst-step {
+  display: flex; align-items: center; gap: 12px; padding: 11px 12px; border-radius: 15px;
+  background: rgba(var(--ink), 0.04); border: 1px solid var(--border);
+}
+.inst-n {
+  width: 28px; height: 28px; flex: none; border-radius: 50%; display: grid; place-items: center;
+  background: var(--accent); color: var(--on-accent); font-weight: 700; font-size: 14px;
+}
+.inst-tx { flex: 1; min-width: 0; font-size: 14.5px; line-height: 1.4; }
+.inst-ic {
+  width: 40px; height: 40px; flex: none; border-radius: 12px; display: grid; place-items: center;
+  background: var(--bg-panel); border: 1px solid var(--border-hi); color: #0a84ff;
+}
+.inst-warn {
+  text-align: left; font-size: 14px; line-height: 1.45; margin: 0 0 10px; padding: 10px 12px; border-radius: 12px;
+  background: rgba(var(--gold-rgb, 245, 158, 11), 0.14); color: var(--text);
+}
+.inst-note { font-size: 13px; color: var(--text-dim); line-height: 1.4; margin: 12px 0 0; text-align: left; }
+.inst-other { font-size: 13.5px; color: var(--text-dim); margin-top: 14px; }
+.inst-other .link-btn { margin: 0; font-size: 13.5px; }
+.inst-other .link-btn.on { text-decoration: underline; }
+.inst-later { margin-top: 14px; min-height: 46px; }
+.inst-banner {
+  display: flex; align-items: center; gap: 12px; width: 100%; max-width: 380px; margin: 14px auto 0; padding: 10px 12px;
+  border-radius: 18px; border: 1px solid var(--border-hi); background: var(--bg-panel); color: var(--text);
+  font-family: inherit; text-align: left; cursor: pointer; box-shadow: 0 6px 18px var(--shadow-soft);
+}
+.inst-banner img { width: 40px; height: 40px; border-radius: 10px; flex: none; }
+.inst-banner-tx { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.inst-banner-tx b { font-size: 14.5px; }
+.inst-banner-tx small { font-size: 12.5px; color: var(--text-dim); }
+.inst-banner-btn { flex: none; height: 36px; padding: 0 14px; border-radius: 18px; display: grid; place-items: center; background: var(--accent); color: var(--on-accent); font-weight: 700; font-size: 14px; }

@@ -41,6 +41,7 @@ import Icon from './components/icons/Icon.jsx';
 import Splash from './components/Splash.jsx';
 import OnboardingTour, { needsOnboarding } from './components/OnboardingTour.jsx';
 import BrandLogo from './components/BrandLogo.jsx';
+import { InstallSheetAuto } from './components/InstallSheet.jsx';
 
 applyTheme(loadTheme()); // applicato subito al caricamento del modulo, prima del primo render
 applyAccent(loadAccent());
@@ -297,6 +298,7 @@ function Shell() {
       {savedToast && <div className="save-toast">✓ Salvato</div>}
 
       {showOnboarding && <OnboardingTour onDone={() => setShowOnboarding(false)} />}
+      {!showOnboarding && <InstallSheetAuto delay={1800} />}
 
       {syncMessage && <div className="save-toast">{syncMessage}</div>}
 

@@ -236,6 +236,29 @@ const PATHS = {
       <path d="M5.8 16.2c.6-1.6 1.8-2.3 3.2-2.3s2.6.7 3.2 2.3M14.5 10h3.5M14.5 13.5h3" />
     </>
   ),
+  iosShare: (
+    <>
+      <path d="M12 3v12M8 7l4-4 4 4" />
+      <path d="M8.5 10H6.5a1.5 1.5 0 0 0-1.5 1.5v8A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5v-8a1.5 1.5 0 0 0-1.5-1.5h-2" />
+    </>
+  ),
+  plusSquare: (
+    <>
+      <rect x="3.5" y="3.5" width="17" height="17" rx="4" />
+      <path d="M12 8v8M8 12h8" />
+    </>
+  ),
+  dotsV: (
+    <>
+      <circle cx="12" cy="5" r="1.6" fill="currentColor" /><circle cx="12" cy="12" r="1.6" fill="currentColor" /><circle cx="12" cy="19" r="1.6" fill="currentColor" />
+    </>
+  ),
+  compass: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M15.5 8.5l-2.2 4.8-4.8 2.2 2.2-4.8z" />
+    </>
+  ),
   share: (
     <>
       <circle cx="18" cy="5" r="2.6" /><circle cx="6" cy="12" r="2.6" /><circle cx="18" cy="19" r="2.6" />

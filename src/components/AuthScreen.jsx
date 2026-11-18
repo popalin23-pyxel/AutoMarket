@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../lib/AuthContext.jsx';
 import Icon from './icons/Icon.jsx';
 import BrandLogo from './BrandLogo.jsx';
+import { InstallBanner, InstallSheetAuto } from './InstallSheet.jsx';
 
 export default function AuthScreen({ onShowPrivacy }) {
   const { signIn, signUp, sendPasswordReset } = useAuth();
@@ -142,6 +143,8 @@ export default function AuthScreen({ onShowPrivacy }) {
           </p>
         )}
       </div>
+      <InstallBanner />
+      <InstallSheetAuto />
     </div>
   );
 }
