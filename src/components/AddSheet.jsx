@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { todayISO, hoursOfShift, siteRateOn, computeTaxes, addDaysISO } from '../lib/calc.js';
+import { todayISO, hoursOfShift, payFor, computeTaxes, addDaysISO } from '../lib/calc.js';
 import { MONTHS_IT, WEEKDAYS_IT_LONG } from '../lib/defaults.js';
 import { addShift, addFavorite, removeFavorite, addOccasionalWork, addDayMarks } from '../lib/store.js';
 import { useLockBodyScroll } from '../lib/useLockBodyScroll.js';
@@ -51,9 +51,8 @@ function SheetBody({ state, setState, onClose, onSaved, onGoSites, onOpenEditor 
 
   let net = null;
   if (canSave) {
-    const revenue = hours * siteRateOn(site, date);
-    const rivPct = site.rivalsaPercent != null ? Number(site.rivalsaPercent) : (Number(state.settings.rivalsaPercent) || 0);
-    net = computeTaxes(revenue, revenue * (rivPct / 100), state.settings).net;
+    const p = payFor(hours, site, date, state.settings);
+    net = computeTaxes(p.revenue, p.rivalsa, state.settings).net;
   }
 
   const pickSite = (id) => { setSiteId(id); setSlot(null); };

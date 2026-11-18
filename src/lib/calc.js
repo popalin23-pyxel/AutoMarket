@@ -323,20 +323,45 @@ export function computeTaxes(revenue, rivalsa, settings = {}) {
 }
 
 // ── Paga oraria ──────────────────────────────────────────────────────────
-// Quando una sede cambia tariffa "a partire dal…", la vecchia resta in `pastRates`
-// ([{ before: 'YYYY-MM-DD', rate }], in ordine di data): vale per i turni prima di quella
-// data, così storico, grafici e confronti restano uguali alle fatture già fatte.
-export function siteRateOn(site, dateISO) {
-  if (!site) return 0;
-  for (const r of site.pastRates ?? []) if (dateISO && dateISO < r.before) return Number(r.rate) || 0;
-  return Number(site.rate) || 0;
+// Come paga una sede in una data: { rate, payMode, rivalsaPercent }.
+// - payMode 'plus': la paga è il compenso e la maggiorazione (es. 4% integrativo ENPAPI) si
+//   aggiunge in fattura (€25 + 4% = €26 l'ora fatturati);
+// - payMode 'inclusive' (omnicomprensiva): la maggiorazione è già dentro la paga e si scorpora
+//   (€27 = €25,96 di compenso + €1,04 di integrativo).
+// - rivalsaPercent: null = quella di Tasse e cassa, altrimenti la % di questa sede.
+// Quando la paga cambia "a partire dal…", quella vecchia resta in `pastRates`
+// ([{ before: 'YYYY-MM-DD', rate, payMode?, rivalsaPercent? }], in ordine di data) e vale per i
+// turni prima di quella data, così storico e grafici restano uguali alle fatture già fatte.
+// I periodi salvati prima della 1.7 non hanno payMode (erano tutti "paga + %") né
+// rivalsaPercent (valeva quella della sede).
+export function sitePayOn(site, dateISO) {
+  if (!site) return { rate: 0, payMode: 'plus', rivalsaPercent: null };
+  for (const r of site.pastRates ?? []) {
+    if (dateISO && dateISO < r.before) {
+      return {
+        rate: Number(r.rate) || 0,
+        payMode: r.payMode === 'inclusive' ? 'inclusive' : 'plus',
+        rivalsaPercent: r.rivalsaPercent !== undefined ? r.rivalsaPercent : (site.rivalsaPercent ?? null),
+      };
+    }
+  }
+  return { rate: Number(site.rate) || 0, payMode: site.payMode === 'inclusive' ? 'inclusive' : 'plus', rivalsaPercent: site.rivalsaPercent ?? null };
 }
 
-// Cambio di tariffa già fissato per il futuro (dopo `todayStr`): { from, rate } oppure null.
+export function siteRateOn(site, dateISO) {
+  return sitePayOn(site, dateISO).rate;
+}
+
+// La % di maggiorazione che vale davvero (quella della sede o quella di Tasse e cassa).
+export function payPercent(rivalsaPercent, settings = {}) {
+  return rivalsaPercent != null && rivalsaPercent !== '' ? Number(rivalsaPercent) || 0 : Number(settings.rivalsaPercent) || 0;
+}
+
+// Cambio di paga già fissato per il futuro (dopo `todayStr`): { from, rate, payMode, rivalsaPercent } oppure null.
 export function scheduledRateChange(site, todayStr = todayISO()) {
   const future = (site?.pastRates ?? []).filter((r) => r.before > todayStr);
   if (!future.length) return null;
-  return { from: future[future.length - 1].before, rate: Number(site.rate) || 0 };
+  return { from: future[future.length - 1].before, ...sitePayOn(site, null) };
 }
 
 // Tariffa di un turno: quella speciale del turno, se impostata, altrimenti quella della sede in quella data.
@@ -345,10 +370,66 @@ export function shiftRate(shift, site) {
   return siteRateOn(site, shift?.date);
 }
 
-// ── Aggregazione (nucleo condiviso da riepilogo mese/settimana) ─────────
-const rivalsaFor = (site, settings) =>
-  (site?.rivalsaPercent != null ? Number(site.rivalsaPercent) : Number(settings.rivalsaPercent) || 0);
+/**
+ * Quanto rendono `hours` ore a una sede in una data (cifre non arrotondate):
+ * { rate, pct, inclusive, revenue (compenso), rivalsa (maggiorazione), total (in fattura) }.
+ * `rateOverride`: tariffa speciale del turno, letta con le stesse regole della sede.
+ */
+export function payFor(hours, site, dateISO, settings = {}, rateOverride = null) {
+  const terms = sitePayOn(site, dateISO);
+  const rate = rateOverride != null && rateOverride !== '' && !Number.isNaN(Number(rateOverride)) ? Number(rateOverride) : terms.rate;
+  const pct = payPercent(terms.rivalsaPercent, settings);
+  const gross = (Number(hours) || 0) * rate;
+  if (terms.payMode === 'inclusive') {
+    const revenue = gross / (1 + pct / 100);
+    return { rate, pct, inclusive: true, revenue, rivalsa: gross - revenue, total: gross };
+  }
+  return { rate, pct, inclusive: false, revenue: gross, rivalsa: gross * (pct / 100), total: gross * (1 + pct / 100) };
+}
 
+// Stesse cifre arrotondate ai centesimi come in fattura. Omnicomprensiva: il totale è ore ×
+// tariffa e il compenso si scorpora; "paga + %": compenso arrotondato, poi la sua %.
+export function roundPay(p) {
+  if (p.inclusive) {
+    const total = round2(p.total);
+    const revenue = round2(p.revenue);
+    return { revenue, rivalsa: round2(total - revenue), total };
+  }
+  const revenue = round2(p.revenue);
+  const rivalsa = round2(revenue * (p.pct / 100));
+  return { revenue, rivalsa, total: round2(revenue + rivalsa) };
+}
+
+// Somma di più turni della stessa sede (o dello stesso foglio ore). I turni "paga + %" si
+// raggruppano per percentuale e si arrotondano come prima della 1.7 (compenso, poi la sua %),
+// così i conti delle fatture già fatte non cambiano di un centesimo; quelli omnicomprensivi
+// tengono il totale uguale a ore × tariffa.
+function payTotals() {
+  const plus = new Map(); // pct → compenso non arrotondato
+  const incl = { gross: 0, revenue: 0 };
+  const pcts = new Set();
+  let nPlus = 0;
+  let nIncl = 0;
+  return {
+    add(p) {
+      pcts.add(p.pct);
+      if (p.inclusive) { incl.gross += p.total; incl.revenue += p.revenue; nIncl++; } else { plus.set(p.pct, (plus.get(p.pct) ?? 0) + p.revenue); nPlus++; }
+    },
+    result() {
+      let revenue = 0;
+      let rivalsa = 0;
+      for (const [pct, raw] of plus) { const r = round2(raw); revenue += r; rivalsa += round2(r * (pct / 100)); }
+      if (nIncl) { const t = round2(incl.gross); const r = round2(incl.revenue); revenue += r; rivalsa += round2(t - r); }
+      revenue = round2(revenue);
+      rivalsa = round2(rivalsa);
+      // una sola % nel periodo: quella; altrimenti quella media, solo da mostrare
+      const rivalsaPercent = pcts.size <= 1 ? ([...pcts][0] ?? 0) : (revenue > 0 ? round2((rivalsa / revenue) * 100) : 0);
+      return { revenue, rivalsa, total: round2(revenue + rivalsa), rivalsaPercent, inclusive: nIncl > 0 && nPlus === 0, mixedPay: nIncl > 0 && nPlus > 0 };
+    },
+  };
+}
+
+// ── Aggregazione (nucleo condiviso da riepilogo mese/settimana) ─────────
 function aggregate(shiftsIn, sites, settings) {
   const filteredShifts = activeShifts(shiftsIn); // gli annullati non contano
   const siteById = new Map(sites.map((s) => [s.id, s]));
@@ -358,26 +439,25 @@ function aggregate(shiftsIn, sites, settings) {
     const h = hoursOfShift(sh);
     const site = siteById.get(sh.siteId);
     if (!site) { unknown.hours += h; continue; }
-    const cur = bySite.get(site.id) ?? { hours: 0, revenue: 0, rates: new Set() };
-    const rate = shiftRate(sh, site);
+    const cur = bySite.get(site.id) ?? { hours: 0, gross: 0, rates: new Set(), pay: payTotals() };
+    const p = payFor(h, site, sh.date, settings, sh.rate);
     cur.hours += h;
-    cur.revenue += h * rate;
-    cur.rates.add(rate);
+    cur.gross += h * p.rate;
+    cur.rates.add(p.rate);
+    cur.pay.add(p);
     bySite.set(site.id, cur);
   }
 
-  const perSite = [...bySite.entries()].map(([id, { hours, revenue: rawRevenue, rates }]) => {
+  const perSite = [...bySite.entries()].map(([id, { hours, gross, rates, pay }]) => {
     const site = siteById.get(id);
-    const rivPct = rivalsaFor(site, settings);
-    const revenue = round2(rawRevenue);
-    const rivalsa = round2(revenue * (rivPct / 100));
+    const t = pay.result();
     // con tariffe diverse nel periodo (cambio di tariffa, turni speciali) si mostra la media
     const mixedRate = rates.size > 1;
-    const rate = mixedRate ? (hours > 0 ? round2(rawRevenue / hours) : 0) : [...rates][0] ?? 0;
+    const rate = mixedRate ? (hours > 0 ? round2(gross / hours) : 0) : [...rates][0] ?? 0;
     return {
       siteId: id, name: site.name, color: site.color,
-      hours: round2(hours), rate, mixedRate, rivalsaPercent: rivPct,
-      revenue, rivalsa, total: round2(revenue + rivalsa),
+      hours: round2(hours), rate, mixedRate, rivalsaPercent: t.rivalsaPercent,
+      revenue: t.revenue, rivalsa: t.rivalsa, total: t.total, inclusive: t.inclusive, mixedPay: t.mixedPay,
     };
   }).sort((a, b) => b.total - a.total);
 
@@ -412,17 +492,24 @@ export function computeTimesheet(shifts, site, settings, fromISO, toISO) {
     .sort(byDateThenStart)
     .map((s) => {
       const hours = hoursOfShift(s);
-      const rate = shiftRate(s, site);
-      return { id: s.id, date: s.date, start: s.start, end: s.end, hours, rate, amount: round2(hours * rate), note: s.note || '' };
+      const p = payFor(hours, site, s.date, settings, s.rate);
+      return { id: s.id, date: s.date, start: s.start, end: s.end, hours, rate: p.rate, amount: round2(hours * p.rate), note: s.note || '', pay: p };
     });
   const totalHours = round2(rows.reduce((a, r) => a + r.hours, 0));
-  // il totale è la somma degli importi dei righi: sul documento mandato al cliente devono tornare
-  const revenue = round2(rows.reduce((a, r) => a + r.amount, 0));
-  const rivalsaPercent = rivalsaFor(site, settings);
-  const rivalsa = round2(revenue * (rivalsaPercent / 100));
+  // sul documento mandato al cliente gli importi dei righi devono tornare: si sommano gli
+  // importi arrotondati di ogni rigo ("paga + %": è il compenso; omnicomprensiva: è il totale)
+  const pay = payTotals();
+  for (const r of rows) {
+    const k = r.pay.inclusive ? r.amount / r.pay.total || 0 : 0;
+    pay.add(r.pay.inclusive
+      ? { ...r.pay, total: r.amount, revenue: r.pay.revenue * k }
+      : { ...r.pay, revenue: r.amount });
+  }
+  const t = pay.result();
   return {
-    site: { id: site.id, name: site.name }, fromISO, toISO, rows,
-    totalHours, revenue, rivalsaPercent, rivalsa, total: round2(revenue + rivalsa),
+    site: { id: site.id, name: site.name }, fromISO, toISO, rows: rows.map(({ pay: _p, ...r }) => r),
+    totalHours, revenue: t.revenue, rivalsaPercent: t.rivalsaPercent, rivalsa: t.rivalsa, total: t.total,
+    inclusive: t.inclusive, mixedPay: t.mixedPay,
   };
 }
 

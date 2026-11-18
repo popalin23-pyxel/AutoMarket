@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { computeMonthSummary, computeYearSummary, todayISO, isShiftDone } from '../lib/calc.js';
 import { updateFiscalSettings, updateSettings } from '../lib/store.js';
-import { PENSION_FUNDS, suggestedFund, rivalsaLabel } from '../lib/defaults.js';
+import { PENSION_FUNDS, PROFESSIONAL_ROLES, suggestedFund, rivalsaLabel, roleLabel } from '../lib/defaults.js';
 import NumberInput from './NumberInput.jsx';
 import Icon from './icons/Icon.jsx';
 
@@ -21,11 +21,12 @@ const fundPatch = (fund) => (fund && fund.forfContributionsPercent != null
 
 export default function FiscalSettingsTab({ state, setState }) {
   const [sub, setSub] = useState('params');
+  const [more, setMore] = useState(false);
   const { settings } = state;
   const exact = settings.taxMode === 'forfettario';
   const fundId = settings.pensionFund || '';
   const fund = PENSION_FUNDS.find((f) => f.id === fundId) ?? null;
-  const suggested = !fundId ? PENSION_FUNDS.find((f) => f.id === suggestedFund(settings)) : null;
+  const forRole = suggestedFund(settings); // la cassa di solito giusta per il lavoro scelto
 
   const today = todayISO();
   const y = Number(today.slice(0, 4));
@@ -46,6 +47,13 @@ export default function FiscalSettingsTab({ state, setState }) {
     const f = PENSION_FUNDS.find((x) => x.id === id);
     patch({ pensionFund: id, ...fundPatch(f) });
   };
+  // scegliendo il lavoro, se la cassa non è ancora scelta si propone quella giusta (es. infermiere → ENPAPI)
+  const chooseRole = (id) => {
+    const f = !fundId ? PENSION_FUNDS.find((x) => x.id === suggestedFund({ professionalRole: id })) : null;
+    setState((s) => updateFiscalSettings(s, { professionalRole: id, ...(f ? { pensionFund: f.id, ...fundPatch(f) } : {}) }));
+  };
+  // la formula esatta c'è solo per il forfettario: sceglierla vuol dire regime forfettario
+  const chooseExact = () => patch({ fiscalRegime: 'forfettario', taxMode: 'forfettario' });
 
   const occasionalYearGross = useMemo(
     () => state.occasionalWork.filter((o) => (o.date || '').slice(0, 4) === String(y))
@@ -145,115 +153,154 @@ export default function FiscalSettingsTab({ state, setState }) {
         </>
       ) : (
         <>
-          <div className="field" style={{ marginBottom: 14 }}>
-            <label className="field-label">Regime fiscale</label>
-            <select value={settings.fiscalRegime} onChange={(e) => patch({
-              fiscalRegime: e.target.value,
-              // la formula esatta vale solo per il forfettario
-              ...(e.target.value !== 'forfettario' && exact ? { taxMode: 'semplice' } : {}),
-            })}>
-              {REGIMES.map((r) => <option key={r.id} value={r.id}>{r.label}</option>)}
-            </select>
+          {/* Le tre scelte che bastano: che lavoro fai, la cassa, come calcolare le tasse */}
+          <div className="fs-step"><span className="sheet-sn">1</span>Che lavoro fai</div>
+          <div className="fs-chips">
+            {PROFESSIONAL_ROLES.map((r) => (
+              <button key={r.id} type="button" className={`fs-chip ${settings.professionalRole === r.id ? 'on' : ''}`}
+                aria-pressed={settings.professionalRole === r.id} onClick={() => chooseRole(r.id)}>
+                {r.id === 'altro' ? 'Altro' : r.label}
+              </button>
+            ))}
           </div>
-
-          <div className="field" style={{ marginBottom: 8 }}>
-            <label className="field-label">Cassa previdenziale</label>
-            <select value={fundId} onChange={(e) => chooseFund(e.target.value)}>
-              <option value="">— scegli —</option>
-              {PENSION_FUNDS.map((f) => <option key={f.id} value={f.id}>{f.label}{f.who ? ` (${f.who})` : ''}</option>)}
-            </select>
-          </div>
-          {suggested && (
-            <button className="link-btn" style={{ marginBottom: 10 }} onClick={() => chooseFund(suggested.id)}>
-              Per il tuo ruolo di solito è {suggested.label}: usa questa →
-            </button>
-          )}
-          {fund && (
-            <ul className="fund-info">{fund.info.map((t) => <li key={t}>{t}</li>)}</ul>
+          {settings.professionalRole === 'altro' && (
+            <input type="text" className="fs-other" value={settings.professionalRoleOther || ''} placeholder="Quale? Es. Ostetrica, Logopedista"
+              onChange={(e) => patchSettings({ professionalRoleOther: e.target.value })} aria-label="Specifica il lavoro" />
           )}
 
-          <div className="editor-label" style={{ marginTop: 16 }}>Come calcolare tasse e contributi</div>
-          <div className="rate-mode">
-            <label className={`rate-mode-opt ${!exact ? 'sel' : ''}`}>
+          <div className="fs-step"><span className="sheet-sn">2</span>La tua cassa</div>
+          <div className="pay-opts">
+            {PENSION_FUNDS.map((f) => (
+              <label key={f.id} className={`pay-opt ${fundId === f.id ? 'sel' : ''}`}>
+                <input type="radio" name="fund" checked={fundId === f.id} onChange={() => chooseFund(f.id)} />
+                <span className="pay-opt-tx">
+                  <b>{f.label}{f.who ? <span className="fs-who"> · {f.who}</span> : null}
+                    {forRole === f.id && <span className="fs-tag">Per il tuo lavoro</span>}
+                  </b>
+                  <small>{f.short}</small>
+                </span>
+              </label>
+            ))}
+          </div>
+
+          <div className="fs-step"><span className="sheet-sn">3</span>Come calcolare le tasse</div>
+          <div className="pay-opts">
+            <label className={`pay-opt ${exact ? 'sel' : ''}`}>
+              <input type="radio" name="tax-mode" checked={exact} onChange={chooseExact} />
+              <span className="pay-opt-tx">
+                <b>Forfettario, formula esatta <span className="fs-tag">Consigliato</span></b>
+                <small>Come il commercialista: reddito = compensi × {pct(settings.coefficientPercent ?? 78)}%, meno i contributi; sul resto l’imposta sostitutiva.</small>
+                {exact && (
+                  <span className="fs-sub" onClick={(e) => e.preventDefault()}>
+                    <span className="fs-sub-t">Imposta sostitutiva</span>
+                    <span className="seg fs-seg">
+                      <button type="button" className={Number(settings.forfTaxRatePercent) === 5 ? 'on' : ''} onClick={() => patch({ forfTaxRatePercent: 5 })}>5% · primi 5 anni</button>
+                      <button type="button" className={Number(settings.forfTaxRatePercent) === 15 ? 'on' : ''} onClick={() => patch({ forfTaxRatePercent: 15 })}>15%</button>
+                    </span>
+                    {![5, 15].includes(Number(settings.forfTaxRatePercent)) && (
+                      <small>Ora è al {pct(settings.forfTaxRatePercent)}% (cambiala nei valori qui sotto).</small>
+                    )}
+                  </span>
+                )}
+              </span>
+            </label>
+            <label className={`pay-opt ${!exact ? 'sel' : ''}`}>
               <input type="radio" name="tax-mode" checked={!exact} onChange={() => patch({ taxMode: 'semplice' })} />
-              <span>
-                <b>Semplice (come finora)</b>
-                <small>Una percentuale fissa di tutto il fatturato, che decidi tu.</small>
-              </span>
-            </label>
-            <label className={`rate-mode-opt ${exact ? 'sel' : ''} ${settings.fiscalRegime !== 'forfettario' ? 'disabled' : ''}`}>
-              <input type="radio" name="tax-mode" checked={exact} disabled={settings.fiscalRegime !== 'forfettario'}
-                onChange={() => patch({ taxMode: 'forfettario' })} />
-              <span>
-                <b>Forfettario, formula esatta</b>
-                <small>
-                  Reddito = compensi × coefficiente (78% per le professioni sanitarie), meno i contributi della cassa;
-                  sul resto l'imposta sostitutiva. L'integrativo della cassa non conta come guadagno.
-                  {settings.fiscalRegime !== 'forfettario' && ' Disponibile solo con il regime forfettario.'}
-                </small>
+              <span className="pay-opt-tx">
+                <b>Semplice: una percentuale fissa</b>
+                <small>Metti da parte la stessa percentuale di tutto il fatturato, che decidi tu.</small>
+                {!exact && (
+                  <span className="fs-sub fs-simple" onClick={(e) => e.preventDefault()}>
+                    <span className="field">
+                      <span className="field-label">Imposta (%)</span>
+                      <NumberInput value={settings.taxRatePercent} onChange={(v) => patch({ taxRatePercent: v })} min={0} max={100} />
+                    </span>
+                    <span className="field">
+                      <span className="field-label">Contributi (%)</span>
+                      <NumberInput value={settings.contributionsPercent} onChange={(v) => patch({ contributionsPercent: v })} min={0} max={100} />
+                    </span>
+                    <small>Totale da mettere da parte: <b>{pct((Number(settings.taxRatePercent) || 0) + (Number(settings.contributionsPercent) || 0))}%</b> del fatturato.</small>
+                  </span>
+                )}
               </span>
             </label>
           </div>
 
-          {exact ? (
-            <>
-              <div className="form-row" style={{ marginTop: 14 }}>
-                <div className="field">
-                  <label className="field-label">Imposta sostitutiva (%)</label>
-                  <NumberInput value={settings.forfTaxRatePercent} onChange={(v) => patch({ forfTaxRatePercent: v })} min={0} max={100} />
-                </div>
-                <div className="field">
-                  <label className="field-label">Contributi (% del reddito)</label>
-                  <NumberInput value={settings.forfContributionsPercent} onChange={(v) => patch({ forfContributionsPercent: v })} min={0} max={100} />
-                </div>
-                <div className="field">
-                  <label className="field-label">Coefficiente (%)</label>
-                  <NumberInput value={settings.coefficientPercent} onChange={(v) => patch({ coefficientPercent: v })} min={0} max={100} />
-                </div>
-              </div>
-              <p className="panel-desc" style={{ marginBottom: 14 }}>
-                Imposta: 5% per i primi 5 anni di attività se hai i requisiti, poi 15%. Coefficiente: 78% per le attività sanitarie.
-              </p>
-            </>
-          ) : (
-            <>
-              <div className="form-row" style={{ marginTop: 14 }}>
-                <div className="field">
-                  <label className="field-label">Aliquota imposta (% del fatturato)</label>
-                  <NumberInput value={settings.taxRatePercent} onChange={(v) => patch({ taxRatePercent: v })} min={0} max={100} />
-                </div>
-                <div className="field">
-                  <label className="field-label">Contributi (% del fatturato)</label>
-                  <NumberInput value={settings.contributionsPercent} onChange={(v) => patch({ contributionsPercent: v })} min={0} max={100} />
-                </div>
-              </div>
-              <div className="hint hint-info" style={{ marginBottom: 14 }}>
-                Totale accantonato sul fatturato: <b>{pct((Number(settings.taxRatePercent) || 0) + (Number(settings.contributionsPercent) || 0))}%</b>.
-              </div>
-            </>
-          )}
-
-          <div className="editor-label">Maggiorazione in fattura</div>
-          <div className="form-row" style={{ alignItems: 'flex-end' }}>
-            <div className="field" style={{ maxWidth: 140 }}>
-              <label className="field-label">Percentuale (%)</label>
-              <NumberInput value={settings.rivalsaPercent} onChange={(v) => patch({ rivalsaPercent: v })} min={0} max={100} />
-            </div>
-            <div className="field">
-              <label className="field-label">Che cos'è</label>
-              <select value={settings.rivalsaType || 'rivalsa'} onChange={(e) => patch({ rivalsaType: e.target.value })}>
-                <option value="integrativo">Contributo integrativo della cassa (es. ENPAPI)</option>
-                <option value="rivalsa">Rivalsa INPS (fa parte del compenso)</option>
-              </select>
-            </div>
-          </div>
-          <p className="panel-desc" style={{ marginBottom: 0 }}>
-            {settings.rivalsaType === 'integrativo'
-              ? 'Lo paga la struttura e lo versi alla cassa: non è un tuo guadagno.'
-              : 'Fa parte del compenso e si tassa.'}
-            {!exact && ' Nel calcolo semplice resta compreso nel fatturato tassato, come finora.'}
-            {' '}Ogni sede può avere una percentuale diversa (Altro → Sedi e paghe).
+          <p className="fs-summary">
+            {[roleLabel(settings), fund && fund.id !== 'altro' ? fund.label : '', exact ? `forfettario, imposta ${pct(settings.forfTaxRatePercent)}%` : `${pct((Number(settings.taxRatePercent) || 0) + (Number(settings.contributionsPercent) || 0))}% da mettere da parte`].filter(Boolean).join(' · ')}
+            {Number(settings.rivalsaPercent) > 0 && <> · in fattura +{pct(settings.rivalsaPercent)}% di {settings.rivalsaType === 'integrativo' ? 'integrativo' : 'rivalsa'}</>}
           </p>
+
+          <button type="button" className="fs-more" onClick={() => setMore(!more)} aria-expanded={more}>
+            <span>Valori nel dettaglio</span>
+            <Icon name="chevronDown" size={18} style={{ transform: more ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+          </button>
+
+          {more && (
+            <div className="fs-detail">
+              <div className="field" style={{ marginBottom: 14 }}>
+                <label className="field-label">Regime fiscale</label>
+                <select value={settings.fiscalRegime} onChange={(e) => patch({
+                  fiscalRegime: e.target.value,
+                  // la formula esatta vale solo per il forfettario
+                  ...(e.target.value !== 'forfettario' && exact ? { taxMode: 'semplice' } : {}),
+                })}>
+                  {REGIMES.map((r) => <option key={r.id} value={r.id}>{r.label}</option>)}
+                </select>
+              </div>
+
+              {exact && (
+                <>
+                  <div className="form-row">
+                    <div className="field">
+                      <label className="field-label">Imposta sostitutiva (%)</label>
+                      <NumberInput value={settings.forfTaxRatePercent} onChange={(v) => patch({ forfTaxRatePercent: v })} min={0} max={100} />
+                    </div>
+                    <div className="field">
+                      <label className="field-label">Contributi (% del reddito)</label>
+                      <NumberInput value={settings.forfContributionsPercent} onChange={(v) => patch({ forfContributionsPercent: v })} min={0} max={100} />
+                    </div>
+                    <div className="field">
+                      <label className="field-label">Coefficiente (%)</label>
+                      <NumberInput value={settings.coefficientPercent} onChange={(v) => patch({ coefficientPercent: v })} min={0} max={100} />
+                    </div>
+                  </div>
+                  <p className="panel-desc" style={{ marginBottom: 14 }}>
+                    Imposta: 5% per i primi 5 anni di attività se hai i requisiti, poi 15%. Coefficiente: 78% per le attività sanitarie.
+                  </p>
+                </>
+              )}
+
+              <div className="editor-label">Maggiorazione in fattura</div>
+              <div className="form-row" style={{ alignItems: 'flex-end' }}>
+                <div className="field" style={{ maxWidth: 140 }}>
+                  <label className="field-label">Percentuale (%)</label>
+                  <NumberInput value={settings.rivalsaPercent} onChange={(v) => patch({ rivalsaPercent: v })} min={0} max={100} />
+                </div>
+                <div className="field">
+                  <label className="field-label">Che cos'è</label>
+                  <select value={settings.rivalsaType || 'rivalsa'} onChange={(e) => patch({ rivalsaType: e.target.value })}>
+                    <option value="integrativo">Contributo integrativo della cassa (es. ENPAPI)</option>
+                    <option value="rivalsa">Rivalsa INPS (fa parte del compenso)</option>
+                  </select>
+                </div>
+              </div>
+              <p className="panel-desc" style={{ marginBottom: 0 }}>
+                {settings.rivalsaType === 'integrativo'
+                  ? 'Lo paga la struttura e lo versi alla cassa: non è un tuo guadagno.'
+                  : 'Fa parte del compenso e si tassa.'}
+                {!exact && ' Nel calcolo semplice resta compreso nel fatturato tassato.'}
+                {' '}Vale per le sedi pagate "+ %" e per quelle omnicomprensive; una sede può avere una percentuale sua (Altro → Sedi e paghe).
+              </p>
+
+              {fund?.info && (
+                <>
+                  <div className="editor-label" style={{ marginTop: 16 }}>Cosa prevede {fund.id === 'altro' ? 'la cassa' : fund.label}</div>
+                  <ul className="fund-info">{fund.info.map((t) => <li key={t}>{t}</li>)}</ul>
+                </>
+              )}
+            </div>
+          )}
 
           <h2 className="panel-title" style={{ marginTop: 22 }}>Prestazioni occasionali</h2>
           <p className="panel-desc">

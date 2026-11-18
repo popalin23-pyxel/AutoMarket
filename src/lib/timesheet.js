@@ -16,6 +16,10 @@ const fileBase = (ts) => `foglio-ore_${ts.site.name.replace(/[^\p{L}\p{N}]+/gu, 
 const FORMULA_TRIGGER = /^[=+\-@\t\r]/;
 const safeText = (v) => (typeof v === 'string' && FORMULA_TRIGGER.test(v) ? `'${v}` : v);
 
+// Con la tariffa omnicomprensiva i righi sono già il totale: il compenso è scorporato.
+export const compensoLabel = (ts) => (ts.inclusive ? 'Compenso (scorporato dalla tariffa omnicomprensiva)'
+  : ts.mixedPay ? 'Compenso (in parte da tariffa omnicomprensiva)' : 'Compenso (ore x tariffa)');
+
 export function exportTimesheetPdf(ts, { headerLines = [], rivalsaLabel = 'Rivalsa' } = {}) {
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
   const mx = 16;
@@ -81,7 +85,7 @@ export function exportTimesheetPdf(ts, { headerLines = [], rivalsaLabel = 'Rival
     doc.text(label, mx + 80, y); doc.text(value, right, y, { align: 'right' }); y += bold ? 8 : 6.5;
   };
   row('Ore totali', `${fmt(ts.totalHours)} h`);
-  row('Compenso (ore x tariffa)', `€ ${fmt(ts.revenue)}`);
+  row(compensoLabel(ts), `€ ${fmt(ts.revenue)}`);
   if (ts.rivalsaPercent > 0) row(`${rivalsaLabel} ${ts.rivalsaPercent}%`, `€ ${fmt(ts.rivalsa)}`);
   row('Totale', `€ ${fmt(ts.total)}`, true);
 
@@ -111,7 +115,7 @@ export function exportTimesheetExcel(ts, { headerLines = [], rivalsaLabel = 'Riv
     ...ts.rows.map((r) => [itDate(r.date), weekday(r.date), r.start, r.end, r.hours, r.rate, r.amount, safeText(r.note)]),
     [],
     ['Ore totali', '', '', '', ts.totalHours],
-    ['Compenso (ore x tariffa)', '', '', '', '', '', ts.revenue],
+    [compensoLabel(ts), '', '', '', '', '', ts.revenue],
   ];
   if (ts.rivalsaPercent > 0) rows.push([`${rivalsaLabel} ${ts.rivalsaPercent}%`, '', '', '', '', '', ts.rivalsa]);
   rows.push(['Totale', '', '', '', '', '', ts.total]);

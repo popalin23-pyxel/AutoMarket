@@ -1,7 +1,7 @@
 // Store persistente su localStorage per Turnio.
 
 import { DEFAULT_SETTINGS, SITE_COLORS } from './defaults.js';
-import { addDaysISO, siteRateOn } from './calc.js';
+import { addDaysISO, sitePayOn } from './calc.js';
 import { markFirstUse, markBackupDone } from './backupReminder.js';
 import { saveFile } from './saveFile.js';
 
@@ -9,7 +9,7 @@ const KEY = 'turnio_state_v1';
 
 function freshState() {
   return {
-    sites: [],   // [{ id, name, color, rate, rivalsaPercent: null|number }]
+    sites: [],   // [{ id, name, color, rate, payMode: 'plus'|'inclusive', rivalsaPercent: null|number, pastRates? }]
     shifts: [],  // [{ id, date: 'YYYY-MM-DD', siteId, start: 'HH:MM', end: 'HH:MM', note }]
     favorites: [], // [{ id, siteId, start: 'HH:MM', end: 'HH:MM', label }] — scorciatoie turno
     expenses: [], // [{ id, date: 'YYYY-MM-DD', category, amount, note }]
@@ -143,6 +143,18 @@ export function replaceAllData(current, next) {
 export const clearAllData = (current) => ({ ...replaceAllData(current, freshState()), history: [], trash: [], historyResetAt: Date.now() });
 
 // ── Sedi ──────────────────────────────────────────────────────────────
+// Paga di una sede ripulita: { rate, payMode, rivalsaPercent } (rivalsaPercent null = quella di Tasse e cassa).
+export function normalizePay(p = {}) {
+  const pct = p.rivalsaPercent;
+  return {
+    rate: Number(p.rate) || 0,
+    payMode: p.payMode === 'inclusive' ? 'inclusive' : 'plus',
+    rivalsaPercent: pct === '' || pct == null || Number.isNaN(Number(pct)) ? null : Number(pct),
+  };
+}
+
+const samePay = (a, b) => a.rate === b.rate && a.payMode === b.payMode && (a.rivalsaPercent ?? null) === (b.rivalsaPercent ?? null);
+
 export function addSite(state, name, rate, opts = {}) {
   const id = nextId(state, 'site');
   const color = opts.color || SITE_COLORS[(state.sites.length) % SITE_COLORS.length];
@@ -150,8 +162,7 @@ export function addSite(state, name, rate, opts = {}) {
     ...state,
     sites: [...state.sites, touch({
       id, name: name.trim(), color,
-      rate: Number(rate) || 0,
-      rivalsaPercent: opts.rivalsaPercent === '' || opts.rivalsaPercent == null ? null : Number(opts.rivalsaPercent),
+      ...normalizePay({ rate, payMode: opts.payMode, rivalsaPercent: opts.rivalsaPercent }),
     })],
     seq: { ...state.seq, site: id + 1 },
   };
@@ -161,21 +172,35 @@ export function updateSite(state, id, patch) {
   return { ...state, sites: state.sites.map((s) => (s.id === id ? touch({ ...s, ...patch }) : s)) };
 }
 
-// Nuova paga oraria. Con `fromISO` vale dai turni di quella data in poi: quelli prima
-// mantengono la tariffa di allora. Senza data è una correzione e vale per tutti i turni.
-export function changeSiteRate(state, id, newRate, fromISO = null) {
-  const rate = Number(newRate) || 0;
+// Nuova paga (tariffa, omnicomprensiva o "+ %", percentuale). Con `fromISO` vale dai turni di
+// quella data in poi: quelli prima mantengono la paga di allora, salvata per intero in
+// `pastRates`. Senza data è una correzione e vale per tutti i turni.
+export function changeSitePay(state, id, pay, fromISO = null) {
+  const next = normalizePay(pay);
   return {
     ...state,
     sites: state.sites.map((s) => {
       if (s.id !== id) return s;
-      if (!fromISO) return touch({ ...s, rate, pastRates: [] });
-      const prevRate = siteRateOn(s, addDaysISO(fromISO, -1));
-      const kept = (s.pastRates ?? []).filter((r) => r.before < fromISO);
-      const pastRates = prevRate === rate ? kept : [...kept, { before: fromISO, rate: prevRate }];
-      return touch({ ...s, rate, pastRates });
+      if (!fromISO) return touch({ ...s, ...next, pastRates: [] });
+      const prev = sitePayOn(s, addDaysISO(fromISO, -1));
+      // i periodi salvati prima della 1.7 prendevano la % dalla sede: la si scrive dentro,
+      // così cambiarla ora non tocca i turni di allora
+      const kept = (s.pastRates ?? []).filter((r) => r.before < fromISO).map((r) => ({
+        ...r,
+        payMode: r.payMode === 'inclusive' ? 'inclusive' : 'plus',
+        rivalsaPercent: r.rivalsaPercent !== undefined ? r.rivalsaPercent : (s.rivalsaPercent ?? null),
+      }));
+      const pastRates = samePay(prev, next) ? kept : [...kept, { before: fromISO, ...prev }];
+      return touch({ ...s, ...next, pastRates });
     }),
   };
+}
+
+// Solo la tariffa (stesso modo di pagare e stessa %).
+export function changeSiteRate(state, id, newRate, fromISO = null) {
+  const site = state.sites.find((s) => s.id === id);
+  if (!site) return state;
+  return changeSitePay(state, id, { rate: newRate, payMode: site.payMode, rivalsaPercent: site.rivalsaPercent }, fromISO);
 }
 
 export function removeSite(state, id) {

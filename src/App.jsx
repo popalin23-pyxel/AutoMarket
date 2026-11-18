@@ -254,7 +254,7 @@ function Shell() {
           )}
           {active === 'altro' && subPage === 'anagrafica' && subPageView('altro', <AnagraficaTab state={state} setState={updateState} />)}
           {active === 'altro' && subPage === 'sites' && subPageView('altro', <>
-            <SitesTab state={state} setState={updateState} />
+            <SitesTab state={state} setState={updateState} onOpenFiscal={() => navigate('altro', 'fiscal')} />
             <SitesMonthPreview state={state} onNavigate={navigate} />
           </>)}
           {active === 'altro' && subPage === 'fiscal' && subPageView('altro', <FiscalSettingsTab state={state} setState={updateState} />)}

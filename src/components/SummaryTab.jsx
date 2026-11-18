@@ -78,7 +78,7 @@ export default function SummaryTab({ state, year, month, setYear, setMonth }) {
                 </div>
                 <div className="ssc-grid">
                   <div><span className="ssc-lbl">Ore</span><span className="mono">{fmt(p.hours)}</span></div>
-                  <div><span className="ssc-lbl">{p.mixedRate ? '€/h (media)' : '€/h'}</span><span className="mono">{fmt(p.rate)}</span></div>
+                  <div><span className="ssc-lbl">{p.mixedRate ? '€/h (media)' : '€/h'}{p.inclusive ? ' omnicompr.' : ''}</span><span className="mono">{fmt(p.rate)}</span></div>
                   <div><span className="ssc-lbl">Fatturato</span><span className="mono">€{fmt(p.revenue)}</span></div>
                   <div><span className="ssc-lbl">{rivLabel} {p.rivalsaPercent}%</span><span className="mono">€{fmt(p.rivalsa)}</span></div>
                 </div>

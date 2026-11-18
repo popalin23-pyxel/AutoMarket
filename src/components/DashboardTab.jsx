@@ -55,8 +55,8 @@ function SetupCard({ state, onNavigate, onAdd }) {
   const st = state.settings;
   const hasData = state.shifts.length > 0 || state.occasionalWork.length > 0;
   const steps = [
-    { done: !!((st.displayName || '').trim() || st.professionalRole || (st.vatNumber || '').trim()), label: 'Completa i tuoi dati', go: () => onNavigate('altro', 'anagrafica') },
-    { done: state.sites.some((x) => !x.archived), label: 'Aggiungi la prima sede con la paga oraria', go: () => onNavigate('altro', 'sites') },
+    { done: !!(st.professionalRole && st.pensionFund), label: 'Scegli lavoro, cassa e come calcolare le tasse', go: () => onNavigate('altro', 'fiscal') },
+    { done: state.sites.some((x) => !x.archived), label: 'Aggiungi la prima sede: paga oraria, omnicomprensiva o + 4%', go: () => onNavigate('altro', 'sites') },
     { done: hasData, label: 'Registra il primo turno', go: onAdd },
   ];
   // serve solo per iniziare: sparisce appena c'è il primo turno o la prima prestazione

@@ -1,182 +1,139 @@
 import React, { useState } from 'react';
-import { addSite, updateSite, removeSite, changeSiteRate } from '../lib/store.js';
-import { SITE_COLORS } from '../lib/defaults.js';
+import { addSite, updateSite, removeSite, changeSitePay } from '../lib/store.js';
+import { PENSION_FUNDS } from '../lib/defaults.js';
 import { useConfirm } from '../lib/ConfirmContext.jsx';
-import NumberInput from './NumberInput.jsx';
-import EmptyState from './EmptyState.jsx';
-import RateChangeDialog from './RateChangeDialog.jsx';
-import { siteRateOn, scheduledRateChange, todayISO } from '../lib/calc.js';
+import { sitePayOn, scheduledRateChange, todayISO, addDaysISO } from '../lib/calc.js';
+import { payText, invoiceText, defaultPercent, extraName, pctText } from '../lib/payOptions.js';
 import SiteDetailsDialog from './SiteDetailsDialog.jsx';
+import SiteEditor from './SiteEditor.jsx';
+import SiteAvatar from './SiteAvatar.jsx';
+import EmptyState from './EmptyState.jsx';
+import Icon from './icons/Icon.jsx';
 
-const fmtRate = (n) => (Number(n) || 0).toLocaleString('it-IT', { useGrouping: 'always', minimumFractionDigits: 0, maximumFractionDigits: 2 });
 const fmtDay = (iso) => { const [y, m, d] = iso.split('-'); return `${Number(d)}/${Number(m)}/${y.slice(2)}`; };
 
-export default function SitesTab({ state, setState }) {
-  const [name, setName] = useState('');
-  const [rate, setRate] = useState('');
-  const [addError, setAddError] = useState('');
-  const [color, setColor] = useState(SITE_COLORS[state.sites.length % SITE_COLORS.length]);
-  const confirmAction = useConfirm();
-  const [rateSite, setRateSite] = useState(null); // sede di cui si cambia la paga
-  const [detailsSite, setDetailsSite] = useState(null); // scheda della struttura
-  const [showArchived, setShowArchived] = useState(false);
-  const activeSites = state.sites.filter((s) => !s.archived);
-  const today = todayISO();
-  const archivedSites = state.sites.filter((s) => s.archived);
+// Riga sotto la paga: un cambio già fissato nel futuro, oppure l'ultimo cambio fatto.
+function historyLine(site, today, settings) {
+  const next = scheduledRateChange(site, today);
+  if (next) return `Dal ${fmtDay(next.from)}: ${payText(next, settings)}`;
+  const past = site.pastRates ?? [];
+  const last = past[past.length - 1];
+  if (!last) return '';
+  return `Dal ${fmtDay(last.before)} · prima ${payText(sitePayOn(site, addDaysISO(last.before, -1)), settings)}`;
+}
 
-  const add = () => {
-    const n = name.trim();
-    // 0 è una paga oraria valida (es. una sede "Appuntamento" per promemoria,
-    // non un vero turno pagato) — niente a che fare col campo vuoto.
-    if (!n) { setAddError('Scrivi il nome della sede.'); return; }
-    if (rate === '' || rate == null) { setAddError('Scrivi la paga oraria (anche 0, se non è pagata).'); return; }
-    setState((s) => addSite(s, n, rate, { color }));
-    setAddError('');
-    setName(''); setRate(''); setColor(SITE_COLORS[(state.sites.length + 1) % SITE_COLORS.length]);
-  };
+// Sedi e paghe: l'elenco delle strutture con come pagano; si tocca una sede per cambiarla.
+export default function SitesTab({ state, setState, onOpenFiscal }) {
+  const [editing, setEditing] = useState(null); // null | 'new' | sede
+  const [detailsSite, setDetailsSite] = useState(null);
+  const [showArchived, setShowArchived] = useState(false);
+  const confirmAction = useConfirm();
+  const settings = state.settings;
+  const today = todayISO();
+  const activeSites = state.sites.filter((s) => !s.archived);
+  const archivedSites = state.sites.filter((s) => s.archived);
+  const def = defaultPercent(settings);
+  const fund = PENSION_FUNDS.find((f) => f.id === settings.pensionFund && f.id !== 'altro');
 
   const patch = (id, p) => setState((s) => updateSite(s, id, p));
-
   // Archiviare: la sede sparisce dalle scelte per i nuovi turni, ma i turni passati restano
   // con i loro guadagni (eliminandola diventerebbero "Sede eliminata" a 0 €).
   const archive = (site, archived) => patch(site.id, { archived: archived || undefined });
 
+  const submit = ({ name, color, terms, payChanged, from }) => {
+    if (editing === 'new') {
+      setState((s) => addSite(s, name, terms.rate, { color, payMode: terms.payMode, rivalsaPercent: terms.rivalsaPercent }));
+    } else {
+      const id = editing.id;
+      setState((s) => {
+        const next = updateSite(s, id, { name, color });
+        return payChanged ? changeSitePay(next, id, terms, from) : next;
+      });
+    }
+    setEditing(null);
+  };
+
   const del = async (site) => {
     const nShifts = state.shifts.filter((sh) => sh.siteId === site.id).length;
     const msg = nShifts > 0
-      ? `"${site.name}" ha ${nShifts} turni registrati. Eliminandola, quei turni resteranno nel calendario ma senza sede (0€ nel calcolo): per tenerli conviene "Archivia". Eliminare comunque?`
+      ? `"${site.name}" ha ${nShifts} turni registrati. Eliminandola, quei turni resteranno nel calendario ma senza sede (0€ nel calcolo): per tenerli conviene lasciarla archiviata. Eliminare comunque?`
       : `Eliminare "${site.name}"?`;
     const ok = await confirmAction(msg, { title: 'Eliminare sede', danger: true, confirmLabel: 'Elimina' });
-    if (!ok) return;
-    setState((s) => removeSite(s, site.id));
+    if (ok) setState((s) => removeSite(s, site.id));
   };
 
   return (
-    <div className="panel">
-      <h2 className="panel-title">Sedi di lavoro</h2>
-      <p className="panel-desc">
-        Aggiungi ogni posto dove lavori con la sua paga oraria. La rivalsa lasciala vuota per usare
-        quella di default (in Tasse e cassa); impostala solo se questa sede fa eccezione.
+    <>
+      <p className="sites-intro">Le strutture dove lavori e come ti pagano. Tocca una sede per cambiare nome, colore o paga.</p>
+
+      {activeSites.length === 0 ? (
+        <div className="ncard sites-empty">
+          <EmptyState icon="mapPin" title="Nessuna sede" hint="Aggiungi la prima struttura con la sua paga oraria: servirà per i turni." />
+          <button type="button" className="btn btn-primary btn-block" onClick={() => setEditing('new')}>
+            <Icon name="plus" size={18} /> Aggiungi la prima sede
+          </button>
+        </div>
+      ) : (
+        <div className="lcard sites-list">
+          {activeSites.map((s) => {
+            const terms = sitePayOn(s, today);
+            const hist = historyLine(s, today, settings);
+            return (
+              <button key={s.id} type="button" className="lrow site-row" onClick={() => setEditing(s)}>
+                <SiteAvatar site={s} size={40} />
+                <span className="lrow-tx">
+                  <span className="lrow-t site-row-name">{s.name}</span>
+                  <span className="site-row-pay">{payText(terms, settings)}</span>
+                  <span className="site-row-sub">{invoiceText(terms, settings)}{hist ? ` · ${hist}` : ''}</span>
+                </span>
+                <span className="lrow-end"><Icon name="chevronRight" size={19} /></span>
+              </button>
+            );
+          })}
+          <button type="button" className="lrow site-add" onClick={() => setEditing('new')}>
+            <span className="site-add-ic"><Icon name="plus" size={20} /></span>
+            <span className="lrow-t">Aggiungi una sede</span>
+          </button>
+        </div>
+      )}
+
+      <p className="sites-foot">
+        {def > 0
+          ? <>Percentuale di riferimento: <b>{pctText(def)} di {extraName(settings)}</b>{fund ? ` (${fund.label})` : ''}.</>
+          : <>La tua cassa non prevede maggiorazioni in fattura{fund ? ` (${fund.label})` : ''}.</>}
+        {onOpenFiscal && <> <button type="button" className="link-btn" onClick={onOpenFiscal}>Cambia in Tasse e cassa</button></>}
       </p>
 
-      <div className="form-row">
-        <div className="field" style={{ flex: 2 }}>
-          <label className="field-label">Nome</label>
-          <input type="text" value={name} placeholder="Es. CDS"
-            onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && add()} />
-        </div>
-        <div className="field" style={{ maxWidth: 120 }}>
-          <label className="field-label">Paga oraria (€)</label>
-          <NumberInput value={rate} onChange={setRate} min={0} max={999} allowEmpty style={{ minWidth: 0 }} />
-        </div>
-        <div className="field">
-          <label className="field-label">Colore</label>
-          <div className="site-picker">
-            {SITE_COLORS.map((c) => (
-              <button key={c} type="button" className={`site-pick-btn ${color === c ? 'sel' : ''}`}
-                style={{ padding: 6 }} onClick={() => setColor(c)}>
-                <span className="site-dot" style={{ background: c }} />
-              </button>
-            ))}
-          </div>
-        </div>
-        <button className="btn btn-primary" onClick={add}>Aggiungi</button>
-      </div>
-      {addError && <div className="hint hint-warn">{addError}</div>}
-
-      {activeSites.length === 0 && (
-        <EmptyState icon="mapPin" title="Nessuna sede configurata" hint="Aggiungine una qui sopra per iniziare a registrare i turni." />
-      )}
-
-      {activeSites.length > 0 && (
-      <div className="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th></th><th>Nome</th><th style={{ width: 110 }}>€ / ora</th>
-              <th style={{ width: 130 }}>Rivalsa %</th><th style={{ width: 90 }}></th>
-            </tr>
-          </thead>
-          <tbody>
-            {activeSites.map((s) => (
-              <tr key={s.id}>
-                <td>
-                  <div className="site-picker">
-                    {SITE_COLORS.map((c) => (
-                      <button key={c} type="button" className={`site-pick-btn ${s.color === c ? 'sel' : ''}`}
-                        style={{ padding: 4 }} onClick={() => patch(s.id, { color: c })}>
-                        <span className="site-dot" style={{ background: c }} />
-                      </button>
-                    ))}
-                  </div>
-                </td>
-                <td>
-                  <input type="text" value={s.name} onChange={(e) => patch(s.id, { name: e.target.value })}
-                    style={{ minWidth: 100, width: '100%' }} />
-                </td>
-                <td>
-                  <button type="button" className="rate-btn" onClick={() => setRateSite(s)} title="Cambia paga oraria">
-                    €{fmtRate(siteRateOn(s, today))} ✎
-                  </button>
-                  {(() => {
-                    const next = scheduledRateChange(s, today);
-                    if (next) return <div className="rate-history">→ €{fmtRate(next.rate)} dal {fmtDay(next.from)}</div>;
-                    const last = s.pastRates?.[s.pastRates.length - 1];
-                    return last ? <div className="rate-history">dal {fmtDay(last.before)} · prima €{fmtRate(last.rate)}</div> : null;
-                  })()}
-                </td>
-                <td>
-                  <NumberInput value={s.rivalsaPercent} onChange={(v) => patch(s.id, { rivalsaPercent: v })}
-                    min={0} max={100} allowEmpty style={{ minWidth: 0, width: 70 }} />
-                  <span style={{ fontSize: 11, color: 'var(--text-mut)', marginLeft: 4 }}>
-                    {s.rivalsaPercent == null ? '(default)' : ''}
-                  </span>
-                </td>
-                <td>
-                  <div className="row-actions">
-                    <button className="btn btn-sm" onClick={() => setDetailsSite(s)} title="Contatti, contratto, tetto ore">Scheda</button>
-                    <button className="btn btn-sm" onClick={() => archive(s, true)} title="Non compare più tra le sedi, i turni passati restano">Archivia</button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      )}
-
       {archivedSites.length > 0 && (
-        <div style={{ marginTop: 14 }}>
-          <button className="link-btn" onClick={() => setShowArchived(!showArchived)}>
-            {showArchived ? '▾' : '▸'} Sedi archiviate ({archivedSites.length})
+        <>
+          <button type="button" className="grp-title sites-arch-toggle" onClick={() => setShowArchived(!showArchived)} aria-expanded={showArchived}>
+            Archiviate ({archivedSites.length}) <Icon name="chevronDown" size={16} style={{ transform: showArchived ? 'rotate(180deg)' : 'none' }} />
           </button>
           {showArchived && (
-            <div className="archived-list">
+            <div className="lcard">
               {archivedSites.map((s) => (
-                <div key={s.id} className="archived-row">
-                  <span className="site-dot" style={{ background: s.color }} />
-                  <span className="archived-name">{s.name}</span>
-                  <button className="btn btn-sm" onClick={() => archive(s, false)}>Ripristina</button>
-                  <button className="btn btn-sm btn-danger" onClick={() => del(s)}>Elimina</button>
+                <div key={s.id} className="lrow site-arch-row">
+                  <SiteAvatar site={s} size={32} />
+                  <span className="lrow-tx"><span className="lrow-t site-arch-name">{s.name}</span></span>
+                  <button type="button" className="btn btn-sm" onClick={() => archive(s, false)}>Ripristina</button>
+                  <button type="button" className="btn btn-sm btn-danger" onClick={() => del(s)} aria-label={`Elimina ${s.name}`}><Icon name="trash" size={16} /></button>
                 </div>
               ))}
-              <p className="panel-desc" style={{ marginTop: 6, marginBottom: 0 }}>
-                I turni passati di queste sedi restano nel calendario e nei guadagni.
-              </p>
+              <p className="sites-arch-note">I turni passati delle sedi archiviate restano nel calendario e nei guadagni.</p>
             </div>
           )}
-        </div>
+        </>
       )}
 
+      {editing && (
+        <SiteEditor site={editing === 'new' ? null : editing} state={state} onSubmit={submit} onClose={() => setEditing(null)}
+          onDetails={() => { const s = editing; setEditing(null); setDetailsSite(s); }}
+          onArchive={() => { archive(editing, true); setEditing(null); }} />
+      )}
       {detailsSite && (
         <SiteDetailsDialog site={detailsSite} onClose={() => setDetailsSite(null)}
           onSave={(p) => { patch(detailsSite.id, p); setDetailsSite(null); }} />
       )}
-
-      {rateSite && (
-        <RateChangeDialog site={rateSite} onClose={() => setRateSite(null)}
-          onSave={(rate, from) => { setState((s) => changeSiteRate(s, rateSite.id, rate, from)); setRateSite(null); }} />
-      )}
-    </div>
+    </>
   );
 }

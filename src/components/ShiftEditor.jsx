@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { hoursOfShift, isShiftDone, siteRateOn, computeTaxes } from '../lib/calc.js';
+import { hoursOfShift, isShiftDone, siteRateOn, computeTaxes, payFor, roundPay } from '../lib/calc.js';
 import { rivalsaLabel, MONTHS_IT, WEEKDAYS_IT_LONG } from '../lib/defaults.js';
 import { useLockBodyScroll } from '../lib/useLockBodyScroll.js';
 import { useBackClose } from '../lib/backStack.js';
@@ -10,7 +10,6 @@ import SiteAvatar from './SiteAvatar.jsx';
 import NumberInput from './NumberInput.jsx';
 
 const fmt = (n) => n.toLocaleString('it-IT', { useGrouping: 'always', minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const round2 = (n) => Math.round((n + Number.EPSILON) * 100) / 100;
 const longDate = (iso) => {
   const d = new Date(iso + 'T00:00:00');
   return Number.isNaN(d.getTime()) ? iso : `${WEEKDAYS_IT_LONG[(d.getDay() + 6) % 7].toLowerCase()} ${d.getDate()} ${MONTHS_IT[d.getMonth()].toLowerCase()}`;
@@ -86,11 +85,10 @@ export default function ShiftEditor({
 
   let breakdown = null;
   if (site && hours > 0) {
-    const rivPct = site.rivalsaPercent != null ? Number(site.rivalsaPercent) : (Number(settings?.rivalsaPercent) || 0);
-    const revenue = round2(hours * rateUsed);
-    const rivalsa = round2(revenue * (rivPct / 100));
+    const pay = payFor(hours, site, date, settings ?? {}, rateUsed);
+    const { revenue, rivalsa } = roundPay(pay);
     const t = computeTaxes(revenue, rivalsa, settings);
-    breakdown = { revenue, rivPct, rivalsa, invoice: t.invoice, taxPercent: t.taxPercent, taxes: t.taxes, net: t.net, exact: t.taxMode === 'forfettario' };
+    breakdown = { revenue, rivPct: pay.pct, inclusive: pay.inclusive, rivalsa, invoice: t.invoice, taxPercent: t.taxPercent, taxes: t.taxes, net: t.net, exact: t.taxMode === 'forfettario' };
   }
 
   return (
@@ -182,7 +180,7 @@ export default function ShiftEditor({
 
             {breakdown && (
               <div className="editor-breakdown">
-                <div className="editor-breakdown-row"><span>Compenso</span><span>€{fmt(breakdown.revenue)}</span></div>
+                <div className="editor-breakdown-row"><span>{breakdown.inclusive ? 'Compenso (paga omnicomprensiva)' : 'Compenso'}</span><span>€{fmt(breakdown.revenue)}</span></div>
                 <div className="editor-breakdown-row"><span>{rivalsaLabel(settings)} ({breakdown.rivPct}%)</span><span>€{fmt(breakdown.rivalsa)}</span></div>
                 <div className="editor-breakdown-row"><span>Fatturato</span><span>€{fmt(breakdown.invoice)}</span></div>
                 <div className="editor-breakdown-row muted"><span>{breakdown.exact ? 'Tasse e contributi' : `Tasse (${breakdown.taxPercent}%)`}</span><span>−€{fmt(breakdown.taxes)}</span></div>

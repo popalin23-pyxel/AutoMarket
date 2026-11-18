@@ -1605,3 +1605,104 @@ select.ask-chip { width: auto; min-width: 0; font-size: 14px; }
 .ask-q { min-height: 54px; }
 .ask-q-e { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; font-size: 19px; background: rgba(var(--ink), 0.04); flex: none; }
 .ask-reset { display: block; margin: 0 auto 14px; }
+
+/* ── Sedi e paghe (1.7): elenco a schede e scheda della sede ─────────────── */
+.sites-intro { font-size: 14.5px; color: var(--text-dim); line-height: 1.45; margin: 0 6px 12px; }
+.sites-empty { padding: 4px 16px 16px; }
+.sites-empty .btn { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; font-size: 16px; }
+.site-row { align-items: center; padding-top: 10px; padding-bottom: 10px; }
+.site-row .site-avatar { box-shadow: 0 0 0 3px rgba(var(--ink), 0.04); }
+.site-row-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
+.site-row-pay { display: block; font-family: var(--mono); font-size: 14.5px; font-weight: 700; color: var(--text); margin-top: 2px; word-spacing: -0.2em; }
+.site-row-sub { display: block; font-size: 13px; color: var(--text-dim); margin-top: 2px; line-height: 1.35; }
+.site-add { min-height: 56px; color: var(--accent-text); }
+.site-add .lrow-t { font-size: 15.5px; }
+.site-add-ic {
+  width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; flex: none;
+  border: 1.5px dashed rgba(var(--accent-rgb), 0.55); color: var(--accent-text);
+}
+.sites-foot { font-size: 13px; color: var(--text-dim); line-height: 1.5; margin: 0 6px 14px; }
+.sites-foot .link-btn { margin-top: 0; font-size: 13px; }
+.sites-arch-toggle { display: flex; align-items: center; gap: 6px; background: none; border: none; cursor: pointer; font-family: inherit; padding: 0; }
+.site-arch-row { cursor: default; gap: 10px; }
+.site-arch-row .btn-sm { min-height: 36px; }
+.site-arch-name { color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; font-size: 15px; }
+.sites-arch-note { font-size: 12.5px; color: var(--text-mut); padding: 10px 14px 12px; border-top: 1px solid var(--border); margin: 0; }
+
+.site-sheet .field input { width: 100%; min-width: 0; font-size: 16.5px; padding: 11px 13px; }
+.site-sheet-lbl { margin: 16px 0 8px; }
+.site-colors { display: flex; flex-wrap: wrap; gap: 10px; }
+.site-color {
+  width: 36px; height: 36px; border-radius: 50%; border: none; background: var(--c); cursor: pointer; padding: 0;
+  box-shadow: 0 0 0 2px var(--bg-panel), 0 0 0 3px transparent; transition: box-shadow 0.15s;
+}
+.site-color.sel { box-shadow: 0 0 0 3px var(--bg-panel), 0 0 0 5px var(--text); }
+.pay-rate {
+  display: flex; align-items: center; gap: 8px; height: 58px; padding: 0 14px; border-radius: 15px;
+  border: 1.5px solid var(--border-hi); background: var(--surface);
+}
+.pay-rate:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.18); }
+.pay-rate-cur { font-size: 22px; font-weight: 700; color: var(--text-dim); }
+.pay-rate input[type=text] {
+  flex: 1; min-width: 0; border: none; background: none; box-shadow: none; padding: 0; height: 100%;
+  font-family: var(--mono); font-size: 24px; font-weight: 700; color: var(--text);
+}
+.pay-rate input[type=text]:focus { box-shadow: none; }
+.pay-rate-unit { font-size: 14px; color: var(--text-mut); white-space: nowrap; }
+.pay-opts { display: flex; flex-direction: column; gap: 9px; }
+.pay-opt {
+  display: flex; gap: 12px; align-items: flex-start; padding: 13px 14px; border-radius: 16px; cursor: pointer;
+  border: 1.5px solid var(--border-hi); background: var(--bg-panel); transition: border-color 0.15s, background 0.15s;
+}
+.pay-opt.sel { border-color: var(--sel-strong); background: var(--sel-bg); box-shadow: 0 0 0 1px var(--sel-strong) inset; }
+.pay-opt input[type=radio] { width: 19px; height: 19px; margin: 2px 0 0; accent-color: var(--accent); flex: none; }
+.pay-opt-tx { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1; }
+.pay-opt-tx b { font-size: 16px; }
+.pay-opt-tx small { font-size: 13.5px; color: var(--text-dim); line-height: 1.4; }
+.pay-opt-tx input[type=date] { align-self: flex-start; min-width: 0; max-width: 100%; margin: 2px 0; }
+.pay-hour {
+  margin-top: 4px; padding: 8px 10px; border-radius: 10px; background: rgba(var(--ink), 0.045);
+  font-size: 13px; line-height: 1.4; color: var(--text);
+}
+.pay-custom { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 4px; }
+.pay-pct { display: flex; align-items: center; gap: 6px; font-weight: 700; }
+.pay-pct input[type=text] { width: 72px; min-width: 0; text-align: right; font-family: var(--mono); font-weight: 700; }
+.pay-seg { height: 42px; }
+.pay-seg button { font-size: 14px; padding: 0 11px; }
+.site-sheet-note { font-size: 13.5px; color: var(--text-dim); margin: -2px 0 9px; line-height: 1.4; }
+.site-sheet-save { margin-top: 18px; min-height: 50px; font-size: 16.5px; }
+.site-sheet-more { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 9px; margin-top: 10px; }
+.site-sheet-more .btn { display: flex; align-items: center; justify-content: center; gap: 7px; min-height: 46px; font-size: 14.5px; }
+
+/* ── Tasse e cassa (1.7): le tre scelte ──────────────────────────────────── */
+.fs-step { display: flex; align-items: center; gap: 9px; font-size: 16px; font-weight: 700; margin: 18px 0 10px; }
+.fs-step:first-of-type { margin-top: 4px; }
+.fs-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.fs-chip {
+  min-height: 42px; padding: 0 15px; border-radius: 21px; border: 1.5px solid var(--border-hi); background: var(--bg-panel);
+  color: var(--text); font-family: inherit; font-size: 15px; font-weight: 600; cursor: pointer;
+}
+.fs-chip.on { border-color: var(--sel-strong); background: var(--sel-bg); color: var(--sel-tx); font-weight: 700; }
+.fs-other { width: 100%; min-width: 0; margin-top: 10px; }
+.fs-who { font-weight: 500; color: var(--text-dim); font-size: 14px; }
+.fs-tag {
+  display: inline-block; vertical-align: 2px; margin-left: 7px; padding: 2px 8px; border-radius: 10px;
+  background: rgba(var(--accent-rgb), 0.12); color: var(--accent-text); font-size: 11px; font-weight: 700; letter-spacing: 0.02em;
+}
+.fs-sub { display: flex; flex-direction: column; gap: 7px; margin-top: 6px; }
+.fs-sub-t { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-mut); }
+.fs-seg { height: 42px; align-self: flex-start; max-width: 100%; }
+.fs-seg button { font-size: 14px; padding: 0 12px; white-space: nowrap; }
+.fs-simple { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; }
+.fs-simple small { grid-column: 1 / -1; }
+.fs-simple input[type=text] { min-width: 0; width: 100%; }
+.fs-summary {
+  margin: 14px 0 0; padding: 11px 13px; border-radius: 13px; background: rgba(var(--ink), 0.04);
+  font-size: 13.5px; line-height: 1.45; color: var(--text-dim);
+}
+.fs-more {
+  display: flex; align-items: center; justify-content: space-between; width: 100%; margin-top: 14px; padding: 13px 2px;
+  background: none; border: none; border-top: 1px solid var(--border); color: var(--text); font-family: inherit;
+  font-size: 15px; font-weight: 700; cursor: pointer;
+}
+.fs-detail { padding-top: 4px; }

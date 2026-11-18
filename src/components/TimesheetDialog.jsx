@@ -73,7 +73,7 @@ export default function TimesheetDialog({ state, siteId, year, month, onClose })
           <div className="editor-breakdown">
             <div className="editor-breakdown-row"><span>Turni</span><span>{ts.rows.length}</span></div>
             <div className="editor-breakdown-row"><span>Ore</span><span>{fmt(ts.totalHours)}</span></div>
-            <div className="editor-breakdown-row"><span>Compenso</span><span>€{fmt(ts.revenue)}</span></div>
+            <div className="editor-breakdown-row"><span>{ts.inclusive ? 'Compenso (scorporato)' : 'Compenso'}</span><span>€{fmt(ts.revenue)}</span></div>
             {ts.rivalsaPercent > 0 && (
               <div className="editor-breakdown-row"><span>{opts.rivalsaLabel} {ts.rivalsaPercent}%</span><span>€{fmt(ts.rivalsa)}</span></div>
             )}

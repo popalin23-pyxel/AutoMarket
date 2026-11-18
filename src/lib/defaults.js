@@ -48,6 +48,7 @@ export function roleLabel(settings) {
 export const PENSION_FUNDS = [
   {
     id: 'enpapi', label: 'ENPAPI', who: 'infermieri',
+    short: 'Contributi 16% del reddito · in fattura +4% di integrativo',
     forfContributionsPercent: 16, rivalsaPercent: 4, rivalsaType: 'integrativo',
     info: [
       'Contributo soggettivo: 16% del reddito (si può scegliere di più, fino al 23%), con un minimo di €1.600 l\'anno.',
@@ -57,6 +58,7 @@ export const PENSION_FUNDS = [
   },
   {
     id: 'enpam', label: 'ENPAM', who: 'medici',
+    short: 'Quota B 19,5% del reddito · nessuna maggiorazione in fattura',
     forfContributionsPercent: 19.5, rivalsaPercent: 0, rivalsaType: 'rivalsa',
     info: [
       'Quota A, fissa in base all\'età (2026): €304,73 fino a 30 anni, €591,47 da 30 a 35, €1.109,92 da 35 a 40, €2.049,83 dai 40 anni; più €84,26 di maternità.',
@@ -66,13 +68,14 @@ export const PENSION_FUNDS = [
   },
   {
     id: 'inps', label: 'INPS Gestione separata', who: 'fisioterapisti e professioni senza cassa',
+    short: 'Contributi 26,07% del reddito · rivalsa 4% in fattura (facoltativa)',
     forfContributionsPercent: 26.07, rivalsaPercent: 4, rivalsaType: 'rivalsa',
     info: [
       '26,07% del reddito nel 2026 (24% se sei già pensionato o iscritto a un\'altra cassa).',
       'La rivalsa del 4% in fattura è facoltativa e fa parte del compenso: si tassa.',
     ],
   },
-  { id: 'altro', label: 'Altra cassa', who: '', info: ['Imposta tu percentuali e maggiorazione, chiedendo i valori al commercialista.'] },
+  { id: 'altro', label: 'Altra cassa', who: '', short: 'Imposti tu i valori, chiedendoli al commercialista', info: ['Imposta tu percentuali e maggiorazione, chiedendo i valori al commercialista.'] },
 ];
 
 // Cassa suggerita in base al ruolo dell'anagrafica.

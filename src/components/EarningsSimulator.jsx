@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import SiteAvatar from './SiteAvatar.jsx';
 import EmptyState from './EmptyState.jsx';
 import NumberInput from './NumberInput.jsx';
-import { computeTaxes, siteRateOn, todayISO } from '../lib/calc.js';
+import { computeTaxes, payFor, roundPay, siteRateOn, sitePayOn, todayISO } from '../lib/calc.js';
 
 const fmt = (n) => n.toLocaleString('it-IT', { useGrouping: 'always', minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const round2 = (n) => Math.round((n + Number.EPSILON) * 100) / 100;
@@ -22,10 +22,8 @@ export default function EarningsSimulator({ state, onNavigate }) {
     const perSite = sites.map((s) => {
       const n = counts[s.id] || 0;
       const hours = round2(n * hoursPerShift);
-      const revenue = round2(hours * siteRateOn(s, today));
-      const rivPct = s.rivalsaPercent != null ? s.rivalsaPercent : (Number(settings.rivalsaPercent) || 0);
-      const rivalsa = round2(revenue * (rivPct / 100));
-      return { site: s, count: n, hours, revenue, rivalsa, total: round2(revenue + rivalsa) };
+      const { revenue, rivalsa, total } = roundPay(payFor(hours, s, today, settings));
+      return { site: s, count: n, hours, revenue, rivalsa, total };
     });
     const totalHours = round2(perSite.reduce((a, p) => a + p.hours, 0));
     const totalRevenue = round2(perSite.reduce((a, p) => a + p.revenue, 0));
@@ -66,7 +64,7 @@ export default function EarningsSimulator({ state, onNavigate }) {
               <SiteAvatar site={s} size={26} />
               <div className="sim-site-info">
                 <div className="sim-site-name">{s.name}</div>
-                <div className="sim-site-rate">€{siteRateOn(s, today)}/h</div>
+                <div className="sim-site-rate">€{siteRateOn(s, today)}/h{sitePayOn(s, today).payMode === 'inclusive' ? ' omnicomprensiva' : ''}</div>
               </div>
               <div className="sim-stepper">
                 <button type="button" onClick={() => bump(s.id, -1)} disabled={!counts[s.id]}>−</button>

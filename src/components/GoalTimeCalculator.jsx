@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { computeMonthProgress, computeTaxes, siteRateOn, todayISO } from '../lib/calc.js';
+import { computeMonthProgress, computeTaxes, payFor, todayISO } from '../lib/calc.js';
 import EmptyState from './EmptyState.jsx';
 
 const fmt = (n) => n.toLocaleString('it-IT', { useGrouping: 'always', minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -29,10 +29,10 @@ export default function GoalTimeCalculator({ state }) {
   const netHourlyRate = useMemo(() => {
     if (sum.totalHours > 0) return sum.net / sum.totalHours;
     if (sites.length === 0) return 0;
-    const avgRate = sites.reduce((a, s) => a + siteRateOn(s, today), 0) / sites.length;
-    const avgRivalsa = sites.reduce((a, s) => a + (s.rivalsaPercent != null ? s.rivalsaPercent : (Number(settings.rivalsaPercent) || 0)), 0) / sites.length;
-    // netto di un'ora "media", con lo stesso calcolo delle tasse usato nel resto dell'app
-    return computeTaxes(avgRate, avgRate * (avgRivalsa / 100), settings).net;
+    // netto di un'ora "media" tra le sedi, con lo stesso calcolo delle tasse usato nel resto dell'app
+    const hour = sites.map((s) => payFor(1, s, today, settings));
+    const avg = (k) => hour.reduce((a, p) => a + p[k], 0) / hour.length;
+    return computeTaxes(avg('revenue'), avg('rivalsa'), settings).net;
   }, [sum, sites, settings, today]);
 
   if (goal <= 0) {
