@@ -80,7 +80,7 @@ export default function FiscalSettingsTab({ state, setState }) {
           </p>
           {exact ? (
             <div className="fiscal-flow">
-              <div className="fiscal-flow-row"><span>Compensi (ore × paga)</span><span className="mono">€{fmt(example.totalRevenue)}</span></div>
+              <div className="fiscal-flow-row"><span>{example.perSite.some((p) => p.inclusive || p.mixedPay) ? 'Compensi (le paghe omnicomprensive senza il ' + pct(settings.rivalsaPercent) + '%)' : 'Compensi (ore × paga)'}</span><span className="mono">€{fmt(example.totalRevenue)}</span></div>
               <div className="fiscal-flow-row sub">
                 <span>+ {riv} in fattura{settings.rivalsaType === 'integrativo' ? ' (va alla cassa)' : ''}</span>
                 <span className="mono">€{fmt(example.totalRivalsa)}</span>

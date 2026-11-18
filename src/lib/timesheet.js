@@ -17,8 +17,10 @@ const FORMULA_TRIGGER = /^[=+\-@\t\r]/;
 const safeText = (v) => (typeof v === 'string' && FORMULA_TRIGGER.test(v) ? `'${v}` : v);
 
 // Con la tariffa omnicomprensiva i righi sono già il totale: il compenso è scorporato.
-export const compensoLabel = (ts) => (ts.inclusive ? 'Compenso (scorporato dalla tariffa omnicomprensiva)'
-  : ts.mixedPay ? 'Compenso (in parte da tariffa omnicomprensiva)' : 'Compenso (ore x tariffa)');
+// Nel PDF la versione corta, che sta accanto all'importo.
+export const compensoLabel = (ts, short = false) => (ts.inclusive
+  ? (short ? 'Compenso (tariffa omnicomprensiva)' : 'Compenso (scorporato dalla tariffa omnicomprensiva)')
+  : ts.mixedPay ? (short ? 'Compenso (in parte omnicompr.)' : 'Compenso (in parte da tariffa omnicomprensiva)') : 'Compenso (ore x tariffa)');
 
 export function exportTimesheetPdf(ts, { headerLines = [], rivalsaLabel = 'Rivalsa' } = {}) {
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
@@ -85,7 +87,7 @@ export function exportTimesheetPdf(ts, { headerLines = [], rivalsaLabel = 'Rival
     doc.text(label, mx + 80, y); doc.text(value, right, y, { align: 'right' }); y += bold ? 8 : 6.5;
   };
   row('Ore totali', `${fmt(ts.totalHours)} h`);
-  row(compensoLabel(ts), `€ ${fmt(ts.revenue)}`);
+  row(compensoLabel(ts, true), `€ ${fmt(ts.revenue)}`);
   if (ts.rivalsaPercent > 0) row(`${rivalsaLabel} ${ts.rivalsaPercent}%`, `€ ${fmt(ts.rivalsa)}`);
   row('Totale', `€ ${fmt(ts.total)}`, true);
 
