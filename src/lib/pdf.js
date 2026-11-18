@@ -17,7 +17,7 @@ export function exportMonthPdf(sum, opts = {}) {
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(20);
   doc.setTextColor(15, 42, 61);
-  doc.text('Turnio', marginX, y);
+  doc.text('Horarya', marginX, y);
   doc.setFontSize(10);
   doc.setTextColor(120, 130, 140);
   doc.setFont('helvetica', 'normal');
@@ -124,7 +124,7 @@ export function exportMonthPdf(sum, opts = {}) {
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
-  doc.text(`Generato da Turnio il ${new Date().toLocaleDateString('it-IT')}`, marginX, 287);
+  doc.text(`Generato da Horarya il ${new Date().toLocaleDateString('it-IT')}`, marginX, 287);
 
-  return saveFile(doc.output('blob'), `turnio_${sum.year}_${String(sum.month).padStart(2, '0')}.pdf`);
+  return saveFile(doc.output('blob'), `horarya_${sum.year}_${String(sum.month).padStart(2, '0')}.pdf`);
 }

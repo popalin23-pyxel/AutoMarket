@@ -34,7 +34,7 @@ function sample() {
 const ask = (id, params, state = sample()) => answer(id, { ...defaultParams(id, NOW), ...params }, state, NOW);
 const text = (id, params, state) => answerText(ask(id, params, state));
 
-describe('Chiedi a Turnio: periodi e domande', () => {
+describe('Chiedi a Horarya: periodi e domande', () => {
   it('il periodo si legge in italiano', () => {
     expect(periodText(preset('thisMonth'), NOW)).toBe('a ottobre');
     expect(periodText({ type: 'month', y: 2026, m: 4 }, NOW)).toBe('ad aprile');
@@ -60,7 +60,7 @@ describe('Chiedi a Turnio: periodi e domande', () => {
   });
 });
 
-describe('Chiedi a Turnio: risposte', () => {
+describe('Chiedi a Horarya: risposte', () => {
   it('guadagnato questo mese: solo i turni fatti, con quelli in programma a parte', () => {
     // ottobre fatto: 7h×27 + 6h×28 + 12h×28 = 189 + 504 = 693 → +4% = 720,72; tasse 25% → netto 540,54
     const t = text('earned');

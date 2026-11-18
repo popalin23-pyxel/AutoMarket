@@ -11,7 +11,7 @@ describe('invita un amico', () => {
 
   it('il messaggio spiega l’app e finisce col link', () => {
     const m = inviteMessage(URL);
-    expect(m).toMatch(/Turnio/);
+    expect(m).toMatch(/Horarya/);
     expect(m).toMatch(/tasse e cassa/);
     expect(m.endsWith(URL)).toBe(true);
   });
@@ -21,7 +21,7 @@ describe('invita un amico', () => {
     const l = shareLinks(m, URL);
     expect(decodeURIComponent(l.whatsapp.split('text=')[1])).toBe(m);
     expect(decodeURIComponent(l.sms.split('body=')[1])).toBe(m);
-    expect(l.email).toMatch(/^mailto:\?subject=Ti%20consiglio%20Turnio&body=/);
+    expect(l.email).toMatch(/^mailto:\?subject=Ti%20consiglio%20Horarya&body=/);
     const tg = new globalThis.URL(l.telegram);
     expect(tg.searchParams.get('url')).toBe(URL);
     expect(tg.searchParams.get('text')).not.toContain('http');

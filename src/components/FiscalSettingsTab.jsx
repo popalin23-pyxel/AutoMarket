@@ -75,7 +75,7 @@ export default function FiscalSettingsTab({ state, setState }) {
       {sub === 'details' ? (
         <>
           <p className="panel-desc">
-            Come Turnio arriva al netto stimato ({exact ? 'formula del regime forfettario' : 'calcolo semplice'}),
+            Come Horarya arriva al netto stimato ({exact ? 'formula del regime forfettario' : 'calcolo semplice'}),
             con i tuoi numeri del mese in corso come esempio.
           </p>
           {exact ? (

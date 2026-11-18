@@ -7,7 +7,7 @@ import Icon from './icons/Icon.jsx';
 const KEY = 'turnio_onboarding_seen';
 
 const STEPS = [
-  { icon: 'home', title: 'Ti diamo il benvenuto su Turnio', text: 'Registra i tuoi turni per sede e calcola automaticamente fatturato, rivalsa e tasse da accantonare.' },
+  { icon: 'home', title: 'Ti diamo il benvenuto su Horarya', text: 'Registra i tuoi turni per sede e calcola automaticamente fatturato, rivalsa e tasse da accantonare.' },
   { icon: 'menu', title: 'Prima cosa: i tuoi dati', text: 'In "Altro" inserisci i tuoi dati, le sedi dove lavori con la paga oraria (Sedi e paghe) e come calcolare le tasse (Tasse e cassa).' },
   { icon: 'plus', title: 'Poi: i turni', text: 'Con il tasto + in basso aggiungi un turno, una prestazione occasionale o le ferie. In "Turni" li vedi settimana per settimana e li modifichi quando vuoi.' },
   { icon: 'euro', title: 'Tutto calcolato per te', text: 'In "Soldi" vedi quanto ti resta tolte le tasse, quanto mettere da parte, le spese e i grafici.' },

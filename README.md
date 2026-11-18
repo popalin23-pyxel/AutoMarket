@@ -1,4 +1,4 @@
-# Turnio
+# Horarya
 
 Registro turni e calcolo compensi per liberi professionisti (nato per un'infermiera/o
 in Partita IVA, ma adatto a chiunque lavori su più sedi con paga oraria diversa).

@@ -216,7 +216,7 @@ export default function SettingsTab({ state, setState, onLogout, isAdmin, onOpen
             <textarea
               value={pasteText}
               onChange={(e) => setPasteText(e.target.value)}
-              placeholder='{"app":"turnio", ...}'
+              placeholder='{"app":"horarya", ...}'
               rows={6}
               className="paste-textarea"
               style={{ width: '100%', minWidth: 0, fontFamily: 'monospace' }}

@@ -15,7 +15,7 @@ export default class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, info) {
-    console.error('Turnio: errore non gestito', error, info);
+    console.error('Horarya: errore non gestito', error, info);
     logError(`${error?.message || error}${info?.componentStack ? ` · ${info.componentStack.trim().split('\n')[0]}` : ''}`);
   }
 
@@ -24,7 +24,7 @@ export default class ErrorBoundary extends React.Component {
     return (
       <div className="auth-wrap">
         <div className="auth-card">
-          <div className="auth-brand"><span className="brand-logo">Turn<span className="accent">io</span></span></div>
+          <div className="auth-brand"><span className="brand-logo">Horar<span className="accent">ya</span></span></div>
           <p style={{ marginTop: 10, marginBottom: 14 }}>
             Si è verificato un problema imprevisto. I tuoi dati sono al sicuro:
             vengono salvati automaticamente a ogni modifica.

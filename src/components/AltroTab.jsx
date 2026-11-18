@@ -86,7 +86,7 @@ export default function AltroTab({ state, user, isAdmin, newReports = 0, onOpen,
         <ListRow color="vio" icon="stamp" title="Segna più giorni" sub="Riempi il mese: tocca i giorni" onClick={() => onTool('stamp')} />
         <ListRow color="grn" icon="send" title="Invia giorni liberi" sub="Messaggio con la tua disponibilità" onClick={() => onTool('availability')} />
         <ListRow color="blue" icon="copy" title="Copia la settimana" sub="Ripeti gli stessi turni" onClick={() => onTool('duplicate')} />
-        <ListRow color="gold" icon="spark" title="Chiedi a Turnio" sub="Domande pronte sui tuoi turni e soldi" onClick={onAsk} />
+        <ListRow color="gold" icon="spark" title="Chiedi a Horarya" sub="Domande pronte sui tuoi turni e soldi" onClick={onAsk} />
       </div>
 
       <div className="grp-title">I tuoi dati</div>
@@ -127,7 +127,7 @@ export default function AltroTab({ state, user, isAdmin, newReports = 0, onOpen,
         </button>
       </div>
 
-      <p className="app-version">Turnio · versione {versionLabel()}</p>
+      <p className="app-version">Horarya · versione {versionLabel()}</p>
 
       {installGuide && <InstallGuide onClose={() => setInstallGuide(false)} />}
       {invite && <InviteSheet isAdmin={isAdmin} onClose={() => setInvite(false)} />}

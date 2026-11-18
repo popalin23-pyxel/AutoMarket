@@ -55,5 +55,5 @@ export function exportMonthExcel(sum, opts = {}) {
 
   const data = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
   const blob = new Blob([data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-  return saveFile(blob, `turnio_${sum.year}_${String(sum.month).padStart(2, '0')}.xlsx`);
+  return saveFile(blob, `horarya_${sum.year}_${String(sum.month).padStart(2, '0')}.xlsx`);
 }

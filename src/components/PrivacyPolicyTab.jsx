@@ -8,7 +8,7 @@ export default function PrivacyPolicyTab({ onBack }) {
   return (
     <div className="panel privacy-page">
       {onBack && <button className="btn btn-sm" style={{ marginBottom: 12 }} onClick={onBack}>‹ Indietro</button>}
-      <h2 className="panel-title">Privacy Policy di Turnio</h2>
+      <h2 className="panel-title">Privacy Policy di Horarya</h2>
       <p className="panel-desc">Ultimo aggiornamento: 18 novembre 2026</p>
 
       <div className="privacy-body">
@@ -18,7 +18,7 @@ export default function PrivacyPolicyTab({ onBack }) {
           email <Fill value={PRIVACY_EMAIL} label="email di contatto" />.
         </p>
 
-        <h3>2. Che dati raccoglie Turnio</h3>
+        <h3>2. Che dati raccoglie Horarya</h3>
         <p>Per far funzionare l'app raccogliamo e conserviamo:</p>
         <ul>
           <li><b>Dati account</b>: email, password (mai salvata in chiaro: viene cifrata dal nostro fornitore di autenticazione), data di creazione dell'account.</li>
@@ -50,7 +50,7 @@ export default function PrivacyPolicyTab({ onBack }) {
 
         <h3>4. Con chi condividiamo i dati</h3>
         <p>
-          I tuoi dati sono conservati dai fornitori tecnici che rendono possibile Turnio, che agiscono come
+          I tuoi dati sono conservati dai fornitori tecnici che rendono possibile Horarya, che agiscono come
           responsabili del trattamento per nostro conto:
         </p>
         <ul>
@@ -81,12 +81,12 @@ export default function PrivacyPolicyTab({ onBack }) {
         <h3>7. Sicurezza</h3>
         <p>
           I dati viaggiano sempre via connessione cifrata (HTTPS). Ogni utente può vedere e modificare solo i propri
-          dati: è tecnicamente impedito, a livello di database, anche a un amministratore di Turnio leggere i turni,
+          dati: è tecnicamente impedito, a livello di database, anche a un amministratore di Horarya leggere i turni,
           le sedi o le spese di un altro utente.
         </p>
 
         <h3>8. Minori</h3>
-        <p>Turnio non è pensato per l'uso da parte di minori di 16 anni.</p>
+        <p>Horarya non è pensato per l'uso da parte di minori di 16 anni.</p>
 
         <h3>9. Modifiche a questa policy</h3>
         <p>

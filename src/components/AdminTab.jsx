@@ -27,7 +27,7 @@ function UpgradeCard() {
       </p>
       <ol className="upgrade-steps">
         <li>Tocca "Copia lo script".</li>
-        <li>Apri <b>supabase.com</b> → il progetto di Turnio → <b>SQL Editor</b> → <b>New query</b>.</li>
+        <li>Apri <b>supabase.com</b> → il progetto di Horarya → <b>SQL Editor</b> → <b>New query</b>.</li>
         <li>Incolla e premi <b>Run</b>. Deve comparire "Success".</li>
         <li>Torna qui e tocca "Controlla di nuovo".</li>
       </ol>
@@ -159,7 +159,7 @@ export default function AdminTab({ onBack, onReportsCount }) {
     <ReportsPanel onCountChange={onReportsCount} />
     <div className="panel">
       <h2 className="panel-title">⚡ Utenti</h2>
-      <p className="panel-desc">Approva i nuovi account e assegna i ruoli. Finché un utente non è "Approvato" non può usare Turnio.</p>
+      <p className="panel-desc">Approva i nuovi account e assegna i ruoli. Finché un utente non è "Approvato" non può usare Horarya.</p>
 
       {error && <div className="hint hint-warn">{error}</div>}
 
@@ -196,7 +196,7 @@ export default function AdminTab({ onBack, onReportsCount }) {
         </div>
       )}
     </div>
-    <p className="app-version">Turnio · versione {versionLabel()}</p>
+    <p className="app-version">Horarya · versione {versionLabel()}</p>
     </>
   );
 }

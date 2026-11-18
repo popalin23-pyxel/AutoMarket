@@ -1,5 +1,5 @@
 /* ============================================================
-   Turnio — tema "rosso": crema rosato, rosso, oro e bordeaux
+   Horarya — tema "rosso": crema rosato, rosso, oro e bordeaux
    ============================================================ */
 
 /* Font ospitati localmente (non più da Google Fonts): niente terze parti
@@ -1567,7 +1567,7 @@ html { background: linear-gradient(var(--bar-color) 50%, var(--bg) 50%); }
   .og-fatt .v { font-size: 15px; }
 }
 
-/* ── Chiedi a Turnio: domande pronte, risposte a fumetto ───────────── */
+/* ── Chiedi a Horarya: domande pronte, risposte a fumetto ───────────── */
 .ask-intro { padding: 16px; text-align: center; }
 .ask-intro-ic { width: 56px; height: 56px; border-radius: 18px; margin: 2px auto 10px; display: grid; place-items: center; background: linear-gradient(135deg, var(--accent), var(--gold)); color: #fff; }
 .ask-intro h2 { font-size: 19px; font-weight: 700; }

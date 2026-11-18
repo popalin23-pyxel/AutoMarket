@@ -12,24 +12,24 @@ export function useCanPromptInstall() {
 
 const STEPS = {
   ios: [
-    'Apri Turnio con Safari (o Chrome) sull\'iPhone.',
+    'Apri Horarya con Safari (o Chrome) sull\'iPhone.',
     'Tocca il pulsante Condividi: il quadrato con la freccia verso l\'alto. Con iOS 26 tocca prima ••• in basso a destra, poi Condividi.',
     'Scorri e tocca "Aggiungi alla schermata Home" (se non lo vedi, cercalo sotto "Altro" o tocca "Modifica azioni" in fondo).',
-    'Tocca "Aggiungi": l\'icona di Turnio compare tra le tue app. Da quel momento aprila sempre da lì.',
+    'Tocca "Aggiungi": l\'icona di Horarya compare tra le tue app. Da quel momento aprila sempre da lì.',
   ],
   android: [
-    'Apri Turnio con Chrome sul telefono.',
+    'Apri Horarya con Chrome sul telefono.',
     'Tocca il menu ⋮ in alto a destra.',
     'Tocca "Installa app" (oppure "Aggiungi a schermata Home") e conferma.',
-    'L\'icona di Turnio compare tra le tue app: da quel momento aprila sempre da lì.',
+    'L\'icona di Horarya compare tra le tue app: da quel momento aprila sempre da lì.',
   ],
   desktop: [
     'Con Chrome o Edge: nella barra dell\'indirizzo tocca l\'icona di installazione (un monitor con la freccia) e conferma.',
-    'Sul telefono è ancora più comodo: apri Turnio dal browser del telefono e segui la guida per iPhone o Android.',
+    'Sul telefono è ancora più comodo: apri Horarya dal browser del telefono e segui la guida per iPhone o Android.',
   ],
 };
 
-// Guida passo passo per aggiungere Turnio alla schermata Home.
+// Guida passo passo per aggiungere Horarya alla schermata Home.
 export default function InstallGuide({ onClose }) {
   const [platform, setPlatform] = useState(() => { const p = devicePlatform(); return p === 'desktop' ? 'ios' : p; });
   const canPrompt = useCanPromptInstall();
@@ -42,15 +42,15 @@ export default function InstallGuide({ onClose }) {
     <div className="editor-overlay" onClick={onClose}>
       <div className="editor-card" onClick={(e) => e.stopPropagation()}>
         <div className="editor-head">
-          <span>Installa Turnio sul telefono</span>
+          <span>Installa Horarya sul telefono</span>
           <button className="btn btn-sm" onClick={onClose}>✕</button>
         </div>
         {installed ? (
-          <p className="hint hint-info">Turnio è già installata su questo dispositivo. 👍</p>
+          <p className="hint hint-info">Horarya è già installata su questo dispositivo. 👍</p>
         ) : (
           <>
             <p className="panel-desc">
-              Installata, Turnio si apre come un'app vera: a schermo intero, più veloce e utilizzabile anche senza rete.
+              Installata, Horarya si apre come un'app vera: a schermo intero, più veloce e utilizzabile anche senza rete.
               Non serve nessuno store e non occupa quasi spazio.
             </p>
             {canPrompt && (

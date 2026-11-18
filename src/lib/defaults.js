@@ -1,4 +1,4 @@
-// Valori di default per Turnio
+// Valori di default per Horarya
 
 export const DEFAULT_SETTINGS = {
   // Come si stimano tasse e contributi (Studio → Fiscali):

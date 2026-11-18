@@ -48,7 +48,7 @@ applyDensity(loadDensity());
 // Sotto-pagine di Soldi e Altro (si aprono a tutto schermo con "‹ Indietro")
 const SUBPAGE_TITLES = {
   soldi: {
-    chiedi: 'Chiedi a Turnio', dettaglio: 'Per sede', spese: 'Spese', grafici: 'Grafici', documenti: 'Esporta e foglio ore',
+    chiedi: 'Chiedi a Horarya', dettaglio: 'Per sede', spese: 'Spese', grafici: 'Grafici', documenti: 'Esporta e foglio ore',
     simulatore: 'Simulatore',
   },
   altro: {
@@ -73,7 +73,7 @@ function NotConfigured() {
   return (
     <div className="auth-wrap">
       <div className="auth-card">
-        <div className="auth-brand"><span className="brand-logo">Turn<span className="accent">io</span></span></div>
+        <div className="auth-brand"><span className="brand-logo">Horar<span className="accent">ya</span></span></div>
         <div className="hint hint-warn" style={{ marginTop: 10 }}>
           L'app non è ancora configurata (mancano le chiavi Supabase). Chi gestisce il progetto deve
           impostare <code>VITE_SUPABASE_URL</code> e <code>VITE_SUPABASE_ANON_KEY</code>.
@@ -201,7 +201,7 @@ function Shell() {
     <div className="app">
       <header className="app-header">
         <div className="brand">
-          <span className="brand-logo">Turn<span className="accent">io</span></span>
+          <span className="brand-logo">Horar<span className="accent">ya</span></span>
           {(monthSummary.shiftCount > 0 || monthSummary.occasionalCount > 0) && (
             <span className="brand-sub">
               Questo mese: €{monthProgress.done.netTotal.toLocaleString('it-IT', { useGrouping: 'always', maximumFractionDigits: 0 })} netto finora

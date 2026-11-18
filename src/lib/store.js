@@ -1,4 +1,4 @@
-// Store persistente su localStorage per Turnio.
+// Store persistente su localStorage per Horarya.
 
 import { DEFAULT_SETTINGS, SITE_COLORS } from './defaults.js';
 import { addDaysISO, sitePayOn } from './calc.js';
@@ -103,7 +103,7 @@ export function loadState() {
 }
 
 export function saveState(state) {
-  try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { console.warn('Turnio: salvataggio fallito', e); }
+  try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { console.warn('Horarya: salvataggio fallito', e); }
 }
 
 // stato vuoto (uscita dall'account, account eliminato): niente cronologia né cestino del vecchio
@@ -356,12 +356,13 @@ export function updateFiscalSettings(state, patch) {
 
 // ── Backup / Ripristino ─────────────────────────────────────────────
 const BACKUP_VERSION = 1;
+const BACKUP_APPS = ['horarya', 'turnio'];
 
 // Ritorna true se il file è stato salvato (false = condivisione annullata dall'utente).
 export async function exportBackup(state) {
-  const payload = { app: 'turnio', version: BACKUP_VERSION, exportedAt: new Date().toISOString(), state };
+  const payload = { app: 'horarya', version: BACKUP_VERSION, exportedAt: new Date().toISOString(), state };
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-  const saved = await saveFile(blob, `turnio-backup-${new Date().toISOString().slice(0, 10)}.json`);
+  const saved = await saveFile(blob, `horarya-backup-${new Date().toISOString().slice(0, 10)}.json`);
   if (saved) markBackupDone(); // il promemoria si sposta solo se il backup è stato fatto davvero
   return saved;
 }
@@ -375,12 +376,13 @@ export function parseBackup(text) {
   } catch {
     throw new Error('Testo non valido: non è un JSON corretto.');
   }
-  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('Il testo non è un backup di Turnio.');
-  if (parsed.app && parsed.app !== 'turnio') throw new Error('Il testo non è un backup di Turnio.');
-  // formato dell'app { app: 'turnio', state }, oppure lo stato "nudo" dei backup più vecchi
-  const raw = parsed.app === 'turnio' ? parsed.state : parsed;
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('Il testo non è un backup di Horarya.');
+  // 'turnio' = backup fatti prima del cambio di nome (versione 1.8 e precedenti)
+  if (parsed.app && !BACKUP_APPS.includes(parsed.app)) throw new Error('Il testo non è un backup di Horarya.');
+  // formato dell'app { app: 'horarya' | 'turnio', state }, oppure lo stato "nudo" dei backup più vecchi
+  const raw = BACKUP_APPS.includes(parsed.app) ? parsed.state : parsed;
   if (!raw || typeof raw !== 'object' || (!Array.isArray(raw.sites) && !Array.isArray(raw.shifts))) {
-    throw new Error('Il testo non è un backup di Turnio.');
+    throw new Error('Il testo non è un backup di Horarya.');
   }
   return { state: sanitizeState(raw), exportedAt: typeof parsed.exportedAt === 'string' ? parsed.exportedAt : null };
 }

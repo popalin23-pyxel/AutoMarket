@@ -24,13 +24,13 @@ export default function ResetPasswordForm() {
     <div className="auth-wrap">
       <div className="auth-card">
         <div className="auth-brand">
-          <span className="brand-logo">Turn<span className="accent">io</span></span>
+          <span className="brand-logo">Horar<span className="accent">ya</span></span>
           <span className="auth-tagline">Imposta una nuova password</span>
         </div>
 
         {done ? (
           <>
-            <div className="hint hint-info">Password aggiornata! Ora puoi continuare a usare Turnio.</div>
+            <div className="hint hint-info">Password aggiornata! Ora puoi continuare a usare Horarya.</div>
             <button className="btn btn-primary btn-block" onClick={() => setRecovery(false)}>Continua</button>
           </>
         ) : (

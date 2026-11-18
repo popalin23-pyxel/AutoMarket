@@ -30,12 +30,12 @@ function Answer({ a, onNavigate }) {
       {a.action && (
         <button type="button" className="btn btn-primary btn-sm" style={{ marginTop: 8 }} onClick={() => onNavigate(...a.action.route)}>{a.action.label}</button>
       )}
-      <div className="ask-src"><Icon name="calc" size={13} /> Calcolato da Turnio con i tuoi dati</div>
+      <div className="ask-src"><Icon name="calc" size={13} /> Calcolato da Horarya con i tuoi dati</div>
     </div>
   );
 }
 
-// Chiedi a Turnio: si sceglie una domanda dall'elenco e la si completa con i tasti (periodo,
+// Chiedi a Horarya: si sceglie una domanda dall'elenco e la si completa con i tasti (periodo,
 // sede). Le risposte le calcola l'app sul telefono (lib/ask.js): nessun dato esce da qui.
 export default function AskPage({ state, now, onNavigate }) {
   const [thread, setThread] = useState([]); // [{ key, id, params }]

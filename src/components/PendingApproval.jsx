@@ -14,7 +14,7 @@ export default function PendingApproval() {
     <div className="auth-wrap">
       <div className="auth-card">
         <div className="auth-brand">
-          <span className="brand-logo">Turn<span className="accent">io</span></span>
+          <span className="brand-logo">Horar<span className="accent">ya</span></span>
         </div>
         <div className="hint hint-info" style={{ marginTop: 8, display: 'flex', gap: 8, alignItems: 'flex-start' }}>
           <Icon name="hourglass" size={16} className="inline-icon" style={{ flexShrink: 0, marginTop: 2 }} />
@@ -26,7 +26,7 @@ export default function PendingApproval() {
           ) : (
             <span>
               Il tuo account (<b>{user?.email}</b>) è in attesa di approvazione.
-              Lo attiva chi gestisce Turnio: appena è attivo, tocca il tasto qui sotto.
+              Lo attiva chi gestisce Horarya: appena è attivo, tocca il tasto qui sotto.
             </span>
           )}
         </div>

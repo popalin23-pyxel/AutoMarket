@@ -46,7 +46,7 @@ export function AuthProvider({ children }) {
       writeCachedProfile(data);
     } catch (e) {
       // errore di rete: si tiene il profilo già noto, se c'è
-      console.warn('Turnio: impossibile caricare il profilo', e);
+      console.warn('Horarya: impossibile caricare il profilo', e);
       if (profileFor.current === userId) setProfileError(true);
     } finally {
       if (profileFor.current === userId) setProfileLoading(false);
@@ -62,7 +62,7 @@ export function AuthProvider({ children }) {
       if (data.session?.user) loadProfile(data.session.user.id);
     }).catch((e) => {
       // Es. rete irraggiungibile: non restare bloccati sulla schermata di caricamento.
-      console.warn('Turnio: impossibile recuperare la sessione', e);
+      console.warn('Horarya: impossibile recuperare la sessione', e);
       setLoading(false);
     });
 

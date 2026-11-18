@@ -21,7 +21,7 @@ export default function InviteSheet({ isAdmin, onClose }) {
     setShareError('');
     try {
       // il link è già nel testo: passarlo anche a parte su alcune app lo farebbe comparire due volte
-      await navigator.share({ title: 'Turnio', text: message });
+      await navigator.share({ title: 'Horarya', text: message });
     } catch (e) {
       if (e?.name !== 'AbortError') setShareError('Il telefono non ha aperto la condivisione: usa uno dei tasti qui sotto.');
     }
@@ -48,7 +48,7 @@ export default function InviteSheet({ isAdmin, onClose }) {
             <h2>Invita un amico</h2>
             <button type="button" className="round-btn" onClick={onClose} aria-label="Chiudi"><Icon name="x" size={20} /></button>
           </div>
-          <p className="invite-intro">Manda Turnio a una collega o a un amico: il messaggio spiega a cosa serve e contiene il link per aprirla.</p>
+          <p className="invite-intro">Manda Horarya a una collega o a un amico: il messaggio spiega a cosa serve e contiene il link per aprirla.</p>
 
           <label className="field-label" htmlFor="invite-msg">Il messaggio (puoi cambiarlo)</label>
           <textarea id="invite-msg" className="invite-msg" rows={6} value={message} onChange={(e) => setMessage(e.target.value)} />
@@ -87,7 +87,7 @@ export default function InviteSheet({ isAdmin, onClose }) {
             <span>
               {isAdmin
                 ? 'Dopo l’iscrizione l’account va attivato: lo trovi in Altro → Amministrazione.'
-                : 'Dopo l’iscrizione l’account viene attivato da chi gestisce Turnio.'}
+                : 'Dopo l’iscrizione l’account viene attivato da chi gestisce Horarya.'}
             </span>
           </p>
         </div>

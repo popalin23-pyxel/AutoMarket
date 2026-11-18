@@ -6,7 +6,7 @@ export function appUrl(loc = typeof window !== 'undefined' ? window.location : n
 }
 
 export function inviteMessage(url) {
-  return 'Ciao! Ti consiglio Turnio, l’app che uso per i turni in libera professione: segni dove e quando lavori '
+  return 'Ciao! Ti consiglio Horarya, l’app che uso per i turni in libera professione: segni dove e quando lavori '
     + 'e ti calcola da sola quanto hai fatturato, quanto mettere da parte per tasse e cassa e quanto ti resta. '
     + `Si usa dal telefono come un’app.\n\nProvala da qui: ${url}`;
 }
@@ -19,7 +19,7 @@ export function shareLinks(message, url) {
   return {
     whatsapp: `https://wa.me/?text=${m}`,
     telegram: `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(withoutUrl)}`,
-    email: `mailto:?subject=${encodeURIComponent('Ti consiglio Turnio')}&body=${m}`,
+    email: `mailto:?subject=${encodeURIComponent('Ti consiglio Horarya')}&body=${m}`,
     // "sms:?&body=" funziona sia su iPhone sia su Android
     sms: `sms:?&body=${m}`,
   };

@@ -118,7 +118,7 @@ export function useCloudSync({ userId, enabled, state, setState }) {
       initAttempts.current = 0;
       setStatus('idle');
     } catch (e) {
-      console.warn('Turnio: caricamento dal cloud non riuscito, riprovo più tardi', e);
+      console.warn('Horarya: caricamento dal cloud non riuscito, riprovo più tardi', e);
       setStatus('error');
       // nuovo tentativo da solo, a intervalli crescenti (anche se l'app resta aperta)
       const delay = INIT_RETRY_DELAYS[Math.min(initAttempts.current, INIT_RETRY_DELAYS.length - 1)];
@@ -147,7 +147,7 @@ export function useCloudSync({ userId, enabled, state, setState }) {
       }
       markOk();
     } catch (e) {
-      console.warn('Turnio: salvataggio sul cloud non riuscito, riprovo più tardi', e);
+      console.warn('Horarya: salvataggio sul cloud non riuscito, riprovo più tardi', e);
       setStatus('error');
       clearTimeout(retryTimer.current);
       retryTimer.current = setTimeout(() => push(uid), 20000);
@@ -164,7 +164,7 @@ export function useCloudSync({ userId, enabled, state, setState }) {
       if (changed) showNotice('🔗 Aggiornato con le modifiche dall\'altro dispositivo');
       if (!inCloud) push(uid); // modifiche locali non ancora sul cloud
     } catch (e) {
-      console.warn('Turnio: aggiornamento dal cloud non riuscito', e);
+      console.warn('Horarya: aggiornamento dal cloud non riuscito', e);
     }
   });
 

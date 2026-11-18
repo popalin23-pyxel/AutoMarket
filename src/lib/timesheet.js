@@ -101,7 +101,7 @@ export function exportTimesheetPdf(ts, { headerLines = [], rivalsaLabel = 'Rival
   doc.text('Visto della struttura (firma e timbro)', right, y + 5, { align: 'right' });
 
   doc.setFontSize(7.5); doc.setTextColor(150, 158, 166);
-  doc.text(`Generato con Turnio il ${new Date().toLocaleDateString('it-IT')}`, mx, 290);
+  doc.text(`Generato con Horarya il ${new Date().toLocaleDateString('it-IT')}`, mx, 290);
 
   return saveFile(doc.output('blob'), `${fileBase(ts)}.pdf`);
 }

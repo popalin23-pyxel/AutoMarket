@@ -1,4 +1,4 @@
-// "Chiedi a Turnio": domande pronte sui propri turni e soldi. La risposta si calcola sul
+// "Chiedi a Horarya": domande pronte sui propri turni e soldi. La risposta si calcola sul
 // telefono con gli stessi conti del resto dell'app (calc.js): niente servizi esterni, niente AI.
 //
 // Una domanda è { id, params: { period, siteId } }; la risposta è fatta di righe di testo a

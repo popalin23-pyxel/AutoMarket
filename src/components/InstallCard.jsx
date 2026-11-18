@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { isStandalone, devicePlatform, installCardDismissed, dismissInstallCard, promptInstall } from '../lib/install.js';
 import InstallGuide, { useCanPromptInstall } from './InstallGuide.jsx';
 
-// In Home, solo sul telefono e solo se Turnio è aperta dal browser e non installata.
+// In Home, solo sul telefono e solo se Horarya è aperta dal browser e non installata.
 export default function InstallCard() {
   const [hidden, setHidden] = useState(() => isStandalone() || devicePlatform() === 'desktop' || installCardDismissed());
   const [guide, setGuide] = useState(false);
@@ -12,7 +12,7 @@ export default function InstallCard() {
   const dismiss = () => { dismissInstallCard(); setHidden(true); };
   return (
     <div className="panel install-card">
-      <div className="install-card-title">📲 Installa Turnio sul telefono</div>
+      <div className="install-card-title">📲 Installa Horarya sul telefono</div>
       <p className="install-card-text">Si apre come un'app, a schermo intero, e funziona anche senza rete. Ci vuole un minuto.</p>
       <div className="install-card-actions">
         {canPrompt

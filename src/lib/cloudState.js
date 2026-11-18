@@ -82,7 +82,7 @@ export async function saveCloudStateSafely(userId, localState, lastKnownVersion)
 // Aggiornamento del database (versione 1.5): copie automatiche giornaliere e segnalazioni.
 // Da eseguire una volta sola nel SQL Editor di Supabase; si può rieseguire senza danni.
 export const UPGRADE_SQL_2 = `-- ════════════════════════════════════════════════════════════
--- Turnio 1.5 · 1) Copia automatica giornaliera dei dati di ogni utente
+-- Horarya 1.5 · 1) Copia automatica giornaliera dei dati di ogni utente
 -- La prima modifica di ogni giorno salva i dati com'erano prima (copia "di inizio
 -- giornata"); si tengono gli ultimi 30 giorni. Solo il proprietario le vede.
 -- ════════════════════════════════════════════════════════════
@@ -123,7 +123,7 @@ create trigger turnio_daily_backup
   execute function public.turnio_daily_backup();
 
 -- ════════════════════════════════════════════════════════════
--- Turnio 1.5 · 2) Segnalazioni dei problemi ("Segnala un problema")
+-- Horarya 1.5 · 2) Segnalazioni dei problemi ("Segnala un problema")
 -- Ognuno invia e vede le proprie; l'amministratore le vede tutte.
 -- ════════════════════════════════════════════════════════════
 create table if not exists turnio_reports (
@@ -155,7 +155,7 @@ create policy "solo l'admin elimina" on turnio_reports
 // Script SQL da eseguire una volta sola nel progetto Supabase (SQL Editor).
 // (per un progetto nuovo va eseguito anche UPGRADE_SQL_2, subito dopo)
 export const SETUP_SQL = `-- ════════════════════════════════════════════════════════════
--- 1) Dati Turnio: una riga per utente, protetta da RLS
+-- 1) Dati Horarya: una riga per utente, protetta da RLS
 -- ════════════════════════════════════════════════════════════
 create table if not exists turnio_states (
   user_id uuid primary key references auth.users(id) on delete cascade,

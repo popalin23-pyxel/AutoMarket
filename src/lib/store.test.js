@@ -84,18 +84,25 @@ describe('importBackupFromText: ripristino da file di backup', () => {
     expect(imported.tombstones).toEqual(state.tombstones);
   });
 
+  it('i backup col nome nuovo ("horarya") e quelli di prima ("turnio") si ripristinano uguali', () => {
+    const state = baseState();
+    const json = (app) => JSON.stringify({ app, version: 1, exportedAt: new Date().toISOString(), state });
+    expect(importBackupFromText(json('horarya'))).toEqual(importBackupFromText(json('turnio')));
+    expect(importBackupFromText(json('horarya')).shifts).toHaveLength(1);
+  });
+
   it('testo non JSON valido dà un errore comprensibile, non un crash', () => {
     expect(() => importBackupFromText('questo non è json{{{')).toThrow(/JSON/i);
   });
 
   it('un JSON valido ma di un\'altra app viene rifiutato', () => {
     expect(() => importBackupFromText(JSON.stringify({ app: 'altrapp', state: baseState() })))
-      .toThrow(/non è un backup di Turnio/i);
+      .toThrow(/non è un backup di Horarya/i);
   });
 
   it('un JSON valido ma che non è un backup ({}, [], null, altri dati) viene rifiutato, non svuota tutto', () => {
     for (const t of ['{}', '[]', 'null', '42', JSON.stringify({ app: 'turnio' }), JSON.stringify({ nome: 'x', lista: [1, 2] })]) {
-      expect(() => importBackupFromText(t)).toThrow(/non è un backup di Turnio/i);
+      expect(() => importBackupFromText(t)).toThrow(/non è un backup di Horarya/i);
     }
   });
 

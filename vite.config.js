@@ -26,8 +26,8 @@ export default defineConfig(() => ({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
       manifest: {
-        name: 'Turnio — Turni e Compensi',
-        short_name: 'Turnio',
+        name: 'Horarya — Turni e Compensi',
+        short_name: 'Horarya',
         description: 'Registro turni per sede con calcolo automatico di fatturato, rivalsa e tasse',
         theme_color: '#b91c1c',
         background_color: '#f9e9e5',

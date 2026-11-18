@@ -1,4 +1,4 @@
-// Installazione di Turnio come app (schermata Home). Su Android/Chrome il browser offre un
+// Installazione di Horarya come app (schermata Home). Su Android/Chrome il browser offre un
 // evento "beforeinstallprompt" che permette di installare con un tocco: va catturato subito
 // all'avvio (per questo il modulo è importato da main.jsx). Su iPhone si fa a mano da Condividi.
 

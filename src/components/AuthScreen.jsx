@@ -61,7 +61,7 @@ export default function AuthScreen({ onShowPrivacy }) {
       <div className="auth-card">
         <div className="auth-hero-icon"><Icon name="calendar" size={26} /></div>
         <div className="auth-brand">
-          <span className="brand-logo">Turn<span className="accent">io</span></span>
+          <span className="brand-logo">Horar<span className="accent">ya</span></span>
           <span className="auth-tagline">Turni e compensi — Partita IVA</span>
         </div>
 

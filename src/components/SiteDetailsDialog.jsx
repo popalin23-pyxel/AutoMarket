@@ -80,7 +80,7 @@ export default function SiteDetailsDialog({ site, onSave, onClose }) {
           placeholder="es. parcheggio dietro, badge in portineria" />
 
         <p className="panel-desc" style={{ marginTop: 8, marginBottom: 0 }}>
-          Con la fine del contratto e il tetto di ore, Turnio ti avvisa nelle Notifiche (30 giorni prima della scadenza,
+          Con la fine del contratto e il tetto di ore, Horarya ti avvisa nelle Notifiche (30 giorni prima della scadenza,
           e quando ti avvicini al massimo di ore del mese).
         </p>
 
