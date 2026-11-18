@@ -1,5 +1,6 @@
 import React from 'react';
 import { logError } from '../lib/errorLog.js';
+import BrandLogo from './BrandLogo.jsx';
 
 // Rete di sicurezza: se un componente qualsiasi genera un errore non gestito,
 // mostra un messaggio comprensibile invece di una pagina bianca. I dati non
@@ -24,7 +25,7 @@ export default class ErrorBoundary extends React.Component {
     return (
       <div className="auth-wrap">
         <div className="auth-card">
-          <div className="auth-brand"><span className="brand-logo">Horar<span className="accent">ya</span></span></div>
+          <div className="auth-brand"><BrandLogo height={44} /></div>
           <p style={{ marginTop: 10, marginBottom: 14 }}>
             Si è verificato un problema imprevisto. I tuoi dati sono al sicuro:
             vengono salvati automaticamente a ogni modifica.

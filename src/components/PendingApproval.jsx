@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../lib/AuthContext.jsx';
 import Icon from './icons/Icon.jsx';
+import BrandLogo from './BrandLogo.jsx';
 
 export default function PendingApproval() {
   const { user, refreshProfile, signOut, profile, profileError } = useAuth();
@@ -14,7 +15,7 @@ export default function PendingApproval() {
     <div className="auth-wrap">
       <div className="auth-card">
         <div className="auth-brand">
-          <span className="brand-logo">Horar<span className="accent">ya</span></span>
+          <BrandLogo height={44} />
         </div>
         <div className="hint hint-info" style={{ marginTop: 8, display: 'flex', gap: 8, alignItems: 'flex-start' }}>
           <Icon name="hourglass" size={16} className="inline-icon" style={{ flexShrink: 0, marginTop: 2 }} />

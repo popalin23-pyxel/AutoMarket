@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../lib/AuthContext.jsx';
+import BrandLogo from './BrandLogo.jsx';
 
 export default function ResetPasswordForm() {
   const { updatePassword, setRecovery, signOut } = useAuth();
@@ -24,7 +25,7 @@ export default function ResetPasswordForm() {
     <div className="auth-wrap">
       <div className="auth-card">
         <div className="auth-brand">
-          <span className="brand-logo">Horar<span className="accent">ya</span></span>
+          <BrandLogo height={44} />
           <span className="auth-tagline">Imposta una nuova password</span>
         </div>
 

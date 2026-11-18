@@ -40,6 +40,7 @@ import SubPage from './components/ui/SubPage.jsx';
 import Icon from './components/icons/Icon.jsx';
 import Splash from './components/Splash.jsx';
 import OnboardingTour, { needsOnboarding } from './components/OnboardingTour.jsx';
+import BrandLogo from './components/BrandLogo.jsx';
 
 applyTheme(loadTheme()); // applicato subito al caricamento del modulo, prima del primo render
 applyAccent(loadAccent());
@@ -73,7 +74,7 @@ function NotConfigured() {
   return (
     <div className="auth-wrap">
       <div className="auth-card">
-        <div className="auth-brand"><span className="brand-logo">Horar<span className="accent">ya</span></span></div>
+        <div className="auth-brand"><BrandLogo height={44} /></div>
         <div className="hint hint-warn" style={{ marginTop: 10 }}>
           L'app non è ancora configurata (mancano le chiavi Supabase). Chi gestisce il progetto deve
           impostare <code>VITE_SUPABASE_URL</code> e <code>VITE_SUPABASE_ANON_KEY</code>.
@@ -201,7 +202,7 @@ function Shell() {
     <div className="app">
       <header className="app-header">
         <div className="brand">
-          <span className="brand-logo">Horar<span className="accent">ya</span></span>
+          <span className="brand-pill"><BrandLogo height={24} /></span>
           {(monthSummary.shiftCount > 0 || monthSummary.occasionalCount > 0) && (
             <span className="brand-sub">
               Questo mese: €{monthProgress.done.netTotal.toLocaleString('it-IT', { useGrouping: 'always', maximumFractionDigits: 0 })} netto finora

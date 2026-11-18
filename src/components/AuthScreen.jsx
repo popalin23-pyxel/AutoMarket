@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../lib/AuthContext.jsx';
 import Icon from './icons/Icon.jsx';
+import BrandLogo from './BrandLogo.jsx';
 
 export default function AuthScreen({ onShowPrivacy }) {
   const { signIn, signUp, sendPasswordReset } = useAuth();
@@ -59,9 +60,9 @@ export default function AuthScreen({ onShowPrivacy }) {
   return (
     <div className="auth-wrap">
       <div className="auth-card">
-        <div className="auth-hero-icon"><Icon name="calendar" size={26} /></div>
+        <img className="auth-app-icon" src="pwa-192.png" alt="" width="72" height="72" />
         <div className="auth-brand">
-          <span className="brand-logo">Horar<span className="accent">ya</span></span>
+          <BrandLogo height={44} />
           <span className="auth-tagline">Turni e compensi — Partita IVA</span>
         </div>
 
