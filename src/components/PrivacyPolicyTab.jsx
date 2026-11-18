@@ -9,7 +9,7 @@ export default function PrivacyPolicyTab({ onBack }) {
     <div className="panel privacy-page">
       {onBack && <button className="btn btn-sm" style={{ marginBottom: 12 }} onClick={onBack}>‹ Indietro</button>}
       <h2 className="panel-title">Privacy Policy di Turnio</h2>
-      <p className="panel-desc">Ultimo aggiornamento: 27 ottobre 2026</p>
+      <p className="panel-desc">Ultimo aggiornamento: 18 novembre 2026</p>
 
       <div className="privacy-body">
         <h3>1. Titolare del trattamento</h3>
