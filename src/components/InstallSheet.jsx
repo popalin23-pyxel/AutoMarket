@@ -48,7 +48,9 @@ function Steps({ platform, info }) {
   if (platform === 'ios') {
     return (
       <ol className="inst-steps">
-        <Step n="1" icon="iosShare">Tocca <b>Condividi</b>, il quadrato con la freccia in su{info.browser === 'chrome' ? ' (in Chrome è in alto, nella barra dell’indirizzo)' : ' in basso. Con iOS 26 tocca prima ••• e poi Condividi'}.</Step>
+        <Step n="1" icon="iosShare">Tocca <b>Condividi</b>, il quadrato con la freccia in su{info.browser === 'chrome' ? ' (in Chrome è in alto, nella barra dell’indirizzo)'
+          : info.tablet ? ' in alto, accanto all’indirizzo'
+          : ' in basso. Con iOS 26 tocca prima ••• e poi Condividi'}.</Step>
         <Step n="2" icon="plusSquare">Scorri e tocca <b>“Aggiungi alla schermata Home”</b>. Se non lo vedi, tocca “Altro”.</Step>
         <Step n="3" icon="check">Tocca <b>“Aggiungi”</b>: l’icona di Horarya compare tra le tue app.</Step>
       </ol>
@@ -74,7 +76,7 @@ export default function InstallSheet({ onClose, onLater }) {
   useBackClose(onClose);
 
   const install = async () => { if (await promptInstall()) onClose(); };
-  const shownInfo = platform === info.platform ? info : { platform, browser: platform === 'ios' ? 'safari' : 'chrome', inApp: false };
+  const shownInfo = platform === info.platform ? info : { platform, browser: platform === 'ios' ? 'safari' : 'chrome', inApp: false, tablet: false };
 
   return (
     <Portal>
@@ -119,7 +121,7 @@ export default function InstallSheet({ onClose, onLater }) {
 }
 
 // Sale da sola poco dopo l'apertura dal telefono (non installata), una volta per visita;
-// con "Più tardi" non torna per 3 giorni.
+// chiusa (con "Più tardi", ✕ o Indietro) non torna per 3 giorni.
 export function InstallSheetAuto({ delay = 1200 }) {
   const [open, setOpen] = useState(false);
   useEffect(() => {
@@ -128,7 +130,10 @@ export function InstallSheetAuto({ delay = 1200 }) {
     return () => clearTimeout(t);
   }, [delay]);
   if (!open) return null;
-  return <InstallSheet onClose={() => setOpen(false)} onLater={() => { installSheetLater(); setOpen(false); }} />;
+  // Chiuderla in qualsiasi modo (✕, tocco fuori, tasto Indietro) vale come "Più tardi":
+  // chi l'ha chiusa ha già risposto, non gliela riproponiamo a ogni visita.
+  const later = () => { installSheetLater(); setOpen(false); };
+  return <InstallSheet onClose={later} onLater={later} />;
 }
 
 // Promemoria fisso nella pagina di accesso (solo telefono, non installata).
