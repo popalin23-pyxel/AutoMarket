@@ -35,11 +35,13 @@ export function isStandalone() {
   return window.matchMedia?.('(display-mode: standalone)').matches || window.navigator.standalone === true;
 }
 
-export function devicePlatform(uaIn) {
+// iPad: da iPadOS 13 Safari si presenta come un Mac ("Macintosh" nello user agent). L'unico modo
+// per riconoscerlo è lo schermo touch: i Mac non ne hanno (maxTouchPoints = 0).
+export function devicePlatform(uaIn, navIn) {
   if (typeof navigator === 'undefined' && uaIn == null) return 'desktop';
-  const ua = uaIn ?? navigator.userAgent ?? '';
-  const nav = typeof navigator !== 'undefined' ? navigator : {};
-  if (/iPad|iPhone|iPod/.test(ua) || (uaIn == null && nav.platform === 'MacIntel' && nav.maxTouchPoints > 1)) return 'ios';
+  const nav = navIn ?? (typeof navigator !== 'undefined' ? navigator : {});
+  const ua = uaIn ?? nav.userAgent ?? '';
+  if (/iPad|iPhone|iPod/.test(ua) || (/Macintosh/.test(ua) && nav.maxTouchPoints > 1)) return 'ios';
   if (/Android/i.test(ua)) return 'android';
   return 'desktop';
 }
@@ -58,8 +60,9 @@ export function dismissInstallCard() {
 
 // Dove è aperto il link: telefono, browser, e se è il browser interno di un'app (WhatsApp,
 // Instagram, Facebook…), da cui non si può installare.
-export function browserInfo(ua = typeof navigator !== 'undefined' ? navigator.userAgent || '' : '') {
-  const platform = devicePlatform(ua);
+// `nav` serve solo ai test (per simulare lo schermo touch dell'iPad).
+export function browserInfo(ua = typeof navigator !== 'undefined' ? navigator.userAgent || '' : '', nav) {
+  const platform = devicePlatform(ua, nav);
   const inApp = /FBAN|FBAV|FB_IAB|Instagram|Line\/|WhatsApp|Snapchat|TikTok|musical_ly|LinkedInApp|Twitter|Telegram/i.test(ua)
     || (platform === 'android' && /; wv\)/.test(ua));
   let browser = 'other';
@@ -73,7 +76,9 @@ export function browserInfo(ua = typeof navigator !== 'undefined' ? navigator.us
     else if (/Firefox/.test(ua)) browser = 'firefox';
     else if (/Chrome/.test(ua) && !inApp) browser = 'chrome';
   }
-  return { platform, browser, inApp };
+  // iPad: in Safari il tasto Condividi è in alto, non in basso come su iPhone
+  const tablet = platform === 'ios' && !/iPhone|iPod/.test(ua);
+  return { platform, browser, inApp, tablet };
 }
 
 // La finestra "Installa sul telefono" che sale da sola: una volta per apertura e, se si tocca
