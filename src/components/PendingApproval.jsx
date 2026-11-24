@@ -3,6 +3,7 @@ import { useAuth } from '../lib/AuthContext.jsx';
 import Icon from './icons/Icon.jsx';
 import BrandLogo from './BrandLogo.jsx';
 import { InstallBanner } from './InstallSheet.jsx';
+import { PRIVACY_EMAIL } from '../lib/legal.js';
 
 export default function PendingApproval() {
   const { user, refreshProfile, signOut, profile, profileError } = useAuth();
@@ -27,8 +28,8 @@ export default function PendingApproval() {
             </span>
           ) : (
             <span>
-              Il tuo account (<b>{user?.email}</b>) è in attesa di approvazione.
-              Lo attiva chi gestisce Horarya: appena è attivo, tocca il tasto qui sotto.
+              Il tuo account (<b>{user?.email}</b>) non è attivo in questo momento.
+              Se pensi che sia un errore, scrivi a <b>{PRIVACY_EMAIL}</b>; quando è di nuovo attivo, tocca il tasto qui sotto.
             </span>
           )}
         </div>

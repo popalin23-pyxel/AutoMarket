@@ -3,27 +3,48 @@ import { fetchAllProfiles, updateProfile } from '../lib/adminStore.js';
 import { useAuth } from '../lib/AuthContext.jsx';
 import { useConfirm } from '../lib/ConfirmContext.jsx';
 import { checkServerUpgrade, listAllReports, setReportStatus, deleteReport } from '../lib/serverData.js';
-import { UPGRADE_SQL_2 } from '../lib/cloudState.js';
+import { UPGRADE_SQL_2, UPGRADE_SQL_3 } from '../lib/cloudState.js';
 import { versionLabel } from '../lib/version.js';
 
 const STATUS_LABEL = { nuovo: 'Nuova', visto: 'Vista', risolto: 'Risolta' };
+const DAY_MS = 24 * 60 * 60 * 1000;
+const fmtDay = (iso) => (iso ? new Date(iso).toLocaleDateString('it-IT', { day: 'numeric', month: 'short', year: 'numeric' }) : '');
 
-// Aggiornamento del database per la versione 1.5 (copie giornaliere e segnalazioni): finché non è
-// stato eseguito, qui c'è lo script da copiare nel SQL Editor di Supabase.
+// Quanti account ci sono: totale, nuovi negli ultimi 7 e 30 giorni, bloccati.
+export function accountStats(rows, now = Date.now()) {
+  const since = (days) => rows.filter((r) => r.created_at && now - new Date(r.created_at).getTime() <= days * DAY_MS).length;
+  return {
+    total: rows.length,
+    week: since(7),
+    month: since(30),
+    blocked: rows.filter((r) => !r.approved && r.role !== 'admin').length,
+  };
+}
+
+// Aggiornamenti del database (1.5: copie giornaliere e segnalazioni; 1.11: account attivi subito):
+// finché non sono stati eseguiti, qui c'è lo script da copiare nel SQL Editor di Supabase.
 function UpgradeCard() {
   const [check, setCheck] = useState(null);
   const [copied, setCopied] = useState(false);
   const run = () => checkServerUpgrade().then(setCheck).catch(() => setCheck(null));
   useEffect(() => { run(); }, []);
-  if (!check || (check.backups && check.reports)) return null;
+  if (!check) return null;
+  const need15 = !(check.backups && check.reports);
+  const need111 = !check.autoApprove;
+  if (!need15 && !need111) return null;
+  const sql = [need15 && UPGRADE_SQL_2, need111 && UPGRADE_SQL_3].filter(Boolean).join('\n\n');
+  const what = [
+    need15 && 'le copie automatiche giornaliere e le segnalazioni',
+    need111 && 'i nuovi account attivi subito, senza la tua approvazione',
+  ].filter(Boolean).join(' e ');
   const copy = async () => {
-    try { await navigator.clipboard.writeText(UPGRADE_SQL_2); setCopied(true); setTimeout(() => setCopied(false), 2500); } catch {}
+    try { await navigator.clipboard.writeText(sql); setCopied(true); setTimeout(() => setCopied(false), 2500); } catch {}
   };
   return (
     <div className="panel upgrade-card">
       <h2 className="panel-title">Da fare: aggiornare il database</h2>
       <p className="panel-desc">
-        Le copie automatiche giornaliere e le segnalazioni funzionano dopo questo passaggio, una volta sola:
+        Per avere {what} serve questo passaggio, una volta sola:
       </p>
       <ol className="upgrade-steps">
         <li>Tocca "Copia lo script".</li>
@@ -35,7 +56,7 @@ function UpgradeCard() {
         <button type="button" className="btn btn-primary" onClick={copy}>{copied ? '✓ Copiato' : 'Copia lo script'}</button>
         <button type="button" className="btn" onClick={run}>Controlla di nuovo</button>
       </div>
-      <textarea className="paste-textarea upgrade-sql" readOnly rows={6} value={UPGRADE_SQL_2} onFocus={(e) => e.target.select()} />
+      <textarea className="paste-textarea upgrade-sql" readOnly rows={6} value={sql} onFocus={(e) => e.target.select()} />
     </div>
   );
 }
@@ -123,6 +144,26 @@ function ReportsPanel({ onCountChange }) {
   );
 }
 
+function AccountStats({ rows }) {
+  const st = accountStats(rows);
+  const items = [
+    { label: 'Account', value: st.total },
+    { label: 'Nuovi in 7 giorni', value: st.week },
+    { label: 'Nuovi in 30 giorni', value: st.month },
+    { label: 'Bloccati', value: st.blocked },
+  ];
+  return (
+    <div className="admin-stats">
+      {items.map((it) => (
+        <div key={it.label} className="admin-stat">
+          <div className="admin-stat-v">{it.value}</div>
+          <div className="admin-stat-l">{it.label}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function AdminTab({ onBack, onReportsCount }) {
   const { user } = useAuth();
   const [rows, setRows] = useState(null);
@@ -159,13 +200,15 @@ export default function AdminTab({ onBack, onReportsCount }) {
     <ReportsPanel onCountChange={onReportsCount} />
     <div className="panel">
       <h2 className="panel-title">⚡ Utenti</h2>
-      <p className="panel-desc">Approva i nuovi account e assegna i ruoli. Finché un utente non è "Approvato" non può usare Horarya.</p>
+      <p className="panel-desc">Chi si registra può usare Horarya subito. Qui vedi tutti gli account e, se serve, puoi bloccarne uno (per esempio un'iscrizione falsa): un account bloccato non entra più nell'app.</p>
 
       {error && <div className="hint hint-warn">{error}</div>}
 
       {rows === null ? (
         <p style={{ color: 'var(--text-dim)' }}>Caricamento…</p>
       ) : (
+        <>
+        <AccountStats rows={rows} />
         <div className="admin-list">
           {rows.map((row) => {
             const draft = draftFor(row);
@@ -176,11 +219,12 @@ export default function AdminTab({ onBack, onReportsCount }) {
                 <div className="admin-email">
                   {row.email} {isSelf && <span className="admin-you">(tu)</span>}
                 </div>
+                {row.created_at && <div className="admin-since">Registrato il {fmtDay(row.created_at)}</div>}
                 <div className="admin-controls">
-                  <select value={draft.approved ? 'approved' : 'pending'}
+                  <select value={draft.approved ? 'approved' : 'blocked'} disabled={isSelf}
                     onChange={(e) => setDraft(row.id, { approved: e.target.value === 'approved' })}>
-                    <option value="pending">⏳ In attesa</option>
-                    <option value="approved">✅ Approvato</option>
+                    <option value="approved">✅ Attivo</option>
+                    <option value="blocked">⛔ Bloccato</option>
                   </select>
                   <select value={draft.role} onChange={(e) => setDraft(row.id, { role: e.target.value })}>
                     <option value="user">Utente</option>
@@ -194,6 +238,7 @@ export default function AdminTab({ onBack, onReportsCount }) {
             );
           })}
         </div>
+        </>
       )}
     </div>
     <p className="app-version">Horarya · versione {versionLabel()}</p>

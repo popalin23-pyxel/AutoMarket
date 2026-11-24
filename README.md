@@ -4,8 +4,9 @@ Registro turni e calcolo compensi per liberi professionisti (nato per un'infermi
 in Partita IVA, ma adatto a chiunque lavori su più sedi con paga oraria diversa).
 
 Accesso con email e password (Supabase Auth). Ogni utente ha i suoi dati, privati e
-sincronizzati sul cloud. I nuovi account restano **in attesa di approvazione** finché
-il Super Admin non li attiva dal pannello di amministrazione.
+sincronizzati sul cloud. I nuovi account sono **attivi subito**: il Super Admin li vede
+tutti dal pannello di amministrazione (quanti sono, quando si sono registrati) e può
+bloccarne uno se serve.
 
 ## Funzioni
 
@@ -25,7 +26,8 @@ il Super Admin non li attiva dal pannello di amministrazione.
   totale dell'anno (ore, fatturato, tasse accantonate, netto)
 - **Impostazioni** — cambio password, percentuale tasse, percentuale rivalsa di
   default, backup/ripristino JSON
-- **⚡ Admin** (solo Super Admin) — elenco utenti registrati, approvazione e ruoli
+- **⚡ Admin** (solo Super Admin) — elenco utenti registrati con i numeri (totale, nuovi
+  in 7 e 30 giorni, bloccati), blocco/sblocco e ruoli
 - **Export Excel** del riepilogo mensile
 - **PWA** — installabile sul telefono, funziona offline (i dati restano disponibili
   anche senza connessione, si sincronizzano quando torna la rete)
@@ -82,8 +84,13 @@ Registrati normalmente nell'app con la tua email. Poi, in **SQL Editor**, esegui
 ```sql
 update profiles set role = 'admin', approved = true where email = 'tua@email.com';
 ```
-Da qui in poi vedrai la scheda **⚡ Admin**, da cui approvare gli altri utenti (es. i
-tuoi amici) man mano che si registrano.
+Da qui in poi vedrai la scheda **⚡ Admin**, con l'elenco degli utenti registrati.
+
+**7. Aggiornamento 1.11 (account attivi subito)**
+Esegui nel **SQL Editor** la costante `UPGRADE_SQL_3` di `src/lib/cloudState.js` (la trovi
+anche in **Altro → Amministrazione → Da fare: aggiornare il database**). I nuovi account
+diventano attivi senza approvazione e quelli ancora in attesa vengono attivati.
+Consigliato contro le iscrizioni false: **Authentication → Providers → Email → Confirm email → ON**.
 
 ## Sviluppo
 
