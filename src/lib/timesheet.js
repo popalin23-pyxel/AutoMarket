@@ -1,5 +1,6 @@
 // Foglio ore di una struttura (PDF ed Excel): turno per turno, con i totali da fatturare
 // e lo spazio per le firme. Niente tasse né netto: è un documento da mandare al cliente.
+// withMoney = false: versione "solo ore", senza tariffa, importi né totali in euro.
 
 import { jsPDF } from 'jspdf';
 import * as XLSX from 'xlsx';
@@ -22,7 +23,7 @@ export const compensoLabel = (ts, short = false) => (ts.inclusive
   ? (short ? 'Compenso (tariffa omnicomprensiva)' : 'Compenso (scorporato dalla tariffa omnicomprensiva)')
   : ts.mixedPay ? (short ? 'Compenso (in parte omnicompr.)' : 'Compenso (in parte da tariffa omnicomprensiva)') : 'Compenso (ore x tariffa)');
 
-export function exportTimesheetPdf(ts, { headerLines = [], rivalsaLabel = 'Rivalsa' } = {}) {
+export function exportTimesheetPdf(ts, { headerLines = [], rivalsaLabel = 'Rivalsa', withMoney = true } = {}) {
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
   const mx = 16;
   const right = 210 - mx;
@@ -41,15 +42,23 @@ export function exportTimesheetPdf(ts, { headerLines = [], rivalsaLabel = 'Rival
   doc.setDrawColor(220, 226, 232); doc.line(mx, y, right, y);
   y += 8;
 
-  const cols = [
-    { label: 'Data', x: mx, w: 22 },
-    { label: 'Giorno', x: mx + 22, w: 14 },
-    { label: 'Orario', x: mx + 36, w: 26 },
-    { label: 'Ore', x: mx + 62, w: 14, align: 'right' },
-    { label: '€/h', x: mx + 76, w: 18, align: 'right' },
-    { label: 'Importo', x: mx + 94, w: 26, align: 'right' },
-    { label: 'Note', x: mx + 124, w: right - (mx + 124) },
+  const cols = withMoney ? [
+    { key: 'date', label: 'Data', x: mx, w: 22 },
+    { key: 'day', label: 'Giorno', x: mx + 22, w: 14 },
+    { key: 'time', label: 'Orario', x: mx + 36, w: 26 },
+    { key: 'hours', label: 'Ore', x: mx + 62, w: 14, align: 'right' },
+    { key: 'rate', label: '€/h', x: mx + 76, w: 18, align: 'right' },
+    { key: 'amount', label: 'Importo', x: mx + 94, w: 26, align: 'right' },
+    { key: 'note', label: 'Note', x: mx + 124, w: right - (mx + 124) },
+  ] : [
+    { key: 'date', label: 'Data', x: mx, w: 22 },
+    { key: 'day', label: 'Giorno', x: mx + 22, w: 14 },
+    { key: 'time', label: 'Orario', x: mx + 36, w: 26 },
+    { key: 'hours', label: 'Ore', x: mx + 62, w: 14, align: 'right' },
+    { key: 'note', label: 'Note', x: mx + 84, w: right - (mx + 84) },
   ];
+  const col = Object.fromEntries(cols.map((c) => [c.key, c]));
+  const rightX = (c) => c.x + c.w;
   const head = () => {
     doc.setFillColor(240, 244, 248); doc.rect(mx, y - 5, right - mx, 8, 'F');
     doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(90, 100, 110);
@@ -61,16 +70,18 @@ export function exportTimesheetPdf(ts, { headerLines = [], rivalsaLabel = 'Rival
 
   for (const r of ts.rows) {
     if (y > 262) { doc.addPage(); y = 20; head(); }
-    doc.text(itDate(r.date), cols[0].x, y);
-    doc.text(weekday(r.date), cols[1].x, y);
-    doc.text(`${r.start}-${r.end}`, cols[2].x, y);
-    doc.text(fmt(r.hours), cols[3].x + cols[3].w, y, { align: 'right' });
-    doc.text(fmt(r.rate), cols[4].x + cols[4].w, y, { align: 'right' });
-    doc.text(fmt(r.amount), cols[5].x + cols[5].w, y, { align: 'right' });
+    doc.text(itDate(r.date), col.date.x, y);
+    doc.text(weekday(r.date), col.day.x, y);
+    doc.text(`${r.start}-${r.end}`, col.time.x, y);
+    doc.text(fmt(r.hours), rightX(col.hours), y, { align: 'right' });
+    if (withMoney) {
+      doc.text(fmt(r.rate), rightX(col.rate), y, { align: 'right' });
+      doc.text(fmt(r.amount), rightX(col.amount), y, { align: 'right' });
+    }
     if (r.note) {
-      const lines = doc.splitTextToSize(pdfSafe(r.note), cols[6].w - 3);
+      const lines = doc.splitTextToSize(pdfSafe(r.note), col.note.w - 3);
       const note = lines.length > 1 ? `${lines[0]}...` : lines[0];
-      doc.setTextColor(110, 120, 130); doc.text(note, cols[6].x, y); doc.setTextColor(30, 40, 50);
+      doc.setTextColor(110, 120, 130); doc.text(note, col.note.x, y); doc.setTextColor(30, 40, 50);
     }
     y += 6.5;
   }
@@ -86,10 +97,15 @@ export function exportTimesheetPdf(ts, { headerLines = [], rivalsaLabel = 'Rival
     doc.setTextColor(...(bold ? [15, 42, 61] : [60, 70, 80]));
     doc.text(label, mx + 80, y); doc.text(value, right, y, { align: 'right' }); y += bold ? 8 : 6.5;
   };
-  row('Ore totali', `${fmt(ts.totalHours)} h`);
-  row(compensoLabel(ts, true), `€ ${fmt(ts.revenue)}`);
-  if (ts.rivalsaPercent > 0) row(`${rivalsaLabel} ${ts.rivalsaPercent}%`, `€ ${fmt(ts.rivalsa)}`);
-  row('Totale', `€ ${fmt(ts.total)}`, true);
+  if (withMoney) {
+    row('Ore totali', `${fmt(ts.totalHours)} h`);
+    row(compensoLabel(ts, true), `€ ${fmt(ts.revenue)}`);
+    if (ts.rivalsaPercent > 0) row(`${rivalsaLabel} ${ts.rivalsaPercent}%`, `€ ${fmt(ts.rivalsa)}`);
+    row('Totale', `€ ${fmt(ts.total)}`, true);
+  } else {
+    row('Turni', String(ts.rows.length));
+    row('Ore totali', `${fmt(ts.totalHours)} h`, true);
+  }
 
   // firme
   y = Math.max(y + 22, 250);
@@ -106,13 +122,39 @@ export function exportTimesheetPdf(ts, { headerLines = [], rivalsaLabel = 'Rival
   return saveFile(doc.output('blob'), `${fileBase(ts)}.pdf`);
 }
 
-export function exportTimesheetExcel(ts, { headerLines = [], rivalsaLabel = 'Rivalsa' } = {}) {
-  const rows = [
+export function exportTimesheetExcel(ts, opts = {}) {
+  const ws = XLSX.utils.aoa_to_sheet(timesheetExcelRows(ts, opts));
+  ws['!cols'] = opts.withMoney === false
+    ? [{ wch: 12 }, { wch: 7 }, { wch: 7 }, { wch: 7 }, { wch: 7 }, { wch: 30 }]
+    : [{ wch: 12 }, { wch: 7 }, { wch: 7 }, { wch: 7 }, { wch: 7 }, { wch: 8 }, { wch: 11 }, { wch: 30 }];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Foglio ore');
+  const data = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+  const blob = new Blob([data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  return saveFile(blob, `${fileBase(ts)}.xlsx`);
+}
+
+// Le righe del foglio Excel (separate per poterle provare nei test).
+export function timesheetExcelRows(ts, { headerLines = [], rivalsaLabel = 'Rivalsa', withMoney = true } = {}) {
+  const intro = [
     ['Prospetto ore'],
     ...headerLines.map((l) => [safeText(String(l))]),
     [safeText(`Struttura: ${ts.site.name}`)],
     [`Periodo: dal ${itDate(ts.fromISO)} al ${itDate(ts.toISO)}`],
     [],
+  ];
+  if (!withMoney) {
+    return [
+      ...intro,
+      ['Data', 'Giorno', 'Inizio', 'Fine', 'Ore', 'Note'],
+      ...ts.rows.map((r) => [itDate(r.date), weekday(r.date), r.start, r.end, r.hours, safeText(r.note)]),
+      [],
+      ['Turni', '', '', '', ts.rows.length],
+      ['Ore totali', '', '', '', ts.totalHours],
+    ];
+  }
+  const rows = [
+    ...intro,
     ['Data', 'Giorno', 'Inizio', 'Fine', 'Ore', '€/h', 'Importo', 'Note'],
     ...ts.rows.map((r) => [itDate(r.date), weekday(r.date), r.start, r.end, r.hours, r.rate, r.amount, safeText(r.note)]),
     [],
@@ -121,12 +163,5 @@ export function exportTimesheetExcel(ts, { headerLines = [], rivalsaLabel = 'Riv
   ];
   if (ts.rivalsaPercent > 0) rows.push([`${rivalsaLabel} ${ts.rivalsaPercent}%`, '', '', '', '', '', ts.rivalsa]);
   rows.push(['Totale', '', '', '', '', '', ts.total]);
-
-  const ws = XLSX.utils.aoa_to_sheet(rows);
-  ws['!cols'] = [{ wch: 12 }, { wch: 7 }, { wch: 7 }, { wch: 7 }, { wch: 7 }, { wch: 8 }, { wch: 11 }, { wch: 30 }];
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Foglio ore');
-  const data = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-  const blob = new Blob([data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-  return saveFile(blob, `${fileBase(ts)}.xlsx`);
+  return rows;
 }

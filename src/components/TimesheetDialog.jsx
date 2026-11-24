@@ -8,6 +8,8 @@ import { loadChunk } from '../lib/loadChunk.js';
 
 const fmt = (n) => (n ?? 0).toLocaleString('it-IT', { useGrouping: 'always', minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const loadTimesheet = () => loadChunk(() => import('../lib/timesheet.js'));
+const KIND_KEY = 'horarya.timesheetKind'; // ultima scelta: 'money' (ore e compenso) o 'hours' (solo ore)
+const readKind = () => { try { return localStorage.getItem(KIND_KEY) === 'hours' ? 'hours' : 'money'; } catch { return 'money'; } };
 
 // Foglio ore da mandare a una struttura: una sede, un periodo (di base il mese aperto).
 export default function TimesheetDialog({ state, siteId, year, month, onClose }) {
@@ -17,6 +19,9 @@ export default function TimesheetDialog({ state, siteId, year, month, onClose })
   const [from, setFrom] = useState(`${year}-${pad(month)}-01`);
   const [to, setTo] = useState(`${year}-${pad(month)}-${pad(monthDays(year, month))}`);
   const [busy, setBusy] = useState(false);
+  const [kind, setKindRaw] = useState(readKind);
+  const setKind = (k) => { setKindRaw(k); try { localStorage.setItem(KIND_KEY, k); } catch {} };
+  const withMoney = kind === 'money';
   useLockBodyScroll();
   useBackClose(onClose);
   useEffect(() => { loadTimesheet().catch(() => {}); }, []); // pronto al tocco (condivisione su iPhone)
@@ -24,14 +29,14 @@ export default function TimesheetDialog({ state, siteId, year, month, onClose })
   const site = sites.find((s) => s.id === sel);
   const ts = useMemo(() => (site && from && to && from <= to
     ? computeTimesheet(state.shifts, site, state.settings, from, to) : null), [state.shifts, state.settings, site, from, to]);
-  const opts = { headerLines: professionalHeaderLines(state.settings), rivalsaLabel: rivalsaLabel(state.settings) };
+  const opts = { headerLines: professionalHeaderLines(state.settings), rivalsaLabel: rivalsaLabel(state.settings), withMoney };
 
-  const run = async (kind) => {
+  const run = async (format) => {
     if (!ts) return;
     setBusy(true);
     try {
       const mod = await loadTimesheet();
-      await (kind === 'pdf' ? mod.exportTimesheetPdf(ts, opts) : mod.exportTimesheetExcel(ts, opts));
+      await (format === 'pdf' ? mod.exportTimesheetPdf(ts, opts) : mod.exportTimesheetExcel(ts, opts));
     } finally { setBusy(false); }
   };
 
@@ -44,8 +49,21 @@ export default function TimesheetDialog({ state, siteId, year, month, onClose })
           <button className="btn btn-sm" onClick={onClose}>✕</button>
         </div>
         <p className="panel-desc">
-          L'elenco dei turni di una sola sede, con ore, tariffa e totale da fatturare e lo spazio per la firma.
+          L'elenco dei turni di una sola sede, con lo spazio per la firma.
           Non contiene tasse, netto né le altre sedi: si può mandare al cliente.
+        </p>
+
+        <div className="editor-label">Cosa mostrare</div>
+        <div className="site-picker" role="radiogroup" aria-label="Cosa mostrare nel foglio">
+          <button type="button" role="radio" aria-checked={!withMoney} className={`site-pick-btn ${!withMoney ? 'sel' : ''}`} onClick={() => setKind('hours')}>
+            🕒 Solo ore
+          </button>
+          <button type="button" role="radio" aria-checked={withMoney} className={`site-pick-btn ${withMoney ? 'sel' : ''}`} onClick={() => setKind('money')}>
+            💶 Ore, tariffa e totale
+          </button>
+        </div>
+        <p className="hint" style={{ marginTop: 6 }}>
+          {withMoney ? 'Ogni turno con la tariffa oraria e l\'importo, più il totale da pagare.' : 'Solo date, orari e ore: nessuna cifra in euro.'}
         </p>
 
         <div className="editor-label">Struttura</div>
@@ -73,11 +91,13 @@ export default function TimesheetDialog({ state, siteId, year, month, onClose })
           <div className="editor-breakdown">
             <div className="editor-breakdown-row"><span>Turni</span><span>{ts.rows.length}</span></div>
             <div className="editor-breakdown-row"><span>Ore</span><span>{fmt(ts.totalHours)}</span></div>
+            {withMoney && <>
             <div className="editor-breakdown-row"><span>{ts.inclusive ? 'Compenso (scorporato)' : 'Compenso'}</span><span>€{fmt(ts.revenue)}</span></div>
             {ts.rivalsaPercent > 0 && (
               <div className="editor-breakdown-row"><span>{opts.rivalsaLabel} {ts.rivalsaPercent}%</span><span>€{fmt(ts.rivalsa)}</span></div>
             )}
             <div className="editor-breakdown-row total"><span>Totale</span><span>€{fmt(ts.total)}</span></div>
+            </>}
           </div>
         )}
         {from > to && <p className="hint hint-warn" style={{ marginTop: 10 }}>La data di fine viene prima di quella di inizio.</p>}
