@@ -789,6 +789,12 @@ code { background: rgba(var(--ink), 0.08); padding: 1px 5px; border-radius: 4px;
 .admin-row { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px; background: rgba(var(--ink), 0.02); }
 .admin-email { font-weight: 700; margin-bottom: 8px; word-break: break-all; }
 .admin-you { font-weight: 400; color: var(--text-mut); font-size: 12px; }
+.admin-since { color: var(--text-mut); font-size: 12px; margin: -4px 0 8px; }
+.admin-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-bottom: 12px; }
+@media (min-width: 560px) { .admin-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.admin-stat { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px; background: rgba(var(--ink), 0.02); }
+.admin-stat-v { font-size: 22px; font-weight: 800; line-height: 1.1; }
+.admin-stat-l { color: var(--text-mut); font-size: 12px; margin-top: 2px; }
 .admin-controls { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .admin-controls select { min-width: 0; flex: 1; }
 

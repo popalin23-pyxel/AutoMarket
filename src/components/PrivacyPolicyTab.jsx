@@ -44,7 +44,7 @@ export default function PrivacyPolicyTab({ onBack }) {
         <p>
           Esclusivamente per fornirti il servizio che hai richiesto: farti accedere in modo sicuro, calcolare le
           stime di fatturato/tasse/netto che ci chiedi di calcolare, sincronizzare i tuoi dati tra i tuoi dispositivi,
-          e — se il tuo account è soggetto ad approvazione manuale — permettere all'amministratore di attivarlo.
+          e permettere all'amministratore di sospendere gli account usati in modo improprio (per esempio iscrizioni false).
           Non usiamo i tuoi dati per pubblicità e non li vendiamo a terzi.
         </p>
 

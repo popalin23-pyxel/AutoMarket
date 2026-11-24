@@ -78,6 +78,13 @@ export async function checkServerUpgrade() {
     const { error } = await supabase.from(table).select('*', { head: true, count: 'exact' }).limit(1);
     return !error || !isMissingTable(error);
   };
-  const [backups, reports] = await Promise.all([probe(BACKUPS), probe(REPORTS)]);
-  return { backups, reports };
+  // 1.11: account attivi subito (UPGRADE_SQL_3) — la funzione segnale esiste?
+  const probeAutoApprove = async () => {
+    const { error } = await supabase.rpc('horarya_auto_approve');
+    if (!error) return true;
+    const msg = String(error.message || '');
+    return !(error.code === 'PGRST202' || error.code === '42883' || /Could not find the function|does not exist|schema cache/i.test(msg));
+  };
+  const [backups, reports, autoApprove] = await Promise.all([probe(BACKUPS), probe(REPORTS), probeAutoApprove()]);
+  return { backups, reports, autoApprove };
 }

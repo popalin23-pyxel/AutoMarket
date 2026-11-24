@@ -152,8 +152,37 @@ drop policy if exists "solo l'admin elimina" on turnio_reports;
 create policy "solo l'admin elimina" on turnio_reports
   for delete using (public.is_admin());`;
 
+// Aggiornamento del database per la versione 1.11: i nuovi account sono attivi subito, senza
+// approvazione manuale. L'admin continua a vederli tutti e può bloccarne uno (approved = false).
+// Si può eseguire più volte senza danni.
+export const UPGRADE_SQL_3 = `-- ════════════════════════════════════════════════════════════
+-- Horarya 1.11 · Account attivi subito (niente più approvazione manuale)
+-- ════════════════════════════════════════════════════════════
+-- i nuovi profili nascono attivi
+alter table public.profiles alter column approved set default true;
+
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql security definer set search_path = public
+as $$
+begin
+  insert into public.profiles (id, email, approved) values (new.id, new.email, true);
+  return new;
+end;
+$$;
+
+-- chi era ancora "in attesa" diventa attivo
+update public.profiles set approved = true where approved = false;
+
+-- segnale per l'app: aggiornamento eseguito
+create or replace function public.horarya_auto_approve()
+returns boolean
+language sql stable
+as $$ select true $$;
+grant execute on function public.horarya_auto_approve() to authenticated;`;
+
 // Script SQL da eseguire una volta sola nel progetto Supabase (SQL Editor).
-// (per un progetto nuovo va eseguito anche UPGRADE_SQL_2, subito dopo)
+// (per un progetto nuovo vanno eseguiti anche UPGRADE_SQL_2 e UPGRADE_SQL_3, subito dopo)
 export const SETUP_SQL = `-- ════════════════════════════════════════════════════════════
 -- 1) Dati Horarya: una riga per utente, protetta da RLS
 -- ════════════════════════════════════════════════════════════
@@ -175,13 +204,13 @@ create policy "ognuno elimina solo i propri dati" on turnio_states
   for delete using (auth.uid() = user_id);
 
 -- ════════════════════════════════════════════════════════════
--- 2) Profili utente: ruolo (user/admin) e approvazione manuale
+-- 2) Profili utente: ruolo (user/admin) e stato (attivo / bloccato dall'admin)
 -- ════════════════════════════════════════════════════════════
 create table if not exists profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   email text not null,
   role text not null default 'user' check (role in ('user','admin')),
-  approved boolean not null default false,
+  approved boolean not null default true,  -- true = attivo; false = bloccato dall'admin
   created_at timestamptz not null default now()
 );
 
@@ -202,13 +231,13 @@ create policy "vedo il mio profilo, l'admin li vede tutti" on profiles
 create policy "solo l'admin approva/promuove" on profiles
   for update using (public.is_admin()) with check (public.is_admin());
 
--- crea automaticamente il profilo (in attesa di approvazione) a ogni registrazione
+-- crea automaticamente il profilo (già attivo) a ogni registrazione
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql security definer set search_path = public
 as $$
 begin
-  insert into public.profiles (id, email) values (new.id, new.email);
+  insert into public.profiles (id, email, approved) values (new.id, new.email, true);
   return new;
 end;
 $$;
