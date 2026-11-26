@@ -3,6 +3,7 @@ import { computeMonthSummary } from '../lib/calc.js';
 import { MONTHS_IT, professionalHeaderLines, rivalsaLabel } from '../lib/defaults.js';
 import Icon from './icons/Icon.jsx';
 import TimesheetDialog from './TimesheetDialog.jsx';
+import ServicesDialog from './ServicesDialog.jsx';
 import { ListRow } from './AltroTab.jsx';
 import { loadChunk } from '../lib/loadChunk.js';
 
@@ -13,6 +14,7 @@ const loadPdf = () => loadChunk(() => import('../lib/pdf.js'));
 // Documenti: riepilogo del mese in PDF o Excel e foglio ore per una struttura.
 export default function DocumentsPage({ state, year, month, setYear, setMonth }) {
   const [timesheet, setTimesheet] = useState(false);
+  const [services, setServices] = useState(false);
   const [busy, setBusy] = useState(false);
   useEffect(() => { loadExcel().catch(() => {}); loadPdf().catch(() => {}); }, []);
   const sum = useMemo(
@@ -46,6 +48,7 @@ export default function DocumentsPage({ state, year, month, setYear, setMonth })
         <div className="lcard">
           <ListRow color="rose" icon="download" title="Scarica il PDF" sub="Ore, compensi, tasse e netto del mese" onClick={() => !busy && run('pdf')} />
           <ListRow color="grn" icon="download" title="Scarica l'Excel" sub="Lo stesso riepilogo, in tabella" onClick={() => !busy && run('xlsx')} />
+          <ListRow color="blue" icon="doc" title="Elenco prestazioni" sub="Ogni prestazione con descrizione e importo, e i totali" onClick={() => setServices(true)} />
         </div>
       ) : (
         <p className="panel-desc" style={{ margin: '0 6px 12px' }}>Nessun turno in questo mese.</p>
@@ -57,6 +60,9 @@ export default function DocumentsPage({ state, year, month, setYear, setMonth })
           onClick={() => setTimesheet(true)} />
       </div>
 
+      {services && (
+        <ServicesDialog state={state} year={year} month={month} siteId={sum.perSite[0]?.siteId ?? null} onClose={() => setServices(false)} />
+      )}
       {timesheet && (
         <TimesheetDialog state={state} siteId={sum.perSite[0]?.siteId ?? null} year={year} month={month} onClose={() => setTimesheet(false)} />
       )}

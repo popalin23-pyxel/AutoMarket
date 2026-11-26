@@ -6,6 +6,7 @@ import RingChart from './charts/RingChart.jsx';
 import EmptyState from './EmptyState.jsx';
 import SiteAvatar from './SiteAvatar.jsx';
 import TimesheetDialog from './TimesheetDialog.jsx';
+import ServicesDialog from './ServicesDialog.jsx';
 import CountUpText from './CountUpText.jsx';
 import { useCountUp } from '../lib/useCountUp.js';
 import { useSwipe } from '../lib/useSwipe.js';
@@ -29,6 +30,7 @@ export default function SummaryTab({ state, year, month, setYear, setMonth }) {
   const swipe = useSwipe(nextMonth, prevMonth);
   const animatedNet = useCountUp(sum.net);
   const [timesheetSite, setTimesheetSite] = useState(undefined); // undefined = chiuso
+  const [services, setServices] = useState(false);
   const rivLabel = rivalsaLabel(state.settings);
   const exact = sum.taxMode === 'forfettario' || sum.taxMode === 'ordinario';
   const ordinary = sum.taxMode === 'ordinario';
@@ -58,6 +60,7 @@ export default function SummaryTab({ state, year, month, setYear, setMonth }) {
           <div className="form-row" style={{ marginBottom: 0 }}>
             <button className="btn" onClick={exportExcel}>⬇ Esporta Excel</button>
             <button className="btn" onClick={exportPdf}>⬇ Esporta PDF</button>
+            <button className="btn" onClick={() => setServices(true)}>🧾 Elenco prestazioni</button>
             {state.sites.length > 0 && (
               <button className="btn" onClick={() => setTimesheetSite(sum.perSite[0]?.siteId ?? null)}>📄 Foglio ore struttura</button>
             )}
@@ -157,6 +160,9 @@ export default function SummaryTab({ state, year, month, setYear, setMonth }) {
 
       {timesheetSite !== undefined && (
         <TimesheetDialog state={state} siteId={timesheetSite} year={year} month={month} onClose={() => setTimesheetSite(undefined)} />
+      )}
+      {services && (
+        <ServicesDialog state={state} year={year} month={month} siteId={sum.perSite[0]?.siteId ?? null} onClose={() => setServices(false)} />
       )}
     </>
   );
