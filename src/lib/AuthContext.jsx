@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
-import { supabase, isSupabaseConfigured } from './supabaseClient.js';
+import { supabase, isSupabaseConfigured, authLink } from './supabaseClient.js';
 
 const AuthContext = createContext(null);
 
@@ -22,7 +22,7 @@ function writeCachedProfile(profile) {
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(isSupabaseConfigured);
-  const [recovery, setRecovery] = useState(false); // true = arrivato dal link "reimposta password"
+  const [recovery, setRecovery] = useState(authLink.recovery); // true = arrivato dal link "reimposta password"
   const [profile, setProfile] = useState(null);
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileError, setProfileError] = useState(false); // profilo non verificabile (es. senza rete)
@@ -138,7 +138,7 @@ export function AuthProvider({ children }) {
   const value = {
     configured: isSupabaseConfigured,
     session, user: session?.user ?? null,
-    loading, recovery, setRecovery,
+    loading, recovery, setRecovery, linkError: authLink.linkError,
     profile, profileLoading, profileError, refreshProfile,
     isAdmin: profile?.role === 'admin',
     isApproved: !!profile?.approved || profile?.role === 'admin',
