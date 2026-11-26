@@ -26,6 +26,16 @@ export const DEFAULT_SETTINGS = {
   // tassazione IRPEF a scaglioni invece dell'aliquota forfettaria — qui solo una stima
   // accantonabile, 23% = primo scaglione IRPEF 2024, da adattare col commercialista
   occasionalTaxRatePercent: 23,
+  // regime ordinario e quote fisse INPS (vedi computeOrdinarioYear in calc.js; aliquote in taxRates.js)
+  annualRevenueEstimate: 0, // compensi annui previsti; 0 = stima automatica (DEFAULT_ANNUAL_REVENUE)
+  ordExpensesPercent: 0,    // spese deducibili stimate, % dei compensi
+  ordOtherIncome: 0,        // altri redditi annui (es. stipendio da dipendente)
+  region: '',               // id da REGIONS o '' (= aliquota inserita a mano)
+  regionalManualPercent: 1.23, // addizionale regionale se la regione non è in elenco (1,23% = base nazionale)
+  municipality: '',         // id da MUNICIPALITIES o '' (= aliquota inserita a mano)
+  municipalManualPercent: 0,
+  municipalExemptUpTo: 0,
+  inpsForfReduction: false, // forfettari iscritti ad artigiani/commercianti: riduzione 35% (su domanda)
 };
 
 // La forma (maschile/femminile) la sceglie la persona: compare così com'è nel saluto e nei report.
@@ -34,8 +44,23 @@ export const PROFESSIONAL_ROLES = [
   { id: 'infermiera', label: 'Infermiera' },
   { id: 'medico', label: 'Medico' },
   { id: 'fisioterapista', label: 'Fisioterapista' },
+  { id: 'formatore', label: 'Formatore' },
+  { id: 'videomaker', label: 'Videomaker' },
+  { id: 'fotografo', label: 'Fotografo' },
+  { id: 'consulente', label: 'Consulente' },
+  { id: 'grafico', label: 'Grafico / Web designer' },
+  { id: 'sviluppatore', label: 'Sviluppatore' },
   { id: 'altro', label: 'Altro (specifica)' },
 ];
+
+// Coefficiente di redditività del forfettario di solito giusto per il lavoro scelto
+// (dipende dal codice ATECO: va sempre controllato su quello della propria partita IVA).
+const ROLE_COEFFICIENT = {
+  infermiere: 78, infermiera: 78, medico: 78, fisioterapista: 78,
+  formatore: 78, fotografo: 78, consulente: 78, grafico: 78,
+  videomaker: 67, sviluppatore: 67,
+};
+export const suggestedCoefficient = (settings) => ROLE_COEFFICIENT[settings?.professionalRole] ?? null;
 
 // Etichetta leggibile del ruolo (es. per intestazioni e saluto); '' se non impostato.
 export function roleLabel(settings) {
@@ -67,12 +92,32 @@ export const PENSION_FUNDS = [
     ],
   },
   {
-    id: 'inps', label: 'INPS Gestione separata', who: 'fisioterapisti e professioni senza cassa',
+    id: 'inps', label: 'INPS Gestione separata', who: 'professionisti senza cassa propria (fisioterapisti, formatori, videomaker…)',
     short: 'Contributi 26,07% del reddito · rivalsa 4% in fattura (facoltativa)',
     forfContributionsPercent: 26.07, rivalsaPercent: 4, rivalsaType: 'rivalsa',
     info: [
-      '26,07% del reddito nel 2026 (24% se sei già pensionato o iscritto a un\'altra cassa).',
+      '26,07% del reddito nel 2026 (24% se sei già pensionato o iscritto a un\'altra cassa). Tetto massimo di reddito €122.295.',
       'La rivalsa del 4% in fattura è facoltativa e fa parte del compenso: si tassa.',
+    ],
+  },
+  {
+    id: 'inps_artigiani', label: 'INPS Artigiani', who: 'attività artigiane iscritte in Camera di commercio',
+    short: 'Quota fissa €4.521 l\'anno fino a €18.808 di reddito, poi 24% · nessuna maggiorazione in fattura',
+    forfContributionsPercent: 24, rivalsaPercent: 0, rivalsaType: 'rivalsa',
+    info: [
+      'Quota fissa 2026: €4.521,36 l\'anno (anche con reddito basso o zero), che copre il reddito fino a €18.808.',
+      'Sopra €18.808: 24% del reddito; sopra €56.224: 25%. Tetto massimo di reddito €122.295.',
+      'Se sei forfettario puoi chiedere all\'INPS la riduzione del 35% (meno contributi, ma anche meno pensione).',
+    ],
+  },
+  {
+    id: 'inps_commercianti', label: 'INPS Commercianti', who: 'commercio, e-commerce, agenti',
+    short: 'Quota fissa €4.612 l\'anno fino a €18.808 di reddito, poi 24,48% · nessuna maggiorazione in fattura',
+    forfContributionsPercent: 24.48, rivalsaPercent: 0, rivalsaType: 'rivalsa',
+    info: [
+      'Quota fissa 2026: €4.611,64 l\'anno (anche con reddito basso o zero), che copre il reddito fino a €18.808.',
+      'Sopra €18.808: 24,48% del reddito; sopra €56.224: 25,48%. Tetto massimo di reddito €122.295.',
+      'Se sei forfettario puoi chiedere all\'INPS la riduzione del 35% (meno contributi, ma anche meno pensione).',
     ],
   },
   { id: 'altro', label: 'Altra cassa', who: '', short: 'Imposti tu i valori, chiedendoli al commercialista', info: ['Imposta tu percentuali e maggiorazione, chiedendo i valori al commercialista.'] },
@@ -83,7 +128,7 @@ export function suggestedFund(settings) {
   const role = settings?.professionalRole;
   if (role === 'infermiere' || role === 'infermiera') return 'enpapi';
   if (role === 'medico') return 'enpam';
-  if (role === 'fisioterapista') return 'inps';
+  if (['fisioterapista', 'formatore', 'videomaker', 'fotografo', 'consulente', 'grafico', 'sviluppatore'].includes(role)) return 'inps';
   return '';
 }
 

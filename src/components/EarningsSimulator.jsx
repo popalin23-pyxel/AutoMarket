@@ -29,7 +29,7 @@ export default function EarningsSimulator({ state, onNavigate }) {
     const totalRevenue = round2(perSite.reduce((a, p) => a + p.revenue, 0));
     const totalRivalsa = round2(perSite.reduce((a, p) => a + p.rivalsa, 0));
     const t = computeTaxes(totalRevenue, totalRivalsa, settings);
-    return { perSite, totalHours, totalRevenue, totalRivalsa, totalInvoice: t.invoice, taxes: t.taxes, net: t.net, taxPercent: t.taxPercent, exact: t.taxMode === 'forfettario' };
+    return { perSite, totalHours, totalRevenue, totalRivalsa, totalInvoice: t.invoice, taxes: t.taxes, net: t.net, taxPercent: t.taxPercent, exact: t.taxMode === 'forfettario' || t.taxMode === 'ordinario' };
   }, [sites, counts, hoursPerShift, settings, today]);
 
   const goal = Number(settings.monthlyGoal) || 0;

@@ -88,7 +88,7 @@ export default function ShiftEditor({
     const pay = payFor(hours, site, date, settings ?? {}, rateUsed);
     const { revenue, rivalsa } = roundPay(pay);
     const t = computeTaxes(revenue, rivalsa, settings);
-    breakdown = { revenue, rivPct: pay.pct, inclusive: pay.inclusive, rivalsa, invoice: t.invoice, taxPercent: t.taxPercent, taxes: t.taxes, net: t.net, exact: t.taxMode === 'forfettario' };
+    breakdown = { revenue, rivPct: pay.pct, inclusive: pay.inclusive, rivalsa, invoice: t.invoice, taxPercent: t.taxPercent, taxes: t.taxes, net: t.net, exact: t.taxMode === 'forfettario' || t.taxMode === 'ordinario' };
   }
 
   return (

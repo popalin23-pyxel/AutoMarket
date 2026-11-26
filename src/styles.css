@@ -1826,3 +1826,28 @@ select.ask-chip { width: auto; min-width: 0; font-size: 14px; }
 .inst-banner-tx b { font-size: 14.5px; }
 .inst-banner-tx small { font-size: 12.5px; color: var(--text-dim); }
 .inst-banner-btn { flex: none; height: 36px; padding: 0 14px; border-radius: 18px; display: grid; place-items: center; background: var(--accent); color: var(--on-accent); font-weight: 700; font-size: 14px; }
+
+/* ── Tasse e cassa (1.12): regime ordinario, casse INPS, coefficienti ─────── */
+.fs-panel {
+  display: flex; flex-direction: column; gap: 8px; margin: -3px 0 4px; padding: 12px 14px 14px; border-radius: 0 0 16px 16px;
+  border: 1.5px solid var(--sel-strong); border-top: none; background: var(--bg-panel);
+}
+.fs-panel small { font-size: 13px; color: var(--text-dim); line-height: 1.45; }
+.fs-panel select { width: 100%; min-width: 0; }
+.fs-panel .field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.fs-panel input[type=text] { width: 100%; min-width: 0; }
+.fs-check { flex-direction: row; align-items: flex-start; gap: 10px; cursor: pointer; font-size: 14px; line-height: 1.4; }
+.fs-check input { width: 19px; height: 19px; margin: 1px 0 0; accent-color: var(--accent); flex: none; }
+.fs-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; margin-top: 4px; }
+.fs-annual { display: flex; flex-direction: column; gap: 4px; }
+.fs-inline-btn { font-size: 13px; padding: 0; margin: 0; display: inline; }
+.fs-panel small.fs-warn { color: var(--hint-warn-fg); font-weight: 600; }
+.fs-panel small.fs-note { font-style: italic; }
+.fs-result {
+  margin-top: 6px; padding: 10px 12px; border-radius: 12px; background: rgba(var(--accent-rgb), 0.08);
+  border: 1px solid rgba(var(--accent-rgb), 0.25); font-size: 13.5px; line-height: 1.45;
+}
+.fs-disclaimer { display: flex; gap: 7px; margin: 10px 2px 0; font-size: 12.5px; color: var(--text-mut); line-height: 1.4; }
+.fs-sources { font-size: 11.5px; color: var(--text-mut); line-height: 1.45; margin: 10px 2px 0; }
+.fs-panel .fs-seg { width: 100%; height: auto; min-height: 42px; }
+.fs-panel .fs-seg button { flex: 1; white-space: normal; line-height: 1.2; padding: 6px 8px; min-height: 34px; }

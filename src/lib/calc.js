@@ -1,6 +1,10 @@
 // Calcoli: ore, fatturato, rivalsa, tasse, netto — mese, settimana, confronti, festività.
 
 import { MONTHS_IT } from './defaults.js';
+import {
+  IRPEF_BRACKETS, selfEmployedDeduction, bracketTax, INPS_GESTIONE_SEPARATA, INPS_ARTIGIANI_COMMERCIANTI,
+  REGIONS, MUNICIPALITIES, REGIONAL_BASE_RATE,
+} from './taxRates.js';
 
 export function monthDays(year, month) {
   return new Date(year, month, 0).getDate(); // month 1-based
@@ -287,18 +291,117 @@ export function dayKind(year, month, day, holidaySet) {
 }
 
 // ── Tasse e contributi ───────────────────────────────────────────────────
-// Due modi, a scelta in Studio → Fiscali (taxMode):
+// Tre modi, a scelta in Altro → Tasse e cassa (taxMode):
 // - 'semplice' (com'era): si accantona una % fissa di tutto il fatturato (imposta + contributi);
 // - 'forfettario' (la formula del regime forfettario): reddito = compensi × coefficiente di
 //   redditività (78% per le professioni sanitarie); contributi della cassa = % del reddito;
 //   imposta sostitutiva (15%, o 5% i primi anni) su reddito meno contributi. Il contributo
 //   integrativo di una cassa (es. 4% ENPAPI) si versa alla cassa: non è un guadagno e non si
-//   tassa; la rivalsa INPS invece fa parte del compenso.
+//   tassa; la rivalsa INPS invece fa parte del compenso;
+// - 'ordinario': IRPEF a scaglioni con detrazione per lavoro autonomo, più addizionale
+//   regionale e comunale (vedi computeOrdinarioYear).
+// IRPEF a scaglioni e quote fisse INPS (artigiani/commercianti) dipendono dal totale dell'anno:
+// si calcolano sui compensi annui previsti (annualRevenueEstimate) e si ripartiscono su ogni
+// periodo in proporzione ai compensi, così un mese o un turno ha la sua parte.
 // `taxes` è tutto ciò che non resta in tasca (imposta + contributi + integrativo da versare),
-// così netto = fatturato − taxes in entrambi i modi.
+// così netto = fatturato − taxes in ogni modo.
+export const DEFAULT_ANNUAL_REVENUE = 30000;
+
+export const isInpsArtCom = (fundId) => fundId === 'inps_artigiani' || fundId === 'inps_commercianti';
+
+const num = (v, d = 0) => (v == null || v === '' || Number.isNaN(Number(v)) ? d : Number(v));
+
+/** Compensi annui previsti (senza integrativo) usati per scaglioni e quote fisse. */
+export function annualRevenueOf(settings = {}) {
+  const v = num(settings.annualRevenueEstimate, 0);
+  return v > 0 ? v : DEFAULT_ANNUAL_REVENUE;
+}
+
+/** Contributi previdenziali annui sul reddito (imponibile previdenziale) di un anno intero. */
+export function annualContributions(income, settings = {}) {
+  const r = Math.max(0, num(income));
+  const fundId = settings.pensionFund;
+  if (isInpsArtCom(fundId)) {
+    const ac = INPS_ARTIGIANI_COMMERCIANTI;
+    const kind = fundId === 'inps_artigiani' ? ac.artigiani : ac.commercianti;
+    const base = Math.min(r, ac.massimale);
+    const mid = Math.max(0, Math.min(base, ac.threshold) - ac.minimale);
+    const high = Math.max(0, base - Math.max(ac.threshold, ac.minimale));
+    let c = kind.fixed + mid * (kind.rate / 100) + high * ((kind.rate + 1) / 100);
+    if (settings.taxMode === 'forfettario' && settings.inpsForfReduction) c *= 1 - ac.forfettarioReductionPercent / 100;
+    return c;
+  }
+  const base = fundId === 'inps' ? Math.min(r, INPS_GESTIONE_SEPARATA.massimale) : r;
+  return base * (num(settings.forfContributionsPercent) / 100);
+}
+
+/** Addizionale regionale annua sull'imponibile IRPEF (scaglioni della regione o aliquota a mano). */
+export function regionalSurcharge(taxable, settings = {}) {
+  const reg = REGIONS.find((r) => r.id === settings.region);
+  if (reg) return bracketTax(taxable, reg.brackets);
+  return Math.max(0, num(taxable)) * (num(settings.regionalManualPercent, REGIONAL_BASE_RATE) / 100);
+}
+
+/** Addizionale comunale annua: zero fino alla soglia di esenzione, sopra si paga su tutto. */
+export function municipalSurcharge(taxable, settings = {}) {
+  const t = Math.max(0, num(taxable));
+  const mun = MUNICIPALITIES.find((m) => m.id === settings.municipality);
+  const exempt = mun ? mun.exemptUpTo : num(settings.municipalExemptUpTo);
+  if (t <= exempt) return 0;
+  if (mun) return bracketTax(t, mun.brackets);
+  return t * (num(settings.municipalManualPercent) / 100);
+}
+
+/**
+ * Regime ordinario su un anno intero. `revenue` = compensi annui (senza integrativo).
+ * Reddito = compensi − spese deducibili; imponibile = reddito − contributi (deducibili).
+ * Con altri redditi (es. uno stipendio) si calcola solo l'imposta IN PIÙ dovuta alla partita IVA,
+ * perché gli altri redditi occupano già i primi scaglioni; la detrazione per lavoro autonomo
+ * in quel caso non si conta (lo stipendio ha già la sua).
+ */
+export function computeOrdinarioYear(revenue, settings = {}) {
+  const rev = Math.max(0, num(revenue));
+  const expensesPercent = Math.min(100, Math.max(0, num(settings.ordExpensesPercent)));
+  const expenses = rev * (expensesPercent / 100);
+  const income = rev - expenses;
+  const contributions = annualContributions(income, settings);
+  const taxable = Math.max(0, income - contributions);
+  const other = Math.max(0, num(settings.ordOtherIncome));
+  const total = taxable + other;
+  const irpefGross = bracketTax(total, IRPEF_BRACKETS) - bracketTax(other, IRPEF_BRACKETS);
+  const deduction = other > 0 ? 0 : Math.min(irpefGross, selfEmployedDeduction(total));
+  const irpef = Math.max(0, irpefGross - deduction);
+  // le addizionali non si pagano se l'IRPEF, tolte le detrazioni, è zero
+  const owesIrpef = other > 0 || irpef > 0;
+  const regional = owesIrpef ? regionalSurcharge(total, settings) - regionalSurcharge(other, settings) : 0;
+  const municipal = owesIrpef ? municipalSurcharge(total, settings) - municipalSurcharge(other, settings) : 0;
+  const incomeTax = irpef + regional + municipal;
+  return {
+    revenue: round2(rev), expensesPercent, expenses: round2(expenses), income: round2(income),
+    contributions: round2(contributions), taxable: round2(taxable), otherIncome: round2(other),
+    irpefGross: round2(irpefGross), deduction: round2(deduction), irpef: round2(irpef),
+    regional: round2(regional), municipal: round2(municipal), incomeTax: round2(incomeTax),
+    taxes: round2(contributions + incomeTax),
+    net: round2(rev - contributions - incomeTax),
+  };
+}
+
+/** Forfettario su un anno intero (serve per le quote fisse INPS artigiani/commercianti). */
+export function computeForfettarioYear(revenue, settings = {}) {
+  const rev = Math.max(0, num(revenue));
+  const coefficient = num(settings.coefficientPercent, 78);
+  const taxable = rev * (coefficient / 100);
+  const contributions = annualContributions(taxable, settings);
+  const incomeTax = Math.max(0, taxable - contributions) * (num(settings.forfTaxRatePercent) / 100);
+  return {
+    revenue: round2(rev), coefficient, taxable: round2(taxable), contributions: round2(contributions),
+    incomeTax: round2(incomeTax), taxes: round2(contributions + incomeTax), net: round2(rev - contributions - incomeTax),
+  };
+}
+
 export function computeTaxes(revenue, rivalsa, settings = {}) {
   const invoice = round2((Number(revenue) || 0) + (Number(rivalsa) || 0));
-  if (settings.taxMode !== 'forfettario') {
+  if (settings.taxMode !== 'forfettario' && settings.taxMode !== 'ordinario') {
     const taxPercent = Number(settings.taxPercent) || 0;
     const taxes = round2(invoice * (taxPercent / 100));
     const contributions = round2(invoice * ((Number(settings.contributionsPercent) || 0) / 100));
@@ -310,9 +413,35 @@ export function computeTaxes(revenue, rivalsa, settings = {}) {
   }
   const integrativo = settings.rivalsaType === 'integrativo' ? round2(Number(rivalsa) || 0) : 0;
   const income = round2(invoice - integrativo);
+
+  if (settings.taxMode === 'ordinario') {
+    // aliquote medie dell'anno previsto, applicate ai compensi del periodo
+    const year = computeOrdinarioYear(annualRevenueOf(settings), settings);
+    const share = year.revenue > 0 ? income / year.revenue : 0;
+    const contributions = round2(year.contributions * share);
+    const irpef = round2(year.irpef * share);
+    const regional = round2(year.regional * share);
+    const municipal = round2(year.municipal * share);
+    const incomeTax = round2(irpef + regional + municipal);
+    const taxable = round2(year.taxable * share);
+    const taxes = round2(contributions + incomeTax + integrativo);
+    return {
+      taxMode: 'ordinario', invoice, income, taxable,
+      contributions, incomeTax, irpef, regional, municipal, integrativo, taxes, net: round2(invoice - taxes),
+      taxPercent: invoice > 0 ? round2((taxes / invoice) * 100) : 0,
+    };
+  }
+
   const coefficient = settings.coefficientPercent == null || settings.coefficientPercent === '' ? 78 : Number(settings.coefficientPercent) || 0;
   const taxable = round2(income * (coefficient / 100));
-  const contributions = round2(taxable * ((Number(settings.forfContributionsPercent) || 0) / 100));
+  let contributions;
+  if (isInpsArtCom(settings.pensionFund)) {
+    // quota fissa annua + percentuale: si ripartisce in proporzione ai compensi del periodo
+    const year = computeForfettarioYear(annualRevenueOf(settings), settings);
+    contributions = round2(year.revenue > 0 ? year.contributions * (income / year.revenue) : 0);
+  } else {
+    contributions = round2(taxable * ((Number(settings.forfContributionsPercent) || 0) / 100));
+  }
   const incomeTax = round2(Math.max(0, taxable - contributions) * ((Number(settings.forfTaxRatePercent) || 0) / 100));
   const taxes = round2(contributions + incomeTax + integrativo);
   return {
@@ -478,6 +607,7 @@ function aggregate(shiftsIn, sites, settings) {
     taxPercent: tax.taxPercent, taxes: tax.taxes, net: tax.net,
     // dettaglio (per "Come si calcola", riepilogo, PDF): contributi, imposta, integrativo da versare
     taxMode: tax.taxMode, taxable: tax.taxable, contributions: tax.contributions, incomeTax: tax.incomeTax, integrativo: tax.integrativo,
+    irpef: tax.irpef || 0, regional: tax.regional || 0, municipal: tax.municipal || 0,
     shiftCount: filteredShifts.length,
   };
 }
@@ -595,6 +725,7 @@ export function computeYearSummary(shifts, sites, settings, year, occasionalWork
     year, months, totalHours, totalInvoice, totalTaxes, totalNet, occasionalGross, occasionalTaxes, occasionalNet, totalNetAll,
     totalRevenue: sumOf('totalRevenue'), totalRivalsa: sumOf('totalRivalsa'), totalTaxable: sumOf('taxable'),
     totalContributions: sumOf('contributions'), totalIncomeTax: sumOf('incomeTax'), totalIntegrativo: sumOf('integrativo'),
+    totalIrpef: sumOf('irpef'), totalRegional: sumOf('regional'), totalMunicipal: sumOf('municipal'),
   };
 }
 

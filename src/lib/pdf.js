@@ -90,10 +90,15 @@ export function exportMonthPdf(sum, opts = {}) {
   const riv = opts.rivalsaLabel || 'Rivalsa';
   totalRow('Ore totali', `${fmt(sum.totalHours)} h`);
   totalRow(`Compensi + ${riv.toLowerCase()} (fatturato)`, `€${fmt(sum.totalInvoice)}`);
-  if (sum.taxMode === 'forfettario') {
+  if (sum.taxMode === 'forfettario' || sum.taxMode === 'ordinario') {
     if (sum.integrativo > 0) totalRow('Integrativo da versare alla cassa', `−€${fmt(sum.integrativo)}`, { color: [225, 29, 72] });
     totalRow('Contributi previdenziali', `−€${fmt(sum.contributions)}`, { color: [225, 29, 72] });
-    totalRow('Imposta sostitutiva', `−€${fmt(sum.incomeTax)}`, { color: [225, 29, 72] });
+    if (sum.taxMode === 'ordinario') {
+      totalRow('IRPEF', `−€${fmt(sum.irpef)}`, { color: [225, 29, 72] });
+      totalRow('Addizionali regionale e comunale', `−€${fmt(sum.regional + sum.municipal)}`, { color: [225, 29, 72] });
+    } else {
+      totalRow('Imposta sostitutiva', `−€${fmt(sum.incomeTax)}`, { color: [225, 29, 72] });
+    }
   } else {
     totalRow(`Tasse da accantonare (${sum.taxPercent}%)`, `−€${fmt(sum.taxes)}`, { color: [225, 29, 72] });
   }
