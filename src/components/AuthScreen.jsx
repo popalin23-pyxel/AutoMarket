@@ -5,14 +5,15 @@ import BrandLogo from './BrandLogo.jsx';
 import { InstallBanner, InstallSheetAuto } from './InstallSheet.jsx';
 
 export default function AuthScreen({ onShowPrivacy }) {
-  const { signIn, signUp, sendPasswordReset } = useAuth();
-  const [mode, setMode] = useState('login'); // login | signup | forgot | sent
+  const { signIn, signUp, sendPasswordReset, linkError } = useAuth();
+  // link dell'email scaduto: si apre direttamente "Password dimenticata" con la spiegazione
+  const [mode, setMode] = useState(linkError ? 'forgot' : 'login'); // login | signup | forgot | sent
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [showPw, setShowPw] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState(linkError);
   const [info, setInfo] = useState(null);
 
   const reset = () => { setError(null); setInfo(null); };
