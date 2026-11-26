@@ -30,7 +30,8 @@ export default function SummaryTab({ state, year, month, setYear, setMonth }) {
   const animatedNet = useCountUp(sum.net);
   const [timesheetSite, setTimesheetSite] = useState(undefined); // undefined = chiuso
   const rivLabel = rivalsaLabel(state.settings);
-  const exact = sum.taxMode === 'forfettario';
+  const exact = sum.taxMode === 'forfettario' || sum.taxMode === 'ordinario';
+  const ordinary = sum.taxMode === 'ordinario';
 
   // precarica in background: al tocco su "Esporta" il modulo è già pronto e la condivisione
   // su iPhone parte ancora "dentro" il tocco (altrimenti Safari può bloccarla)
@@ -132,7 +133,14 @@ export default function SummaryTab({ state, year, month, setYear, setMonth }) {
                 <div className="flow-row taxes"><span className="flow-label">Integrativo da versare alla cassa</span><span className="flow-value red">−€{fmt(sum.integrativo)}</span></div>
               )}
               <div className="flow-row taxes"><span className="flow-label">Contributi previdenziali</span><span className="flow-value red">−€{fmt(sum.contributions)}</span></div>
-              <div className="flow-row taxes"><span className="flow-label">Imposta sostitutiva</span><span className="flow-value red">−€{fmt(sum.incomeTax)}</span></div>
+              {ordinary ? (
+                <>
+                  <div className="flow-row taxes"><span className="flow-label">IRPEF</span><span className="flow-value red">−€{fmt(sum.irpef)}</span></div>
+                  <div className="flow-row taxes"><span className="flow-label">Addizionali regionale e comunale</span><span className="flow-value red">−€{fmt(sum.regional + sum.municipal)}</span></div>
+                </>
+              ) : (
+                <div className="flow-row taxes"><span className="flow-label">Imposta sostitutiva</span><span className="flow-value red">−€{fmt(sum.incomeTax)}</span></div>
+              )}
             </>
           ) : (
             <div className="flow-row taxes"><span className="flow-label">Tasse da accantonare ({sum.taxPercent}%)</span><span className="flow-value red">−€{fmt(sum.taxes)}</span></div>
@@ -143,7 +151,7 @@ export default function SummaryTab({ state, year, month, setYear, setMonth }) {
           )}
         </div>
         <p className="fiscal-footnote">
-          Stima, non sostituisce il calcolo del commercialista.{exact ? ' Calcolo del regime forfettario: vedi Altro → Tasse e cassa → Come si calcola.' : ''}
+          Stima, non sostituisce il calcolo del commercialista.{exact ? ` Calcolo del regime ${ordinary ? 'ordinario (la parte del mese delle tasse dell\'anno)' : 'forfettario'}: vedi Altro → Tasse e cassa → Come si calcola.` : ''}
         </p>
       </div>
 

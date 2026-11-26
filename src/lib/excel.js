@@ -3,6 +3,7 @@
 import * as XLSX from 'xlsx';
 import { MONTHS_IT } from './defaults.js';
 import { saveFile } from './saveFile.js';
+const round2x = (n) => Math.round((Number(n) || 0) * 100) / 100;
 
 // Protezione da "formula injection": un nome sede come "=cmd|'/c calc'!A0"
 // o "=HYPERLINK(...)" diventerebbe una formula eseguibile se aperto in Excel.
@@ -18,11 +19,13 @@ export function exportMonthExcel(sum, opts = {}) {
 
   const header = (opts.headerLines || []).map((line) => [safeText(String(line))]);
   const riv = opts.rivalsaLabel || 'Rivalsa';
-  const taxRows = sum.taxMode === 'forfettario'
+  const taxRows = sum.taxMode === 'forfettario' || sum.taxMode === 'ordinario'
     ? [
       ...(sum.integrativo > 0 ? [['Integrativo da versare alla cassa', '', '', '', '', '', -sum.integrativo]] : []),
       ['Contributi previdenziali', '', '', '', '', '', -sum.contributions],
-      ['Imposta sostitutiva', '', '', '', '', '', -sum.incomeTax],
+      ...(sum.taxMode === 'ordinario'
+        ? [['IRPEF', '', '', '', '', '', -sum.irpef], ['Addizionali regionale e comunale', '', '', '', '', '', -round2x(sum.regional + sum.municipal)]]
+        : [['Imposta sostitutiva', '', '', '', '', '', -sum.incomeTax]]),
     ]
     : [[`Tasse da accantonare (${sum.taxPercent}%)`, '', '', '', '', '', -sum.taxes]];
   const rows = [
